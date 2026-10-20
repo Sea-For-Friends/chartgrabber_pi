@@ -1,0 +1,11 @@
+﻿[PARAMS]
+GUID={92122135-6B15-4800-AA9E-3E48C556DA17}
+name=Sentinel-2 Cloudless 2025 (EOX)
+ParentSubMenu=Satellite
+DefURLBase=https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2025_3857/default/g/{z}/{y}/{x}.jpg
+ContentType=image/jpeg
+Ext=.jpg
+EPSG=3857
+NameInCache=Sentinel2_Cloudless_2025
+License=EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2025)
+MaxConnectToServerCount=1

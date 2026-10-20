@@ -1,0 +1,2 @@
+note: moved $SCRATCH/home-note/.config/SAS.Planet to $SCRATCH/home-note/.config/chart-grabber; moved $SCRATCH/home-note/.local/share/SAS.Planet to $SCRATCH/home-note/.local/share/chart-grabber
+warning: "OpenTopoMap": the provider's terms of use may not allow downloading tiles for offline use. Read https://opentopomap.org/about before downloading; you are responsible for complying.

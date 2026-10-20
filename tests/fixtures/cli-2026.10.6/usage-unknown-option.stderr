@@ -1,0 +1,2 @@
+error: Unknown option 'nonsense'.
+Usage: chart-grabber-cli COMMAND [options]; chart-grabber-cli --help

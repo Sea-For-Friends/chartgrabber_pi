@@ -1,0 +1,21 @@
+BasedOnStyle: LLVM
+Standard: c++20
+IndentWidth: 4
+ColumnLimit: 110
+AccessModifierOffset: -4
+AllowShortFunctionsOnASingleLine: Inline
+BreakBeforeBraces: Attach
+PointerAlignment: Left
+SortIncludes: CaseSensitive
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^"'
+    Priority: 1
+  - Regex: '^<(gtest|gmock)'
+    Priority: 2
+  - Regex: '^<wx/'
+    Priority: 3
+  - Regex: '^<ocpn_plugin\.h>'
+    Priority: 5
+  - Regex: '^<'
+    Priority: 4

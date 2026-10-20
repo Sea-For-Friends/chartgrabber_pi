@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Chart Grabber toolbar icon, toggled = a download is running. 24 x 24 grid, OpenCPN MUI_flat colours (glyph #b4b4b4),. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <rect x="-1" y="-1" width="26" height="26" fill="#898989"/>
+  <g fill="none" stroke="#b4b4b4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- folded chart: three panels; the lower edge is open where the arrow leaves the middle panel -->
+    <path d="M10.2 13.55L8 13l-6 2V5l6-2 8 2 6-2v10l-6 2-2.2-0.55"/>
+    <path d="M8 3v10M16 5v10"/>
+    <!-- download arrow out of the chart -->
+    <path d="M12 9v12M8.5 17.5L12 21l3.5-3.5"/>
+  </g>
+</svg>

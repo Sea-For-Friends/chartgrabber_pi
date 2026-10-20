@@ -1,0 +1,2 @@
+error: --zooms: "x" is not a zoom list (0-based, such as 8-12,14; levels 0 to 23)
+Usage: chart-grabber-cli COMMAND [options]; chart-grabber-cli --help

@@ -1,0 +1,20 @@
+phase	estimate	{51C1079B-B55D-4DF7-A410-ADC118F53AB1}
+warning: "OpenTopoMap": the provider's terms of use may not allow downloading tiles for offline use. Read https://opentopomap.org/about before downloading; you are responsible for complying.
+phase	download	{51C1079B-B55D-4DF7-A410-ADC118F53AB1}
+progress	download	{51C1079B-B55D-4DF7-A410-ADC118F53AB1}	10	0	6	0	0	0
+progress	download	{51C1079B-B55D-4DF7-A410-ADC118F53AB1}	10	0	6	0	0	1
+progress	download	{51C1079B-B55D-4DF7-A410-ADC118F53AB1}	10	0	6	0	0	2
+progress	download	{51C1079B-B55D-4DF7-A410-ADC118F53AB1}	10	0	6	0	0	3
+progress	download	{51C1079B-B55D-4DF7-A410-ADC118F53AB1}	10	0	6	0	0	4
+progress	download	{51C1079B-B55D-4DF7-A410-ADC118F53AB1}	10	1	6	0	0	5
+progress	download	{51C1079B-B55D-4DF7-A410-ADC118F53AB1}	10	1	6	0	0	6
+progress	download	{51C1079B-B55D-4DF7-A410-ADC118F53AB1}	10	1	6	0	0	7
+progress	download	{51C1079B-B55D-4DF7-A410-ADC118F53AB1}	10	1	6	0	0	8
+progress	download	{51C1079B-B55D-4DF7-A410-ADC118F53AB1}	10	1	6	0	0	9
+progress	download	{51C1079B-B55D-4DF7-A410-ADC118F53AB1}	10	2	6	0	0	10
+error: no connection to the server for 3 tiles in a row: Error connecting to server
+Wait 5 seconds...
+progress	download	{51C1079B-B55D-4DF7-A410-ADC118F53AB1}	10	2	6	0	0	10
+warning: session saved; run the same command again to continue
+warning: to continue from this file: resume $SCRATCH/data/AutoSave/952fa2ff8d8d/{51C1079B-B55D-4DF7-A410-ADC118F53AB1}/final.sls
+phase	fill	{51C1079B-B55D-4DF7-A410-ADC118F53AB1}
