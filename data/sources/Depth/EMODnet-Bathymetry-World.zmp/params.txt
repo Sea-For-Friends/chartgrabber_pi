@@ -1,0 +1,12 @@
+﻿[PARAMS]
+GUID={C44877A0-D455-4238-B5E2-C8BFF25FC0D4}
+name=EMODnet Bathymetry (world)
+ParentSubMenu=Depth
+DefURLBase=https://tiles.emodnet-bathymetry.eu/2020/baselayer/web_mercator/{z}/{x}/{y}.png
+ContentType=image/png
+Ext=.png
+EPSG=3857
+NameInCache=EMODnet_Bathymetry_World
+License=EMODnet Bathymetry Consortium
+MaxConnectToServerCount=2
+NavigationWarning=1

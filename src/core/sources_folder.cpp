@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "sources_folder.h"
 
+#include "portable.h"
+
 #include <algorithm>
 #include <cctype>
 #include <deque>
@@ -33,10 +35,10 @@ struct Pending {
 
 int countZmpEntries(const std::string& root, int limit) {
     std::error_code ec;
-    if (limit <= 0 || !fs::is_directory(root, ec))
+    if (limit <= 0 || !fs::is_directory(fsPath(root), ec))
         return 0;
     int count = 0, visited = 0;
-    std::deque<Pending> folders{{fs::path(root), 0}};
+    std::deque<Pending> folders{{fsPath(root), 0}};
     while (!folders.empty()) {
         const Pending folder = folders.front();
         folders.pop_front();
@@ -51,11 +53,11 @@ int countZmpEntries(const std::string& root, int limit) {
             entries.push_back(*it);
         }
         std::ranges::sort(entries, {},
-                          [](const fs::directory_entry& e) { return e.path().filename().string(); });
+                          [](const fs::directory_entry& e) { return utf8(e.path().filename()); });
         for (const fs::directory_entry& e : entries) {
             if (++visited > kMaxVisitedEntries)
                 return count;
-            const std::string name = e.path().filename().string();
+            const std::string name = utf8(e.path().filename());
             std::error_code dir_ec;
             const bool isDir = fs::is_directory(e.path(), dir_ec); // follows links, as QDir does
             if (folder.depth < kMaxFolderDepth && isDir && !isZmpName(name) && name.front() != '.')

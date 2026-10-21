@@ -1,0 +1,19 @@
+﻿[PARAMS]
+GUID={1A696D82-F258-41A4-BCD6-7648D9E08DE2}
+name=RainViewer radar (worldwide, current)
+ParentSubMenu=Weather now
+asLayer=1
+DefURLBase=https://tilecache.rainviewer.com{ver}/256/{z}/{x}/{y}/2/1_1.png
+ContentType=image/png
+Ext=.png
+EPSG=3857
+NameInCache=Weather_RainViewer_Radar
+CacheType=71
+License=Weather data by RainViewer (https://www.rainviewer.com)
+MaxConnectToServerCount=1
+Sleep=700
+MaxZoom=7
+SnapshotIndex=https://api.rainviewer.com/public/weather-maps.json
+SnapshotIndexType=json-last
+SnapshotItem=radar.past
+SnapshotVersionField=path

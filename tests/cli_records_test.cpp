@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <fstream>
 #include <map>
+#include <set>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -18,7 +19,7 @@ using namespace cg;
 namespace {
 
 std::vector<std::string> fixtureLines(const std::string& name) {
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.6/" + name, std::ios::binary);
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.8/" + name, std::ios::binary);
     EXPECT_TRUE(in.good()) << name;
     std::vector<std::string> out;
     for (std::string line; std::getline(in, line);) {
@@ -27,10 +28,10 @@ std::vector<std::string> fixtureLines(const std::string& name) {
     return out;
 }
 
-// and 8: the captured lines of the pinned 2026.10.6 (15 columns: field 10 `origin` is `user`,
+// proofs 3 and 8: the captured lines of the pinned 2026.10.8 (15 columns: field 10 `origin` is `user`,
 // the last is `navigationWarning`); the record is read by position and `origin` changes nothing.
 TEST(Records, SourcesOfThePinnedRelease) {
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.6/sources-two-folders.stdout",
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.8/sources-two-folders.stdout",
                      std::ios::binary);
     ASSERT_TRUE(in.good());
     std::vector<SourceRecord> recs;
@@ -124,12 +125,14 @@ TEST(CliRecordsStdout, SourceEmptyGroupAndExtraFields) {
     EXPECT_EQ(std::get<SourceRecord>(*e).group, "G");
 }
 
-// and 7: the captured `sources` answers of the pinned CLI. Bundled data/sources after the
-// data edit: the flag is 1 for exactly the two EMODnet Bathymetry GUIDs and 0 for the other 14 rows. A
-// sailor-folder definition with NavigationWarning=1 gets the flag too; the plain bundled one does not.
+// proofs 3 and 7, the captured `sources` answers of the pinned CLI. Bundled
+// data/sources after the regroup: 24 rows, the flag is 1 for exactly the seven sources of the groups
+// `Nautical charts` (Norway, Finland, NOAA chart) and `Depth` (EMODnet Europe and World, GEBCO, BlueTopo) and
+// 0 for the other 17. A sailor-folder definition with NavigationWarning=1 gets the flag too; the plain
+// bundled one does not.
 TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
     const auto flags = [](const char* file) {
-        std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.6/" + file, std::ios::binary);
+        std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.8/" + file, std::ios::binary);
         EXPECT_TRUE(in.good()) << file;
         std::map<std::string, bool> out;
         for (std::string line; std::getline(in, line);) {
@@ -141,15 +144,47 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
         return out;
     };
     const auto all = flags("sources-bundled-all.stdout");
-    ASSERT_EQ(all.size(), 16u);
+    ASSERT_EQ(all.size(), 24u);
+    const std::set<std::string> flagged = {
+        "{25DBA489-D484-4A13-B65D-ABA8967FF3DA}", // Norway sea chart
+        "{8A9C3A53-0512-4401-A6D3-050E08934949}", // Finland sea chart
+        "{5DBBE570-0FA6-403E-B490-7A27AF8A3814}", // NOAA chart
+        "{91D4F1B4-A7CD-4FC8-95F1-637609068FB2}", // EMODnet Bathymetry Europe
+        "{C44877A0-D455-4238-B5E2-C8BFF25FC0D4}", // EMODnet Bathymetry World
+        "{87D82F0F-4841-434F-ADB5-1D63B1BFE5DA}", // GEBCO
+        "{D73ACBDA-4E01-4C81-A36A-A069F38CF90C}", // BlueTopo
+    };
     for (const auto& [guid, flag] : all)
-        EXPECT_EQ(flag, guid == "{C44877A0-D455-4238-B5E2-C8BFF25FC0D4}" ||
-                            guid == "{91D4F1B4-A7CD-4FC8-95F1-637609068FB2}")
-            << guid;
+        EXPECT_EQ(flag, flagged.count(guid) == 1) << guid;
     const auto sailor = flags("sources-navigation-warning.stdout");
     ASSERT_EQ(sailor.size(), 2u);
     EXPECT_TRUE(sailor.at("{D0C0FFEE-0000-4000-8000-000000000078}"));
     EXPECT_FALSE(sailor.at("{51C1079B-B55D-4DF7-A410-ADC118F53AB1}"));
+}
+
+// proofs 1 and 4: the regrouped bundled set as the pinned CLI lists it. Seven groups with these counts
+// (Nautical charts 3, Seamarks and traffic 3, Depth 4, Satellite 3, Coast and land 1, Weather now 8, Ocean
+// 2), and the ten sources of Weather now and Ocean (and only they) refresh as snapshots.
+TEST(Records, BundledSetGroupsAndSnapshots) {
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.8/sources-bundled-all.stdout",
+                     std::ios::binary);
+    ASSERT_TRUE(in.good());
+    std::map<std::string, int> groups;
+    int snapshots = 0;
+    for (std::string line; std::getline(in, line);) {
+        const auto r = parseStdoutLine(line);
+        ASSERT_TRUE(r && std::holds_alternative<SourceRecord>(*r)) << line;
+        const SourceRecord& s = std::get<SourceRecord>(*r);
+        ++groups[s.group];
+        const bool snap = s.refresh == "snapshot";
+        snapshots += snap;
+        EXPECT_EQ(snap, s.group == "Weather now" || s.group == "Ocean") << s.name;
+    }
+    const std::map<std::string, int> expected = {
+        {"Nautical charts", 3}, {"Seamarks and traffic", 3}, {"Depth", 4}, {"Satellite", 3},
+        {"Coast and land", 1},  {"Weather now", 8},          {"Ocean", 2}};
+    EXPECT_EQ(groups, expected);
+    EXPECT_EQ(snapshots, 10);
 }
 
 // Hand-made from core weather-sources.md 5.4 (the CLI cannot produce weather records yet; protocol rule 9).
@@ -389,7 +424,7 @@ TEST(CliRecordsStderr, ProgressAndPhase) {
     EXPECT_EQ(std::get<PhaseRecord>(p).guid, "{G}");
 }
 
-// The `note:` line of the first start (captured, 2026.10.6) is a message of kind Other with
+// the `note:` line of the first start (captured, 2026.10.8) is a message of kind Other with
 // its whole text; the line next to it is a Warning and no line of the capture is an Error (lastError stays
 // empty).
 TEST(CliRecordsStderr, TheFirstStartNoteIsOtherAndNeverAnError) {
@@ -409,7 +444,20 @@ TEST(CliRecordsStderr, TheFirstStartNoteIsOtherAndNeverAnError) {
     EXPECT_EQ(stdoutRecords, 3);
 }
 
-// The three other new stop cases of 2026.10.6 are the real output, read as the plugin reads
+// the CLI's last line after a stop on stdin (captured, run-stopped.stderr) is no warning and no
+// error.
+TEST(CliRecordsStderr, TheStopRequestedLineIsOtherAndNeverAnError) {
+    const std::vector<std::string> all = fixtureLines("run-stopped.stderr");
+    ASSERT_FALSE(all.empty());
+    EXPECT_EQ(all.back(), "chart-grabber-cli: stop requested on stdin; exit 143");
+    const StderrLine last = parseStderrLine(all.back());
+    const auto* m = std::get_if<MessageLine>(&last);
+    ASSERT_NE(m, nullptr);
+    EXPECT_EQ(m->kind, MessageLine::Kind::Other);
+    EXPECT_EQ(m->text, "chart-grabber-cli: stop requested on stdin; exit 143");
+}
+
+// the three other new stop cases of 2026.10.8 are the real output, read as the plugin reads
 // it: the exit code and the one Error message line (the connection-lost run: its Error line is followed by
 // more lines).
 TEST(CliRecordsStderr, TheNewStopCasesOfThePinnedRelease) {
@@ -419,7 +467,7 @@ TEST(CliRecordsStderr, TheNewStopCasesOfThePinnedRelease) {
         const char* error;
     };
     const Row rows[] = {
-        {"estimate-cache-refused", "3",
+        {"run-cache-refused", "3",
          "\"OpenTopoMap\": cannot write the cache folder $SCRATCH/a-file/cache_sqlite/Osm_Topo_Map/"},
         {"estimate-area-too-large", "3",
          "the area is too large at zoom 16 (0-based): more than 2147483647 tiles; choose a smaller area or "
@@ -428,6 +476,12 @@ TEST(CliRecordsStderr, TheNewStopCasesOfThePinnedRelease) {
         // the CLI's line ends in "\r\n" (the curl text): parseStderrLine trims the "\r"
         {"run-connection-lost", "4",
          "no connection to the server for 3 tiles in a row: Error connecting to server"},
+        // (CR 11.2): a ZMP with CacheType=6 is refused offline with exit 3
+        {"run-cache-berkeleydb", "3",
+         "\"BerkeleyDB copy\": cannot open the cache: $SCRATCH/Osm_Topo_Map/ (cache type 6): BerkeleyDB "
+         "caches "
+         "(cache types 6 and 61) are no longer supported"},
+        {"usage-stdin-not-a-pipe", "2", "--stop-on-stdin needs stdin to be a pipe"},
     };
     for (const Row& r : rows) {
         SCOPED_TRACE(r.name);
@@ -441,6 +495,38 @@ TEST(CliRecordsStderr, TheNewStopCasesOfThePinnedRelease) {
         }
         EXPECT_EQ(errors, (std::vector<std::string>{r.error}));
     }
+}
+
+// (CR 11.2, 2026.10.8): the stop on stdin. Both captured runs (a `stop` line after 20 s; EOF at once)
+// exit 143, end with the CLI's stop line after the two `warning:` lines of the saved session, and 143 reads
+// as Interrupted. The EOF run stops before the first tile.
+TEST(CliRecordsStderr, TheStopOnStdinEndsWithExit143AndItsStopLine) {
+    for (const char* name : {"run-stopped", "run-stdin-eof-at-once"}) {
+        SCOPED_TRACE(name);
+        EXPECT_EQ(fixtureLines(std::string(name) + ".exit"), (std::vector<std::string>{"143"}));
+        const auto lines = fixtureLines(std::string(name) + ".stderr");
+        ASSERT_GT(lines.size(), 3u);
+        EXPECT_EQ(lines.back(), "chart-grabber-cli: stop requested on stdin; exit 143");
+        for (size_t i = lines.size() - 3; i < lines.size() - 1; ++i) {
+            const auto m = std::get<MessageLine>(parseStderrLine(lines[i]));
+            EXPECT_EQ(m.kind, MessageLine::Kind::Warning) << lines[i];
+        }
+        EXPECT_EQ(classifyExit(143, "", false), Outcome::Interrupted);
+    }
+    for (const std::string& l : fixtureLines("run-stdin-eof-at-once.stderr")) {
+        const StderrLine r = parseStderrLine(l);
+        if (const auto* p = std::get_if<DownloadProgress>(&r)) {
+            EXPECT_EQ(p->processed, 0) << "EOF at once: no tile was downloaded";
+        }
+    }
+    bool sawProgress = false;
+    for (const std::string& l : fixtureLines("run-stopped.stderr")) {
+        const StderrLine r = parseStderrLine(l);
+        if (const auto* p = std::get_if<DownloadProgress>(&r)) {
+            sawProgress = sawProgress || p->processed > 0;
+        }
+    }
+    EXPECT_TRUE(sawProgress) << "the `stop` line came after tiles were downloaded";
 }
 
 TEST(CliRecordsStderr, MessagesAndBadProtocolLinesAreOther) {
@@ -470,12 +556,12 @@ TEST(CliRecordsStderr, MessagesAndBadProtocolLinesAreOther) {
     }
 }
 
-// every stderr line of the captured CLI 2026.10.6 runs is a record or a message; a line
+// every stderr line of the captured CLI 2026.10.8 runs is a record or a message; a line
 // starting "phase<TAB>" / "progress<TAB>" is never "other", the `warning:` lines are warnings, and the
 // numbers of a record are the fields of the line (the first progress record of the stopped run, literal from
 // the capture).
 TEST(CliRecordsStderr, EveryLineOfTheCaptured2026Dot10RunsIsARecordOrAMessage) {
-    int phases = 0, progresses = 0, exports = 0, warnings = 0;
+    int phases = 0, progresses = 0, exports = 0, warnings = 0, stopLines = 0;
     for (const char* name : {"run-stopped.stderr", "run-continued.stderr"}) {
         const auto lines = fixtureLines(name);
         ASSERT_GT(lines.size(), 20u) << name;
@@ -491,6 +577,12 @@ TEST(CliRecordsStderr, EveryLineOfTheCaptured2026Dot10RunsIsARecordOrAMessage) {
                 ++exports;
                 EXPECT_TRUE(std::holds_alternative<ExportProgress>(r)) << l;
             } else {
+                if (l == "chart-grabber-cli: stop requested on stdin; exit 143") { // the stop line of
+                                                                                   // the CLI
+                    ++stopLines;
+                    EXPECT_EQ(std::get<MessageLine>(r).kind, MessageLine::Kind::Other) << l;
+                    continue;
+                }
                 ASSERT_TRUE(l.rfind("warning: ", 0) == 0) << l;
                 ++warnings;
                 const auto& m = std::get<MessageLine>(r);
@@ -502,20 +594,22 @@ TEST(CliRecordsStderr, EveryLineOfTheCaptured2026Dot10RunsIsARecordOrAMessage) {
     EXPECT_GT(phases, 10);
     EXPECT_GT(progresses, 50);
     EXPECT_EQ(exports, 2);
-    EXPECT_EQ(warnings, 5); // per run: the Esri terms-of-use warning; the stopped run: 2 (session); the
-                            // continued: 1 (continuing)
+    EXPECT_EQ(stopLines, 1); // the stopped run (--stop-on-stdin) ends with the CLI's stop line, kind Other
+    EXPECT_EQ(warnings, 5);  // per run: the Esri terms-of-use warning; the stopped run: 2 (session); the
+                             // continued: 1 (continuing)
 
     const auto first = std::get<DownloadProgress>(parseStderrLine(fixtureLines("run-stopped.stderr")[4]));
     EXPECT_EQ(first.guid, "{7B743985-BC5F-4AB6-8915-AC5DBBB8F552}");
     EXPECT_EQ(first.zoom, 9);
     EXPECT_EQ(first.processed, 0);
-    EXPECT_EQ(first.total, 243); // 2026.10.4 printed 0 here (no total yet); 2026.10.6 prints it at once
+    EXPECT_EQ(first.total,
+              243); // 2026.10.4 printed 0 here (no total yet); 2026.10.6 and later print it at once
     EXPECT_EQ(first.downloadedBytes, 0);
     const auto second = std::get<DownloadProgress>(parseStderrLine(fixtureLines("run-stopped.stderr")[5]));
-    EXPECT_EQ(second.zoom, 10);
-    EXPECT_EQ(second.processed, 9);
-    EXPECT_EQ(second.downloaded, 9);
-    EXPECT_EQ(second.downloadedBytes, 127639);
+    EXPECT_EQ(second.zoom, 11);
+    EXPECT_EQ(second.processed, 28);
+    EXPECT_EQ(second.downloaded, 28);
+    EXPECT_EQ(second.downloadedBytes, 369338);
     EXPECT_EQ(second.elapsedSec, 1);
     const auto ex = std::get<ExportProgress>(parseStderrLine("progress\texport\t{G}\t1000"));
     EXPECT_EQ(ex.permille, 1000);
@@ -739,13 +833,13 @@ TEST(LevelCostTest, FromTheCapturedEstimateRecords) {
     ASSERT_EQ(records.size(), 10u);
     const auto c13 = levelCost(records, 13);
     ASSERT_TRUE(c13);
-    EXPECT_EQ(c13->finestBytes, 360766);
-    EXPECT_EQ(c13->totalBytes, 360766);
-    EXPECT_EQ(c13->nextBytes, 8700092);
+    EXPECT_EQ(c13->finestBytes, 441283);
+    EXPECT_EQ(c13->totalBytes, 494286);
+    EXPECT_EQ(c13->nextBytes, 8948628);
     const auto c12 = levelCost(records, 12);
     ASSERT_TRUE(c12);
-    EXPECT_EQ(c12->finestBytes, 0);
-    EXPECT_EQ(c12->nextBytes, 2697840);
+    EXPECT_EQ(c12->finestBytes, 53003);
+    EXPECT_EQ(c12->nextBytes, 2853904);
     EXPECT_FALSE(levelCost(records, 14)); // no record at 14
     EXPECT_FALSE(levelCost(records, 8));
     std::vector<EstimateRecord> deep(1);
@@ -756,15 +850,15 @@ TEST(LevelCostTest, FromTheCapturedEstimateRecords) {
 }
 
 // mean bytes per tile = sum bytesOnDisk / sum tiles over the captured records
-// (run-continued.stdout, 10 estimate records): bytesOnDisk 2673211 + 569649 = 3242860, tiles 243 + 243 = 486,
-// 3242860 / 486 = 6672 (integer division; 6672.3). No usable record: kAssumedTileBytes = 20 x 1024.
+// (run-continued.stdout, 10 estimate records): bytesOnDisk 2673211 + 670799 = 3344010, tiles 243 + 243 = 486,
+// 3344010 / 486 = 6880 (integer division; 6880.8). No usable record: kAssumedTileBytes = 20 x 1024.
 TEST(MeanTileBytesTest, FromTheCapturedRecordsAndTheAssumedDefault) {
     std::vector<EstimateRecord> records;
     for (const std::string& line : fixtureLines("run-continued.stdout"))
         if (line.rfind("estimate\t", 0) == 0)
             records.push_back(std::get<EstimateRecord>(*parseStdoutLine(line)));
     ASSERT_EQ(records.size(), 10u);
-    EXPECT_EQ(meanTileBytes(records), 6672);
+    EXPECT_EQ(meanTileBytes(records), 6880);
     EXPECT_EQ(meanTileBytes({}), 20480);
     std::vector<EstimateRecord> empty(2); // tiles 0: their bytes count for nothing
     empty[0].bytesOnDisk = 999;
@@ -912,5 +1006,32 @@ TEST(Sources, ImageryNames) {
     for (const char* n :
          {"OSM Mapnik", "Saturn charts", "Navionics", "Карта", "Sa t", "", "КартаSat", "SatКарта"}) {
         EXPECT_FALSE(nameLooksLikeImagery(n)) << n;
+    }
+}
+
+// the wx exit code as the CLI's exit code, one case per branch of normalizeExit.
+TEST(ExitCode, NormalizeExitPerSystem) {
+    struct Row {
+        int wxCode;
+        Os os;
+        bool killedByUs;
+        int want;
+    };
+    const std::vector<Row> rows = {
+        {-113, Os::Posix, false, 143}, // a normal exit 143 seen as a signed byte
+        {-126, Os::Posix, true, 130},  // killed flag ignored on Posix
+        {-9, Os::Posix, false, -9},    // SIGKILL stays a signal
+        {0, Os::Posix, false, 0},
+        {-1, Os::Windows, true, -9},         // our TerminateProcess(-1): Killed as on Linux
+        {-1, Os::Windows, false, 1},         // a negative code that is not ours: InternalError
+        {-9, Os::Windows, true, 1},          // only -1 is ours
+        {-1073741819, Os::Windows, true, 1}, // NTSTATUS 0xC0000005 (access violation)
+        {-1073741819, Os::Windows, false, 1},
+        {143, Os::Windows, false, 143},
+        {0, Os::Windows, true, 0},
+    };
+    for (const Row& r : rows) {
+        EXPECT_EQ(normalizeExit(r.wxCode, r.os, r.killedByUs), r.want)
+            << r.wxCode << " os=" << static_cast<int>(r.os) << " killed=" << r.killedByUs;
     }
 }

@@ -1,12 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "session_log.h"
 
+#include "portable.h"
+
 #include <cerrno>
 #include <cstring>
 #include <filesystem>
 #include <system_error>
 
 namespace cg {
+
+namespace {
+// UTF-8 path; _wfopen on Windows (fopen would read the bytes in the ANSI code page).
+std::FILE* openForWrite(const std::string& path) {
+#ifdef _WIN32
+    return _wfopen(fsPath(path).c_str(), L"w");
+#else
+    return std::fopen(path.c_str(), "w");
+#endif
+}
+} // namespace
 
 std::string formatLogStamp(const std::tm& t, int ms) {
     if (ms < 0)
@@ -46,14 +59,14 @@ bool SessionLog::open(const std::string& path, std::uintmax_t capBytes, std::str
     };
     namespace fs = std::filesystem;
     std::error_code ec;
-    const fs::path file(path);
+    const fs::path file = fsPath(path);
     if (file.has_parent_path()) {
         fs::create_directories(file.parent_path(), ec);
         if (ec)
             return fail(ec.message());
     }
-    fs::remove(fs::path(path + ".1"), ec); // a failed removal is not an error: the roll replaces it
-    file_ = std::fopen(path.c_str(), "w");
+    fs::remove(fsPath(path + ".1"), ec); // a failed removal is not an error: the roll replaces it
+    file_ = openForWrite(path);
     if (!file_)
         return fail(std::strerror(errno));
     path_ = path;
@@ -81,14 +94,14 @@ bool SessionLog::roll(std::string_view stamp) {
     std::fclose(file_);
     file_ = nullptr;
     std::error_code ec;
-    std::filesystem::rename(path_, path_ + ".1", ec);
+    std::filesystem::rename(fsPath(path_), fsPath(path_ + ".1"), ec);
     if (!ec)
-        file_ = std::fopen(path_.c_str(), "w");
+        file_ = openForWrite(path_);
     if (!file_) {
         path_.clear();
         return false;
     }
-    const std::string name = std::filesystem::path(path_).filename().string();
+    const std::string name = utf8(fsPath(path_).filename());
     const std::string head = header_ + std::string(stamp) + " log continued from " + name + ".1\n";
     std::fwrite(head.data(), 1, head.size(), file_);
     size_ = base_ = head.size();

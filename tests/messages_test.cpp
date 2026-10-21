@@ -165,7 +165,6 @@ TEST(MessagesStrip, PhaseLines) {
 TEST(MessagesStrip, StripTextsAndButtonLabels) {
     EXPECT_EQ(u(stoppingText()), "Stopping - saving progress...");
     EXPECT_EQ(u(stopButtonText()), "Stop");
-    EXPECT_EQ(u(forceStopButtonText()), "Force stop");
     EXPECT_EQ(u(showButtonText()), "Show");
     EXPECT_EQ(u(resumeButtonText()), "Resume");
     EXPECT_EQ(u(closeButtonText()), "Close");
@@ -231,7 +230,7 @@ TEST(MessagesOutcome, FixedHeadlinesOfSection93) {
         EXPECT_EQ(u(outcomeHeadline(o, none, {}, "ignored")), text) << static_cast<int>(o);
 }
 
-// exit 4 whose last error is the CLI's snapshot line (a real line, tests/fixtures/cli-2026.10.6/
+// exit 4 whose last error is the CLI's snapshot line (a real line, tests/fixtures/cli-2026.10.8/
 // run-weather-snapshot-failed.stderr) gives the weather text; any other last error keeps the landed one.
 TEST(MessagesOutcome, ASnapshotFailureHasItsOwnHeadline) {
     EXPECT_EQ(u(outcomeHeadline(cg::Outcome::DownloadIncomplete, {}, {},
@@ -281,8 +280,8 @@ TEST(MessagesOutcome, RefusalTextBranches) {
         EXPECT_EQ(u(refusalText(in)), text) << in;
 }
 
-// The S-15 and S-16 refusals. The first and third lines are the captured ones (tests/fixtures/
-// cli-2026.10.6/estimate-cache-refused.stderr, estimate-area-too-large.stderr); the "cannot open the cache"
+// the S-15 and S-16 refusals. The first and third lines are the captured ones (tests/fixtures/
+// cli-2026.10.8/run-cache-refused.stderr, estimate-area-too-large.stderr); the "cannot open the cache"
 // forms are HAND-MADE from core v2026.10.6 src/cg/app/job_checks.cpp (the capture produced the other form).
 TEST(MessagesOutcome, TheCacheAndAreaSizeRefusals) {
     const std::string cache =
@@ -301,6 +300,12 @@ TEST(MessagesOutcome, TheCacheAndAreaSizeRefusals) {
         large);
     EXPECT_EQ(u(tooLargeText()), large);
     EXPECT_EQ(u(cacheRefusedText()), cache);
+    // the captured BerkeleyDB line also holds ": cannot open the cache: ", so its check comes first.
+    EXPECT_EQ(
+        u(refusalText("\"BerkeleyDB copy\": cannot open the cache: $SCRATCH/Osm_Topo_Map/ (cache type 6): "
+                      "BerkeleyDB caches (cache types 6 and 61) are no longer supported")),
+        "This chart source asks for a BerkeleyDB tile cache, which Chart Grabber CLI no longer "
+        "supports.");
 }
 
 TEST(MessagesOutcome, RefusalTextKeepsUtf8) {
@@ -319,7 +324,30 @@ TEST(MessagesCli, FixedTexts) {
               "sources folder.");
 }
 
-// : the two status tables, word for word.
+// the Windows texts.
+TEST(MessagesCli, WindowsTexts) {
+    const cg::Os w = cg::Os::Windows;
+    EXPECT_EQ(u(cliNotFoundText(w)),
+              "Chart Grabber CLI was not found. Download the Chart Grabber CLI zip from the project's "
+              "Releases page, unpack it and choose chart-grabber-cli.exe under Advanced in Preferences.");
+    EXPECT_EQ(u(cliTooOldText(w)), "Chart Grabber CLI is too old. Download the current Chart Grabber CLI zip "
+                                   "from the project's Releases page.");
+    EXPECT_EQ(u(cliStatusText(CliStatus::NotInstalled, "1.2.3", "x", w)),
+              "Chart Grabber CLI was not found. Download the Chart Grabber CLI zip from the project's "
+              "Releases page, unpack it and choose chart-grabber-cli.exe under Advanced.");
+    EXPECT_EQ(u(cliStatusText(CliStatus::TooOld, "0.0.9", "x", w)),
+              "Chart Grabber CLI 0.0.9 is too old. Download the current Chart Grabber CLI zip from the "
+              "project's Releases page.");
+    EXPECT_EQ(u(cliStatusText(CliStatus::TooOld, "", "x", w)), u(cliTooOldText(w)));
+    // The rows that do not name the package keep one text on both systems.
+    EXPECT_EQ(u(cliStatusText(CliStatus::Ready, "2026.10.0", "x", w)),
+              "Chart Grabber CLI 2026.10.0 is ready.");
+    // Posix stays when asked for explicitly.
+    EXPECT_EQ(u(cliTooOldText(cg::Os::Posix)),
+              "Chart Grabber CLI is too old. Install the current chart-grabber-cli package.");
+}
+
+// the two status tables, word for word.
 TEST(MessagesSettingsStatus, CliStatusTextsOfSection112) {
     EXPECT_EQ(u(cliStatusText(CliStatus::Checking, "9.9.9", "x")), "Checking Chart Grabber CLI...");
     EXPECT_EQ(u(cliStatusText(CliStatus::Ready, "2026.10.0", "x")), "Chart Grabber CLI 2026.10.0 is ready.");
@@ -769,7 +797,6 @@ TEST(MessagesSweep, NoTextOfMessagesHSaysMapOrTileProgramAndAllAreAscii) {
           weatherPictureLine("2026-10-16 06:40 UTC"),
           stoppingText(),
           stopButtonText(),
-          forceStopButtonText(),
           showButtonText(),
           resumeButtonText(),
           closeButtonText(),

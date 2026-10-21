@@ -1,0 +1,13 @@
+﻿[PARAMS]
+GUID={8A9C3A53-0512-4401-A6D3-050E08934949}
+name=Finland sea chart (Traficom, not for navigation)
+ParentSubMenu=Nautical charts
+DefURLBase=https://julkinen.traficom.fi/rasteripalvelu/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=Traficom:Merikarttasarjat%20public&STYLE=&TILEMATRIXSET=WGS84_Pseudo-Mercator&TILEMATRIX=WGS84_Pseudo-Mercator:{z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png
+ContentType=image/png
+Ext=.png
+EPSG=3857
+NameInCache=Nautical_Finland_Traficom
+License=Source: Traficom, CC BY 4.0 (not for navigational use)
+MaxConnectToServerCount=1
+MaxZoom=15
+NavigationWarning=1

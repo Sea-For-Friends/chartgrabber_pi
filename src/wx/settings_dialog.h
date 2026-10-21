@@ -4,6 +4,7 @@
 // Cancel / OK. Every folder and the program is a visible read-only field with "Change..." and "Use default".
 #pragma once
 
+#include "cli_runner.h"
 #include "question.h"
 #include "settings.h"
 
@@ -59,9 +60,9 @@ public:
     // or the log file). Default: wxLaunchDefaultApplication.
     std::function<void(const wxString& folder)> openFolder;
     // What the dialog passes to resolveCli; tests set a temp file and a temp PATH.
-    std::string cliDefaultPath = cg::defaultCliPath();
-    std::optional<std::string> cliPathEnv; // nullopt = getenv("PATH")
-    // a change of the program or the sources folder starts a check after this delay (tests may
+    std::vector<std::string> cliDefaultPaths = hostCliPaths();
+    std::optional<std::string> cliPathEnv; // nullopt = the PATH variable
+    //: a change of the program or the sources folder starts a check after this delay (tests may
     // shorten it before the first change; the default is the spec's 500 ms).
     int checkDelayMs = 500;
 

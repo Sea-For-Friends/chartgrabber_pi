@@ -1,0 +1,13 @@
+﻿[PARAMS]
+GUID={25DBA489-D484-4A13-B65D-ABA8967FF3DA}
+name=Norway sea chart (Kartverket, not for navigation)
+ParentSubMenu=Nautical charts
+DefURLBase=https://cache.kartverket.no/v1/wmts/1.0.0/sjokartraster/default/webmercator/{z}/{y}/{x}.png
+ContentType=image/png
+Ext=.png
+EPSG=3857
+NameInCache=Nautical_Norway_Kartverket
+License=© Kartverket, CC BY 4.0 (not for navigation)
+MaxConnectToServerCount=1
+MaxZoom=18
+NavigationWarning=1

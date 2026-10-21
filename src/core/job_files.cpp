@@ -2,16 +2,14 @@
 #include "job_files.h"
 
 #include "geo_math.h"
+#include "portable.h"
 
 #include <algorithm>
 #include <cctype>
 #include <charconv>
 #include <cmath>
 #include <cstdio>
-#include <filesystem>
 #include <map>
-#include <system_error>
-#include <unistd.h>
 
 namespace cg {
 
@@ -214,7 +212,12 @@ std::vector<std::string> niced(const std::string& program, const std::vector<std
 }
 
 std::vector<std::string> cliCommand(const std::string& program, const std::vector<std::string>& args,
-                                    bool nice) {
+                                    bool nice, Os os) {
+    if (os == Os::Windows) { // no env, no nice: the runner sets the priority
+        std::vector<std::string> a{program};
+        a.insert(a.end(), args.begin(), args.end());
+        return a;
+    }
     std::vector<std::string> a{"env", "LC_ALL=C.UTF-8"};
     if (nice) {
         const std::vector<std::string> n = niced(program, args);
@@ -226,7 +229,10 @@ std::vector<std::string> cliCommand(const std::string& program, const std::vecto
     return a;
 }
 
-std::string displayCommand(const std::vector<std::string>& argv) {
+std::string displayCommand(const std::vector<std::string>& argv, Os os) {
+    if (os == Os::Windows) {
+        return windowsCommandLine(argv);
+    }
     std::string out;
     for (const std::string& arg : argv) {
         if (!out.empty()) {
@@ -261,7 +267,46 @@ std::string areaPlace(const BBox& box) {
            formatNumber(std::fabs(lon), 2) + (lon < 0 ? 'W' : 'E');
 }
 
+namespace {
+
+// CON, PRN, AUX, NUL, COM1-COM9, LPT1-LPT9 (ASCII case-insensitive); the name part is before the first '.'
+// with trailing spaces removed.
+bool deviceName(std::string_view stem) {
+    std::string s;
+    for (const char c : stem) {
+        s += (c >= 'a' && c <= 'z') ? static_cast<char>(c - 'a' + 'A') : c;
+    }
+    if (s == "CON" || s == "PRN" || s == "AUX" || s == "NUL") {
+        return true;
+    }
+    return s.size() == 4 && (s.starts_with("COM") || s.starts_with("LPT")) && s[3] >= '1' && s[3] <= '9';
+}
+
+} // namespace
+
 std::string chartFileName(const std::string& chartName) {
+    constexpr std::string_view kReserved = "/\\:*?\"<>|";
+    std::string out;
+    for (const char c : chartName) {
+        if (c == '\'') {
+            continue;
+        }
+        const bool bad =
+            kReserved.find(c) != std::string_view::npos || static_cast<unsigned char>(c) < 0x20 || c == 0x7f;
+        out += bad ? '_' : c;
+    }
+    std::string_view stem(out);
+    stem = stem.substr(0, stem.find('.'));
+    while (stem.ends_with(' ')) {
+        stem.remove_suffix(1);
+    }
+    if (deviceName(stem)) {
+        out.insert(out.begin(), '_');
+    }
+    return out + ".mbtiles";
+}
+
+std::string chartFileNameLegacy(const std::string& chartName) {
     std::string out;
     for (const char c : chartName) {
         if (c == '\'') {
@@ -305,17 +350,22 @@ std::string routeGpx(const std::string& name, const std::vector<LatLon>& points)
     return t + "</rte>\n</gpx>\n";
 }
 
-std::optional<std::string> findOnPath(std::string_view name, std::string_view pathEnv) {
+std::optional<std::string> findOnPath(std::string_view name, std::string_view pathEnv, Os os) {
+    const char separator = os == Os::Windows ? ';' : ':';
+    const std::string file =
+        os == Os::Windows && !hasExeSuffix(name) ? std::string(name) + ".exe" : std::string(name);
     while (!pathEnv.empty()) {
-        const auto colon = pathEnv.find(':');
-        const std::string_view dir = pathEnv.substr(0, colon);
-        pathEnv = colon == std::string_view::npos ? std::string_view() : pathEnv.substr(colon + 1);
+        const auto cut = pathEnv.find(separator);
+        std::string_view dir = pathEnv.substr(0, cut);
+        pathEnv = cut == std::string_view::npos ? std::string_view() : pathEnv.substr(cut + 1);
+        if (os == Os::Windows && dir.size() >= 2 && dir.front() == '"' && dir.back() == '"') {
+            dir = dir.substr(1, dir.size() - 2);
+        }
         if (dir.empty()) {
             continue;
         }
-        const std::string candidate = std::string(dir) + '/' + std::string(name);
-        std::error_code ec;
-        if (std::filesystem::is_regular_file(candidate, ec) && ::access(candidate.c_str(), X_OK) == 0) {
+        const std::string candidate = joinPath(dir, file, os);
+        if (isProgramFile(candidate, os)) {
             return candidate;
         }
     }

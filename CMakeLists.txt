@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
-# Calendar version YYYY.MM.N  set only at a release; until then the next planned one.
-project(chartgrabber_pi VERSION 2026.10.1 LANGUAGES CXX)
+# Calendar version YYYY.MM.N: set only at a release; until then the next planned one.
+project(chartgrabber_pi VERSION 2026.10.2 LANGUAGES CXX)
 
 option(CG_BUILD_TESTS "Build the GoogleTest unit tests" ON)
 # Host tuple of the build host's OpenCPN, e.g. debian-x86_64 (see the README). Never "all":
@@ -14,9 +14,13 @@ if(CG_TARGET_LOWER STREQUAL "all")
         " build host's OpenCPN, e.g. debian-x86_64")
 endif()
 set(CG_TARGET_VERSION "13" CACHE STRING "metadata.xml <target-version>")
-execute_process(COMMAND uname -m OUTPUT_VARIABLE CG_HOST_MACHINE OUTPUT_STRIP_TRAILING_WHITESPACE)
-if(CG_HOST_MACHINE STREQUAL "aarch64")
-    set(CG_HOST_MACHINE "arm64")
+if(UNIX)
+    execute_process(COMMAND uname -m OUTPUT_VARIABLE CG_HOST_MACHINE OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(CG_HOST_MACHINE STREQUAL "aarch64")
+        set(CG_HOST_MACHINE "arm64")
+    endif()
+elseif(MSVC AND CMAKE_SIZEOF_VOID_P EQUAL 4)
+    set(CG_HOST_MACHINE "x86") # Windows plugin DLL: x86
 endif()
 set(CG_TARGET_ARCH "${CG_HOST_MACHINE}" CACHE STRING "metadata.xml <target-arch>: x86_64 or arm64")
 set(CG_AUTHOR "Chart Grabber contributors" CACHE STRING "metadata.xml <author>")
@@ -31,6 +35,9 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Sanitizer builds (cmake -DCG_SANITIZE=address): applies to every target, own code and tests.
 set(CG_SANITIZE "" CACHE STRING "Sanitizer build: empty or address (+undefined)")
+if(MSVC AND NOT CG_SANITIZE STREQUAL "")
+    message(FATAL_ERROR "CG_SANITIZE is not supported with MSVC")
+endif()
 if(CG_SANITIZE STREQUAL "address")
     add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
     add_link_options(-fsanitize=address,undefined)
@@ -45,13 +52,21 @@ endif()
 
 # Flags for our own code only (never for api/ or wx headers: those are SYSTEM includes).
 add_library(cg_options INTERFACE)
-target_compile_options(cg_options INTERFACE -Wall -Wextra -Wpedantic -Werror
-    "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
+if(MSVC)
+    target_compile_options(cg_options INTERFACE /W4 /WX /utf-8 /permissive- /Zc:__cplusplus /EHsc)
+    # The first must reach every object of the DLL: OpenCPN 5.14 builds with it and ships msvcp140.dll 14.12.
+    target_compile_definitions(cg_options INTERFACE _DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR _CRT_SECURE_NO_WARNINGS)
+else()
+    target_compile_options(cg_options INTERFACE -Wall -Wextra -Wpedantic -Werror
+        "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
+endif()
 
 find_package(wxWidgets 3.2 REQUIRED COMPONENTS core base xml)
 find_package(OpenGL REQUIRED)
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0) # progress_strip.cpp: gtk_window_begin_move_drag
+if(UNIX)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0) # progress_strip.cpp: gtk_window_begin_move_drag
+endif()
 
 add_subdirectory(src/core)
 
@@ -80,7 +95,18 @@ target_compile_definitions(chartgrabber_pi PRIVATE ${wxWidgets_DEFINITIONS}
     CG_VERSION_MAJOR=${PROJECT_VERSION_MAJOR} CG_VERSION_MINOR=${PROJECT_VERSION_MINOR}
     CG_VERSION_PATCH=${PROJECT_VERSION_PATCH}
     "CG_VERSION_STRING=\"${PROJECT_VERSION}\"")
-target_link_libraries(chartgrabber_pi PRIVATE cg_core cg_options ${wxWidgets_LIBRARIES} OpenGL::GL PkgConfig::GTK3)
+target_link_libraries(chartgrabber_pi PRIVATE cg_core cg_options ${wxWidgets_LIBRARIES} OpenGL::GL)
+if(UNIX)
+    target_link_libraries(chartgrabber_pi PRIVATE PkgConfig::GTK3)
+endif()
+# Windows: the API symbols resolve against opencpn.lib (opencpn-libs api-18/msvc-wx32).
+set(CG_OPENCPN_LIB "" CACHE FILEPATH "opencpn.lib of opencpn-libs api-18/msvc-wx32 (Windows only)")
+if(WIN32)
+    if(NOT CG_OPENCPN_LIB)
+        message(FATAL_ERROR "CG_OPENCPN_LIB must name opencpn.lib of opencpn-libs api-18/msvc-wx32")
+    endif()
+    target_link_libraries(chartgrabber_pi PRIVATE "${CG_OPENCPN_LIB}")
+endif()
 # API symbols resolve against the opencpn executable at load time: no -Wl,--no-undefined.
 
 # metadata.xml for the tarball; tools/tarball.sh packs it with the files below.
@@ -100,7 +126,7 @@ set(CG_TARBALL_NAME
     "chartgrabber_pi-${PROJECT_VERSION}-${CG_TARGET}-${CG_TARGET_VERSION_FILE}-${CG_TARGET_ARCH}")
 file(WRITE "${CMAKE_BINARY_DIR}/tarball-name.txt" "${CG_TARBALL_NAME}\n")
 
-if(CG_BUILD_TESTS)
+if(CG_BUILD_TESTS AND UNIX)
     find_package(GTest REQUIRED)
     enable_testing()
     add_subdirectory(tests)

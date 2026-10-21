@@ -4,6 +4,7 @@
 // CLI. Needs a wx event loop: a global environment starts a wxAppConsole, each test runs inside its own loop.
 #include "cli_runner.h"
 #include "plugin_log.h"
+#include "sources_stub.h"
 #include "wx_env.h"
 #include "wx_loop.h"
 
@@ -17,22 +18,28 @@
 
 #include <algorithm>
 #include <chrono>
+#include <csignal>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <functional>
 #include <optional>
 #include <regex>
+#include <spawn.h>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <sys/stat.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #include <variant>
 #include <vector>
 
 using namespace cg;
 namespace fs = std::filesystem;
 using Clock = std::chrono::steady_clock;
+
+extern char** environ;
 
 namespace {
 
@@ -73,6 +80,11 @@ struct Capture {
 
 std::vector<std::string> sh(const std::string& script) {
     return {"/bin/sh", "-c", script};
+}
+
+// A stand-in that is stopped: the stop line becomes a SIGTERM (stub::kStopPrelude).
+std::vector<std::string> shStop(const std::string& script) {
+    return sh(std::string(stub::kStopPrelude) + script);
 }
 
 // Temp directory whose name has a space, a quote and Cyrillic.
@@ -274,8 +286,8 @@ TEST_F(CliRunnerTest, TerminateGivesTheChildsOwnExit143AndItsMessage) {
     CliRunner runner;
     std::string error;
     ASSERT_TRUE(
-        runner.start(sh("trap 'echo \"session saved; run the same command again\" >&2; exit 143' TERM;"
-                        " echo ready >&2; k=0; while [ $k -lt 1200 ]; do sleep 0.05; k=$((k + 1)); done"),
+        runner.start(shStop("trap 'echo \"session saved; run the same command again\" >&2; exit 143' TERM;"
+                            " echo ready >&2; k=0; while [ $k -lt 1200 ]; do sleep 0.05; k=$((k + 1)); done"),
                      cb, &error))
         << error;
     ASSERT_TRUE(runUntil([&] { return ready; }, 20000));
@@ -303,12 +315,14 @@ TEST_F(CliRunnerTest, SignalledChildIsMinusTheSignal) {
         };
         CliRunner runner;
         std::string error;
-        ASSERT_TRUE(runner.start(sh("echo ready >&2; exec sleep 30"), cb, &error)) << error;
+        // SIGTERM: the child sends it to itself (the runner never does); SIGKILL: runner.kill()
+        ASSERT_TRUE(runner.start(
+            sh(c.kill ? "echo ready >&2; exec sleep 30" : "echo ready >&2; kill -TERM $$; sleep 30"), cb,
+            &error))
+            << error;
         ASSERT_TRUE(runUntil([&] { return ready; }, 20000));
         if (c.kill) {
             runner.kill();
-        } else {
-            runner.terminate();
         }
         ASSERT_TRUE(runUntil([&] { return run.exits > 0; }, 20000));
         EXPECT_EQ(run.exitCode, c.expected) << (c.kill ? "SIGKILL" : "SIGTERM");
@@ -328,9 +342,10 @@ TEST_F(CliRunnerTest, StopAndWaitTrueForAChildThatExitsOnTerm) {
     };
     CliRunner runner;
     std::string error;
-    ASSERT_TRUE(runner.start(sh("trap 'exit 143' TERM; echo ready >&2; k=0; while [ $k -lt 1200 ]; do sleep "
-                                "0.05; k=$((k + 1)); done"),
-                             cb, &error))
+    ASSERT_TRUE(
+        runner.start(shStop("trap 'exit 143' TERM; echo ready >&2; k=0; while [ $k -lt 1200 ]; do sleep "
+                            "0.05; k=$((k + 1)); done"),
+                     cb, &error))
         << error;
     ASSERT_TRUE(runUntil([&] { return ready; }, 20000));
     const auto t0 = Clock::now();
@@ -341,15 +356,112 @@ TEST_F(CliRunnerTest, StopAndWaitTrueForAChildThatExitsOnTerm) {
     EXPECT_EQ(run.exitCode, 143);
 }
 
-// A CLI that reads stdin gets EOF at once (CloseOutput after start), not a blocked read.
-TEST_F(CliRunnerTest, ChildReadingStdinSeesEofAndExits) {
+// --stop-on-stdin is the LAST argument (after the caller's), and stdin is a pipe.
+TEST_F(CliRunnerTest, TheChildGetsTheStopOptionLastAndAPipeAsStdin) {
     Capture run;
     CliRunner runner;
     std::string error;
-    ASSERT_TRUE(runner.start(sh("cat >/dev/null; echo eof >&2"), run.callbacks(), &error)) << error;
+    ASSERT_TRUE(runner.start({"/bin/sh", "-c",
+                              "[ -p /dev/stdin ] && echo pipe >&2; echo \"$0\" >&2; "
+                              "for a; do l=$a; done; echo \"last:$l\" >&2",
+                              "n0", "a1", "a2"},
+                             run.callbacks(), &error))
+        << error;
     ASSERT_TRUE(runUntil([&] { return run.exits > 0; }, 20000));
-    EXPECT_EQ(run.exitCode, 0);
+    EXPECT_TRUE(run.sawStderrText("pipe"));
+    EXPECT_TRUE(run.sawStderrText("n0"));
+    EXPECT_TRUE(run.sawStderrText("last:--stop-on-stdin"));
+}
+
+// proofs 2 and 3: the stdin stays open until terminate(); then the child reads exactly `stop` and EOF;
+// it exits 143 itself (its TERM trap would give 99: no signal was sent).
+TEST_F(CliRunnerTest, StdinStaysOpenUntilTerminateThenStopAndEofAndNoSignal) {
+    Capture run;
+    bool ready = false;
+    CliRunner::Callbacks cb = run.callbacks();
+    cb.onStderr = [&, inner = cb.onStderr](const StderrLine& l) {
+        inner(l);
+        if (const auto* m = std::get_if<MessageLine>(&l); m && m->text == "ready")
+            ready = true;
+    };
+    CliRunner runner;
+    std::string error;
+    ASSERT_TRUE(runner.start(sh("trap 'exit 99' TERM; echo ready >&2; read l; echo \"got:$l\" >&2; "
+                                "if read m; then echo \"more:$m\" >&2; else echo eof >&2; fi; exit 143"),
+                             cb, &error))
+        << error;
+    ASSERT_TRUE(runUntil([&] { return ready; }, 20000));
+    runFor(500); // five timer periods: a closed stdin would have ended the child
+    EXPECT_EQ(run.exits, 0);
+    EXPECT_FALSE(run.sawStderrText("got:"));
+    runner.terminate();
+    runner.terminate(); // once per run: no second line
+    ASSERT_TRUE(runUntil([&] { return run.exits > 0; }, 20000));
+    EXPECT_EQ(run.exitCode, 143);
+    EXPECT_TRUE(run.sawStderrText("got:stop"));
     EXPECT_TRUE(run.sawStderrText("eof"));
+    EXPECT_FALSE(run.sawStderrText("more:"));
+}
+
+// the write end of the stdin pipe is close-on-exec. A process spawned later by other means
+// (posix_spawn, as OpenCPN's system() would) must not keep it open: the child sees EOF while `sleep 5` runs.
+TEST_F(CliRunnerTest, ProcessSpawnedByOthersDoesNotHoldTheStdinWriteEnd) {
+    Capture run;
+    bool ready = false;
+    CliRunner::Callbacks cb = run.callbacks();
+    cb.onStderr = [&, inner = cb.onStderr](const StderrLine& l) {
+        inner(l);
+        if (const auto* m = std::get_if<MessageLine>(&l); m && m->text == "ready")
+            ready = true;
+    };
+    CliRunner runner;
+    std::string error;
+    ASSERT_TRUE(runner.start(sh("echo ready >&2; cat >/dev/null"), cb, &error)) << error;
+    ASSERT_TRUE(runUntil([&] { return ready; }, 20000));
+    pid_t other = 0;
+    char arg0[] = "sleep", arg1[] = "5";
+    char* const argv[] = {arg0, arg1, nullptr};
+    ASSERT_EQ(posix_spawnp(&other, "sleep", nullptr, nullptr, argv, environ), 0);
+    runner.terminate();
+    const bool ended = runUntil([&] { return run.exits > 0; }, 3000);
+    const bool otherAlive = ::waitpid(other, nullptr, WNOHANG) == 0;
+    ::kill(other, SIGKILL);
+    ::waitpid(other, nullptr, 0);
+    EXPECT_TRUE(ended) << "the child did not see EOF while the other process lived";
+    EXPECT_TRUE(otherAlive);
+    EXPECT_EQ(run.exitCode, 0);
+}
+
+// terminate() on a child that closed its stdin raises SIGPIPE; the guard keeps the test
+// process alive and the write logs nothing. Void unless SIGPIPE is the default here.
+TEST_F(CliRunnerTest, TerminateOnAChildThatClosedItsStdinSurvivesSigpipe) {
+    struct sigaction sa{};
+    ASSERT_EQ(sigaction(SIGPIPE, nullptr, &sa), 0);
+    ASSERT_TRUE(sa.sa_handler == SIG_DFL) << "SIGPIPE is not the default here: the proof would be void";
+    wxLogBuffer* buffer = new wxLogBuffer;
+    wxLog* old = wxLog::SetActiveTarget(buffer);
+    Capture run;
+    bool ready = false;
+    CliRunner::Callbacks cb = run.callbacks();
+    cb.onStderr = [&, inner = cb.onStderr](const StderrLine& l) {
+        inner(l);
+        if (const auto* m = std::get_if<MessageLine>(&l); m && m->text == "ready")
+            ready = true;
+    };
+    {
+        CliRunner runner;
+        runner.setStopGraceMs(300);
+        std::string error;
+        ASSERT_TRUE(runner.start(sh("exec 0<&-; echo ready >&2; exec sleep 30"), cb, &error)) << error;
+        ASSERT_TRUE(runUntil([&] { return ready; }, 20000));
+        runner.terminate();
+        ASSERT_TRUE(runUntil([&] { return run.exits > 0; }, 10000));
+        EXPECT_EQ(run.exitCode, -9);
+    }
+    wxLog::SetActiveTarget(old);
+    wxLog::FlushActive();
+    EXPECT_TRUE(buffer->GetBuffer().empty()) << buffer->GetBuffer();
+    delete buffer;
 }
 
 // No active event loop: the end cannot be observed, so stopAndWait says false at once.
@@ -358,7 +470,7 @@ TEST_F(CliRunnerTest, StopAndWaitWithoutALoopReturnsFalseAtOnce) {
     CliRunner runner;
     std::string error;
     ASSERT_TRUE(runner.start(
-        sh("trap 'exit 143' TERM; k=0; while [ $k -lt 1200 ]; do sleep 0.05; k=$((k + 1)); done"),
+        shStop("trap 'exit 143' TERM; k=0; while [ $k -lt 1200 ]; do sleep 0.05; k=$((k + 1)); done"),
         run.callbacks(), &error))
         << error;
     activator_.reset();
@@ -390,7 +502,7 @@ TEST_F(CliRunnerTest, StopAndWaitFalseForAChildThatIgnoresTermAndTheDestructorDe
     auto runner = std::make_unique<CliRunner>();
     runner->setDestructorWaitMs(300);
     std::string error;
-    ASSERT_TRUE(runner->start(sh("trap '' TERM; echo \"$$\" >&2; echo ready >&2; sleep 22"), cb, &error))
+    ASSERT_TRUE(runner->start(shStop("trap '' TERM; echo \"$$\" >&2; echo ready >&2; sleep 22"), cb, &error))
         << error;
     ASSERT_TRUE(runUntil([&] { return ready; }, 20000));
     auto t0 = Clock::now();
@@ -483,7 +595,7 @@ TEST(ResolveCli, DefaultPathWinsOverTheOneOnPath) {
     const std::string def = tmp.write("installed-cli", "#!/bin/sh\n", true);
     const std::string onPath = tmp.write(std::string(kDefaultCliName), "#!/bin/sh\n", true);
     std::string why = "untouched";
-    const auto found = resolveCli(Settings(), &why, def, tmp.dir().string());
+    const auto found = resolveCli(Settings(), &why, {def}, tmp.dir().string());
     ASSERT_TRUE(found);
     EXPECT_EQ(*found, def);
     EXPECT_NE(*found, onPath);
@@ -495,14 +607,32 @@ TEST(ResolveCli, MissingOrNonExecutableDefaultFallsToPath) {
     const std::string onPath = tmp.write(std::string(kDefaultCliName), "#!/bin/sh\n", true);
     const std::string plain = tmp.write("plain-default", "x", false);
     for (const std::string& def : {(tmp.dir() / "missing").string(), plain}) {
-        const auto found = resolveCli(Settings(), nullptr, def, tmp.dir().string() + ":/nonexistent-dir");
+        const auto found = resolveCli(Settings(), nullptr, {def}, tmp.dir().string() + ":/nonexistent-dir");
         ASSERT_TRUE(found) << def;
         EXPECT_EQ(*found, onPath);
     }
 }
 
-TEST(ResolveCli, DefaultPathParameterIsTheInstalledOne) {
-    EXPECT_EQ(cg::defaultCliPath(), "/usr/bin/chart-grabber-cli");
+TEST(ResolveCli, HostCliPathsIsTheInstalledOneOnLinux) {
+    EXPECT_EQ(hostCliPaths(), std::vector<std::string>{"/usr/bin/chart-grabber-cli"});
+}
+
+// the first runnable entry of the list wins; an empty list goes to PATH.
+TEST(ResolveCli, FirstRunnableEntryOfTheListWins) {
+    TempDir tmp;
+    const std::string missing = (tmp.dir() / "missing").string();
+    const std::string plain = tmp.write("plain-first", "x", false);
+    const std::string a = tmp.write("cli-a", "#!/bin/sh\n", true);
+    const std::string b = tmp.write("cli-b", "#!/bin/sh\n", true);
+    const std::string onPath = tmp.write(std::string(kDefaultCliName), "#!/bin/sh\n", true);
+    const std::string pathEnv = tmp.dir().string();
+    EXPECT_EQ(resolveCli(Settings(), nullptr, {a, b}, pathEnv), a);
+    EXPECT_EQ(resolveCli(Settings(), nullptr, {missing, b}, pathEnv), b);
+    EXPECT_EQ(resolveCli(Settings(), nullptr, {plain, b, a}, pathEnv), b);
+    EXPECT_EQ(resolveCli(Settings(), nullptr, {}, pathEnv), onPath);
+    std::string why;
+    EXPECT_FALSE(resolveCli(Settings(), &why, {missing, plain}, (tmp.dir() / "none").string()));
+    EXPECT_NE(why.find("was not found"), std::string::npos);
 }
 
 TEST(ResolveCli, PathEnvDefaultsToTheEnvironment) {
@@ -510,7 +640,7 @@ TEST(ResolveCli, PathEnvDefaultsToTheEnvironment) {
     const std::string cli = tmp.write(std::string(kDefaultCliName), "#!/bin/sh\n", true);
     EnvGuard guard("PATH");
     setenv("PATH", tmp.dir().string().c_str(), 1);
-    const auto found = resolveCli(Settings(), nullptr, (tmp.dir() / "missing").string());
+    const auto found = resolveCli(Settings(), nullptr, {(tmp.dir() / "missing").string()});
     ASSERT_TRUE(found);
     EXPECT_EQ(*found, cli);
 }
@@ -518,11 +648,11 @@ TEST(ResolveCli, PathEnvDefaultsToTheEnvironment) {
 TEST(ResolveCli, NeitherGivesTheNotFoundReason) {
     TempDir tmp;
     std::string why;
-    EXPECT_FALSE(resolveCli(Settings(), &why, (tmp.dir() / "missing").string(), tmp.dir().string()));
+    EXPECT_FALSE(resolveCli(Settings(), &why, {(tmp.dir() / "missing").string()}, tmp.dir().string()));
     EXPECT_EQ(why,
               "Chart Grabber CLI was not found. Install the chart-grabber-cli package, or choose the program "
               "under Advanced in Preferences."); // messages.h cliNotFoundText
-    EXPECT_FALSE(resolveCli(Settings(), nullptr, (tmp.dir() / "missing").string(), tmp.dir().string()));
+    EXPECT_FALSE(resolveCli(Settings(), nullptr, {(tmp.dir() / "missing").string()}, tmp.dir().string()));
 }
 
 TEST(ResolveCli, ChosenPathWinsAndNeverFallsBack) {
@@ -537,13 +667,13 @@ TEST(ResolveCli, ChosenPathWinsAndNeverFallsBack) {
         Settings s;
         s.cliPath = w;
         std::string why;
-        EXPECT_FALSE(resolveCli(s, &why, def, pathEnv)) << w;
+        EXPECT_FALSE(resolveCli(s, &why, {def}, pathEnv)) << w;
         EXPECT_EQ(why, w + " cannot be run as a program.");
-        EXPECT_FALSE(resolveCli(s, nullptr, def, pathEnv));
+        EXPECT_FALSE(resolveCli(s, nullptr, {def}, pathEnv));
     }
     Settings s;
     s.cliPath = other;
-    const auto found = resolveCli(s, nullptr, def, pathEnv);
+    const auto found = resolveCli(s, nullptr, {def}, pathEnv);
     ASSERT_TRUE(found);
     EXPECT_EQ(*found, other);
 }
@@ -587,7 +717,7 @@ int runsOf(const TempDir& tmp) {
 } // namespace
 
 // Proof 2/3: version line -> the supported version or "too old" (nullopt) and the one log line. Supported
-// from 2026.10.6; 2026.10.5, 2026.9.9 and old-tiles 0.1.0 are too old.
+// from 2026.10.8; 2026.10.7, 2026.10.5, 2026.9.9 and old-tiles 0.1.0 are too old.
 TEST(ProbeCli, SupportedOrTooOldAndItsLogLine) {
     struct Row {
         const char* name;
@@ -596,12 +726,14 @@ TEST(ProbeCli, SupportedOrTooOldAndItsLogLine) {
         std::string logged;
     };
     const std::vector<Row> rows = {
-        {"minimum", "echo 'chart-grabber-cli 2026.10.6 (x)'; echo 'second line'", true,
-         "ChartGrabber: tile program chart-grabber-cli 2026.10.6 (x) - supported"},
-        {"dirty release", "echo 'chart-grabber-cli 2026.10.6 (3016525c4521-dirty)'", true,
-         "ChartGrabber: tile program chart-grabber-cli 2026.10.6 (3016525c4521-dirty) - supported"},
+        {"minimum", "echo 'chart-grabber-cli 2026.10.8 (x)'; echo 'second line'", true,
+         "ChartGrabber: tile program chart-grabber-cli 2026.10.8 (x) - supported"},
+        {"dirty release", "echo 'chart-grabber-cli 2026.10.8 (e0a207dadb59-dirty)'", true,
+         "ChartGrabber: tile program chart-grabber-cli 2026.10.8 (e0a207dadb59-dirty) - supported"},
         {"2027.1.0", "echo 'chart-grabber-cli 2027.1.0 (x)'", true,
          "ChartGrabber: tile program chart-grabber-cli 2027.1.0 (x) - supported"},
+        {"2026.10.7", "echo 'chart-grabber-cli 2026.10.7 (x)'", false,
+         "ChartGrabber: tile program chart-grabber-cli 2026.10.7 (x) - too old"},
         {"2026.10.5", "echo 'chart-grabber-cli 2026.10.5 (x)'", false,
          "ChartGrabber: tile program chart-grabber-cli 2026.10.5 (x) - too old"},
         {"2026.9.9", "echo 'chart-grabber-cli 2026.9.9 (x)'", false,
@@ -610,7 +742,7 @@ TEST(ProbeCli, SupportedOrTooOldAndItsLogLine) {
          "ChartGrabber: tile program old-tiles 0.1.0 (\xD0\x81-build) - too old"},
         {"exit 2", "exit 2", false, "ChartGrabber: tile program no version (exit 2) - too old"},
         {"garbage", "echo 'hello world'", false, "ChartGrabber: tile program hello world - too old"},
-        {"version line but exit 3", "echo 'chart-grabber-cli 2026.10.6 (x)'; exit 3", false,
+        {"version line but exit 3", "echo 'chart-grabber-cli 2026.10.8 (x)'; exit 3", false,
          "ChartGrabber: tile program no version (exit 3) - too old"},
         {"exit 0, no output", "exit 0", false, "ChartGrabber: tile program no version (exit 0) - too old"},
     };
@@ -633,12 +765,12 @@ TEST(ProbeCli, SupportedOrTooOldAndItsLogLine) {
 TEST(ProbeCli, ProbedVersionComesFromTheCache) {
     TempDir tmp;
     const std::string cli =
-        tmp.write("probe-cli", countingScript("echo 'chart-grabber-cli 2026.10.6 (abc)'"), true);
+        tmp.write("probe-cli", countingScript("echo 'chart-grabber-cli 2026.10.8 (abc)'"), true);
     const std::string old = tmp.write("old-cli", countingScript("echo 'old-tiles 0.0.9 (x)'"), true);
     const std::string none = tmp.write("none-cli", countingScript("echo 'hello'"), true);
     EXPECT_EQ(probedCliVersion(cli), "") << "never probed";
     ASSERT_TRUE(probeCli(cli));
-    EXPECT_EQ(probedCliVersion(cli), "2026.10.6");
+    EXPECT_EQ(probedCliVersion(cli), "2026.10.8");
     EXPECT_EQ(runsOf(tmp), 1) << "probedCliVersion started no process";
     EXPECT_FALSE(probeCli(old));
     EXPECT_EQ(probedCliVersion(old), "0.0.9") << "a too old program still has its version";
@@ -690,7 +822,7 @@ TEST(ProbeCli, CachedPerPathSizeAndModificationTime) {
     EXPECT_EQ(log->messages.size(), 1u);
 
     // Only the size changes (same modification time): the program runs again.
-    tmp.write("probe-cli", countingScript("echo 'chart-grabber-cli 2026.10.6 (aa)'"), true);
+    tmp.write("probe-cli", countingScript("echo 'chart-grabber-cli 2026.10.8 (aa)'"), true);
     fs::last_write_time(cli, t0);
     EXPECT_TRUE(probeCli(cli));
     EXPECT_EQ(runsOf(tmp), 2);
@@ -877,7 +1009,7 @@ TEST_F(CliLogTest, NormalLevelWritesTheStartAndExitLinesOnly) {
     ASSERT_EQ(all.size(), 2u);
     std::smatch start, exit;
     ASSERT_TRUE(
-        std::regex_match(all[0], start, std::regex(R"(cli start pid (\d+): /bin/sh \(6 arguments\))")))
+        std::regex_match(all[0], start, std::regex(R"(cli start pid (\d+): /bin/sh \(7 arguments\))")))
         << all[0];
     ASSERT_TRUE(std::regex_match(all[1], exit, std::regex(R"(cli exit pid (\d+): code 3)"))) << all[1];
     EXPECT_EQ(start[1].str(), exit[1].str());
@@ -925,6 +1057,42 @@ TEST_F(CliLogTest, TheProxyValueIsRedactedInEveryCopyOfAChildLineButTheParserKee
     EXPECT_TRUE(has("debug: cli out: connection to user:secret@proxy.example:3128 failed"));
 }
 
+// a child that ignores the line is killed once the grace has passed (exit -9), by the timer
+// and by stopAndWait; the kill is logged once.
+TEST_F(CliLogTest, AChildThatIgnoresTheStopLineIsKilledAfterTheGrace) {
+    for (const bool wait : {false, true}) {
+        Capture run;
+        bool ready = false;
+        CliRunner::Callbacks cb = run.callbacks();
+        cb.onStderr = [&, inner = cb.onStderr](const StderrLine& l) {
+            inner(l);
+            if (const auto* m = std::get_if<MessageLine>(&l); m && m->text == "ready")
+                ready = true;
+        };
+        CliRunner runner;
+        runner.setStopGraceMs(300);
+        std::string error;
+        ASSERT_TRUE(runner.start(sh("echo ready >&2; exec sleep 30"), cb, &error)) << error;
+        ASSERT_TRUE(runUntil([&] { return ready; }, 20000));
+        const auto t0 = Clock::now();
+        if (wait) {
+            EXPECT_TRUE(runner.stopAndWait(10000));
+        } else {
+            runner.terminate();
+            runFor(150);
+            EXPECT_EQ(run.exits, 0) << "killed before the grace";
+            ASSERT_TRUE(runUntil([&] { return run.exits > 0; }, 10000));
+        }
+        EXPECT_GE(Clock::now() - t0, std::chrono::milliseconds(290));
+        EXPECT_LT(Clock::now() - t0, std::chrono::seconds(5));
+        EXPECT_EQ(run.exitCode, -9);
+    }
+    size_t killed = 0;
+    for (const std::string& l : lines())
+        killed += std::regex_match(l, std::regex(R"(cli stop pid \d+: no exit after 300 ms; killed)"));
+    EXPECT_EQ(killed, 2u);
+}
+
 TEST_F(CliLogTest, ATerminatedRunSaysStopped) {
     Capture cap;
     bool ready = false;
@@ -937,10 +1105,10 @@ TEST_F(CliLogTest, ATerminatedRunSaysStopped) {
     };
     CliRunner runner;
     std::string error;
-    ASSERT_TRUE(
-        runner.start(sh("trap 'exit 143' TERM; echo ready >&2; k=0; while [ $k -lt 1200 ]; do sleep 0.05; "
-                        "k=$((k + 1)); done"),
-                     cb, &error))
+    ASSERT_TRUE(runner.start(
+        shStop("trap 'exit 143' TERM; echo ready >&2; k=0; while [ $k -lt 1200 ]; do sleep 0.05; "
+               "k=$((k + 1)); done"),
+        cb, &error))
         << error;
     ASSERT_TRUE(runUntil([&] { return ready; }, 20000));
     runner.terminate();

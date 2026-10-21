@@ -121,7 +121,7 @@ protected:
             return next_;
         };
         dlg_->openFolder = [this](const wxString& f) { opened_.push_back(u(f)); };
-        dlg_->cliDefaultPath = (root_ / "no-such" / "chart-grabber-cli").string();
+        dlg_->cliDefaultPaths = {(root_ / "no-such" / "chart-grabber-cli").string()};
         dlg_->cliPathEnv = (root_ / "emptybin").string();
         return *dlg_;
     }
@@ -187,7 +187,7 @@ TEST_F(SettingsPage, ChangeTwiceThenUseDefaultForEveryPathRow) {
         const std::string a = "/pick/a d'\xc3\xa9", b = "/pick/b";
         {
             SettingsDialog& dlg = open();
-            dlg.cliDefaultPath = standIn_; // the automatic program of this row
+            dlg.cliDefaultPaths = {standIn_}; // the automatic program of this row
             EXPECT_FALSE(defaultEnabled(c.name)) << "nothing chosen yet";
             change(c.name, a);
             change(c.name, b);
@@ -202,7 +202,7 @@ TEST_F(SettingsPage, ChangeTwiceThenUseDefaultForEveryPathRow) {
         }
         {
             SettingsDialog& dlg = open();
-            dlg.cliDefaultPath = standIn_;
+            dlg.cliDefaultPaths = {standIn_};
             EXPECT_EQ(field(c.name), b);
             EXPECT_TRUE(defaultEnabled(c.name));
             click(std::string(c.name) + "Default");
@@ -214,7 +214,7 @@ TEST_F(SettingsPage, ChangeTwiceThenUseDefaultForEveryPathRow) {
         }
         {
             SettingsDialog& dlg = open();
-            dlg.cliDefaultPath = standIn_;
+            dlg.cliDefaultPaths = {standIn_};
             change(c.name, b);
             EXPECT_TRUE(defaultEnabled(c.name));
             change(c.name, defaultText + "/"); // the default itself, one trailing '/' ignored
@@ -469,7 +469,7 @@ TEST_F(SettingsPage, TheCliFieldShowsTheAutomaticProgramOfEachCase) {
     for (const Row& r : rows) {
         SCOPED_TRACE(r.name);
         SettingsDialog& dlg = open();
-        dlg.cliDefaultPath = r.installed;
+        dlg.cliDefaultPaths = {r.installed};
         dlg.cliPathEnv = r.pathDir;
         change("cli", "/some/chosen");
         click("cliDefault");
@@ -477,7 +477,7 @@ TEST_F(SettingsPage, TheCliFieldShowsTheAutomaticProgramOfEachCase) {
     }
     // A chosen program is shown as chosen, whatever the automatic one is.
     SettingsDialog& dlg = open();
-    dlg.cliDefaultPath = standIn_;
+    dlg.cliDefaultPaths = {standIn_};
     change("cli", onPath);
     EXPECT_EQ(field("cli"), onPath);
 }
@@ -690,7 +690,7 @@ TEST_F(SavedTiles, ADownloadThatStartsWhileTheWindowIsOpenRefusesClearAtThePress
     store_->saveSettings(s);
     bool busy = false;
     dlg_ = std::make_unique<SettingsDialog>(nullptr, *store_, look_, [&busy] { return busy; });
-    dlg_->cliDefaultPath = (root_ / "no-such" / "chart-grabber-cli").string();
+    dlg_->cliDefaultPaths = {(root_ / "no-such" / "chart-grabber-cli").string()};
     dlg_->cliPathEnv = (root_ / "emptybin").string();
     EXPECT_TRUE(find<wxButton>("clear")->IsEnabled());
 
@@ -720,7 +720,7 @@ TEST_F(SavedTiles, DeletingTheDialogWithTheClearQuestionOpenDeletesTheQuestionAt
     s.cacheDir = cache.string();
     store_->saveSettings(s);
     auto* dlg = new SettingsDialog(nullptr, *store_, look_);
-    dlg->cliDefaultPath = (root_ / "no-such" / "chart-grabber-cli").string();
+    dlg->cliDefaultPaths = {(root_ / "no-such" / "chart-grabber-cli").string()};
     dlg->cliPathEnv = (root_ / "emptybin").string();
     dlg_.reset(dlg);
     click("clear");
@@ -791,7 +791,7 @@ TEST_F(SettingsPage, AModelessDialogEndsOnOkCancelEscapeAndTheCloseBoxWithOneCal
         SCOPED_TRACE(row.name);
         ++budget;
         auto* d = new SettingsDialog(nullptr, *store_, look_);
-        d->cliDefaultPath = (root_ / "no-such" / "chart-grabber-cli").string();
+        d->cliDefaultPaths = {(root_ / "no-such" / "chart-grabber-cli").string()};
         d->cliPathEnv = (root_ / "emptybin").string();
         wxWeakRef<SettingsDialog> ref(d);
         int calls = 0;
@@ -818,7 +818,7 @@ TEST_F(SettingsPage, AModelessDialogEndsOnOkCancelEscapeAndTheCloseBoxWithOneCal
 TEST_F(SettingsPage, ShownFindsTheOpenSettingsWindowAndNotAHiddenOne) {
     EXPECT_EQ(SettingsDialog::shown(), nullptr);
     auto* d = new SettingsDialog(nullptr, *store_, look_);
-    d->cliDefaultPath = (root_ / "no-such" / "chart-grabber-cli").string();
+    d->cliDefaultPaths = {(root_ / "no-such" / "chart-grabber-cli").string()};
     d->cliPathEnv = (root_ / "emptybin").string();
     EXPECT_EQ(SettingsDialog::shown(), nullptr) << "not shown yet";
     d->Show();
@@ -1074,7 +1074,7 @@ TEST_F(SettingsCheck, OnOpenTheLinesSayReadyAndWhatTheSourcesAre) {
     openStub();
     EXPECT_EQ(label("cliStatus"), "") << "nothing before the event loop runs";
     ASSERT_TRUE(settle());
-    EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.6 is ready.");
+    EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.8 is ready.");
     EXPECT_EQ(label("sourcesStatus"),
               "3 chart sources available. Your own chart sources folder was not found: press Open folder to "
               "create it.");
@@ -1122,7 +1122,7 @@ TEST_F(SettingsCheck, WithoutBundledSourcesTheCliIsNotRun) {
         stub_->records(recs(3));
         openStub();
         ASSERT_TRUE(settle());
-        EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.6 is ready.");
+        EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.8 is ready.");
         EXPECT_EQ(label("sourcesStatus"), bundledMissing);
         EXPECT_FALSE(advancedOpen()) << "the plugin's own files are missing, not the CLI";
         EXPECT_TRUE(stub_->argv().empty()) << "sources was not run";
@@ -1136,7 +1136,7 @@ TEST_F(SettingsCheck, WithoutBundledSourcesTheCliIsNotRun) {
     openStub();
     ASSERT_TRUE(settle());
     EXPECT_EQ(label("sourcesStatus"), bundledMissing);
-    EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.6 is ready.");
+    EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.8 is ready.");
     EXPECT_FALSE(advancedOpen()) << "the race keeps Advanced folded too";
     stub_->exitWith(0);
     stub_->stderrText("");
@@ -1154,7 +1154,7 @@ TEST_F(SettingsCheck, ANotRunnableProgramIsReportedAfterTheDelayAndOpensAdvanced
     openStub();
     ASSERT_TRUE(settle());
     change("cli", plainFile());
-    EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.6 is ready.") << "not before the delay";
+    EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.8 is ready.") << "not before the delay";
     const auto t0 = Clock::now();
     ASSERT_TRUE(runUntil([&] { return label("cliStatus").find("cannot be run") != std::string::npos; }));
     EXPECT_GE(Clock::now() - t0, std::chrono::milliseconds(400));
@@ -1182,7 +1182,7 @@ TEST_F(SettingsCheck, ANotRunnableProgramIsReportedAfterTheDelayAndOpensAdvanced
 // Proof 3b: "Use default" (an empty CliPath) through the dialog's default path and PATH.
 TEST_F(SettingsCheck, TheAutomaticProgramIsTheDefaultPathThenPathThenNone) {
     stub::Sources second(root_ / "stubs", "b d'x");
-    stub_->version("chart-grabber-cli 2026.10.6 (a)");
+    stub_->version("chart-grabber-cli 2026.10.8 (a)");
     second.version("chart-grabber-cli 2026.11.2 (b)");
     fs::create_directories(root_ / "pathbin");
     const std::string onPath = (root_ / "pathbin" / "chart-grabber-cli").string();
@@ -1197,7 +1197,7 @@ TEST_F(SettingsCheck, TheAutomaticProgramIsTheDefaultPathThenPathThenNone) {
     };
     const std::vector<Row> rows = {
         {"default path wins", stub_->cli(), (root_ / "pathbin").string(),
-         "Chart Grabber CLI 2026.10.6 is ready.", "", false, 1, 0},
+         "Chart Grabber CLI 2026.10.8 is ready.", "", false, 1, 0},
         {"PATH when the default is absent", absent, (root_ / "pathbin").string(),
          "Chart Grabber CLI 2026.11.2 is ready.", "", false, 1, 1},
         {"neither", absent, (root_ / "emptybin").string(),
@@ -1209,7 +1209,7 @@ TEST_F(SettingsCheck, TheAutomaticProgramIsTheDefaultPathThenPathThenNone) {
     for (const Row& r : rows) {
         SCOPED_TRACE(r.name);
         open();
-        dlg_->cliDefaultPath = r.installed;
+        dlg_->cliDefaultPaths = {r.installed};
         dlg_->cliPathEnv = r.pathDir;
         ASSERT_TRUE(settle());
         EXPECT_EQ(label("cliStatus"), r.cli);
@@ -1307,7 +1307,7 @@ TEST_F(SettingsCheck, AChangeWhileTheRunIsSlowTerminatesItAndOnlyTheLaterAnswerI
     ASSERT_TRUE(runUntil([&] { return label("sourcesStatus").find("available") != std::string::npos; }));
     EXPECT_EQ(label("sourcesStatus"),
               "1 chart source available. Put your own chart source (.zmp) files in your folder to add more.");
-    EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.6 is ready.");
+    EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.8 is ready.");
     runFor(100);
     for (const std::string& m : log->messages)
         EXPECT_EQ(m.find("3 chart sources"), std::string::npos) << m;

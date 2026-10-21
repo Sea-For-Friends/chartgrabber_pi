@@ -1,0 +1,2 @@
+error: --stop-on-stdin needs stdin to be a pipe
+Usage: chart-grabber-cli COMMAND [options]; chart-grabber-cli --help

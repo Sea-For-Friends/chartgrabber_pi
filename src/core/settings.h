@@ -12,12 +12,11 @@ namespace cg {
 inline constexpr std::string_view kDefaultCliName = "chart-grabber-cli";
 // Where the package installs the CLI.
 inline constexpr std::string_view kCliInstallDir = "/usr/bin/";
-inline std::string defaultCliPath() {
-    return std::string(kCliInstallDir) + std::string(kDefaultCliName);
-}
+// The folder of the CLI in Program Files on Windows.
+inline constexpr std::string_view kCliWindowsFolder = "Chart Grabber CLI";
 
 struct Settings {
-    std::string cliPath; // empty: defaultCliPath, else kDefaultCliName on PATH
+    std::string cliPath; // empty: the automatic places (cg::defaultCliPaths), else kDefaultCliName on PATH
     std::string
         mapsDir; // the chart-sources folder; empty: <home>/Charts/Chart sources (ConfigStore::sourcesDir)
     std::vector<std::string> cliMaps; // only in the cliSettings copy: the folders passed as --maps, in order

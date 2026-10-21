@@ -19,7 +19,7 @@ struct CliVersion {
 };
 
 // The one version the plugin supports at least (calendar versions YYYY.MM.N).
-inline constexpr VersionNumber kMinimumCli{2026, 10, 6};
+inline constexpr VersionNumber kMinimumCli{2026, 10, 8};
 
 // First line of `--version` stdout (text up to the first '\n', a trailing '\r' and blanks dropped):
 // <program> ' ' <major> '.' <minor> '.' <patch> [suffix: any non-blank chars] [' (' <commit> ')'] [anything].

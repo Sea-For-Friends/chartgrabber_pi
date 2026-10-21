@@ -1,0 +1,12 @@
+﻿[PARAMS]
+GUID={AB8A8685-AEC6-4E16-80DA-DC4AC37E4777}
+name=OpenSeaMap Seamarks
+ParentSubMenu=Seamarks and traffic
+asLayer=1
+DefURLBase=https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png
+ContentType=image/png
+Ext=.png
+EPSG=3857
+NameInCache=Osm_OpenSeaMap_Layer_Seamark
+License=Seamarks (c) OpenSeaMap contributors, CC-BY-SA
+MaxConnectToServerCount=2

@@ -1,0 +1,12 @@
+﻿[PARAMS]
+GUID={91D4F1B4-A7CD-4FC8-95F1-637609068FB2}
+name=EMODnet Bathymetry (European seas, depth shading)
+ParentSubMenu=Depth
+DefURLBase=https://tiles.emodnet-bathymetry.eu/latest/mean_atlas_land/web_mercator/{z}/{x}/{y}.png
+ContentType=image/png
+Ext=.png
+EPSG=3857
+NameInCache=EMODnet_Bathymetry_Europe
+License=EMODnet Bathymetry Consortium
+MaxConnectToServerCount=2
+NavigationWarning=1

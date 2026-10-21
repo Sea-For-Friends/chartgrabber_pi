@@ -444,6 +444,16 @@ Outcome classifyExit(int exitCode, std::string_view lastError, bool startFailed)
     }
 }
 
+int normalizeExit(int wxCode, Os os, bool killedByUs) {
+    if (os == Os::Posix) {
+        return wxCode < -64 ? wxCode + 256 : wxCode;
+    }
+    if (killedByUs && wxCode == -1) {
+        return -9;
+    }
+    return wxCode < 0 ? 1 : wxCode;
+}
+
 bool resumable(Outcome o) {
     return o == Outcome::Stalled || o == Outcome::StorageError || o == Outcome::DownloadIncomplete ||
            o == Outcome::Interrupted || o == Outcome::Killed;

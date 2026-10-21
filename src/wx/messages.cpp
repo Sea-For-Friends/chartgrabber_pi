@@ -17,6 +17,11 @@ wxString packageName() {
     return wxString::FromAscii(std::string(cg::kDefaultCliName).c_str());
 }
 
+// The Windows file name of the CLI, built from the one place that names it.
+wxString exeName() {
+    return packageName() + ".exe";
+}
+
 wxString num(std::int64_t n) {
     return wxString::FromAscii(std::to_string(n).c_str());
 }
@@ -146,6 +151,9 @@ wxString tooLargeText() {
 }
 
 wxString refusalText(std::string_view lastError) {
+    if (contains(lastError, "BerkeleyDB"))
+        return _("This chart source asks for a BerkeleyDB tile cache, which Chart Grabber CLI no longer "
+                 "supports.");
     if (contains(lastError, ": cannot open the cache: ") ||
         contains(lastError, ": cannot write the cache folder "))
         return cacheRefusedText();
@@ -226,9 +234,6 @@ wxString stoppingText() {
 }
 wxString stopButtonText() {
     return _("Stop");
-}
-wxString forceStopButtonText() {
-    return _("Force stop");
 }
 wxString showButtonText() {
     return _("Show");
@@ -362,14 +367,22 @@ wxString sourceLimitText(const wxString& name, const wxString& scale) {
     return wxString::Format(_("%s has detail only up to %s; the chart stops there."), name, scale);
 }
 
-wxString cliNotFoundText() {
+wxString cliNotFoundText(cg::Os os) {
+    if (os == cg::Os::Windows)
+        return wxString::Format(_("Chart Grabber CLI was not found. Download the Chart Grabber CLI zip from "
+                                  "the project's Releases page, unpack it and choose %s under Advanced in "
+                                  "Preferences."),
+                                exeName());
     return wxString::Format(
         _("Chart Grabber CLI was not found. Install the %s package, or choose the program "
           "under Advanced in Preferences."),
         packageName());
 }
 
-wxString cliTooOldText() {
+wxString cliTooOldText(cg::Os os) {
+    if (os == cg::Os::Windows)
+        return _("Chart Grabber CLI is too old. Download the current Chart Grabber CLI zip from the "
+                 "project's Releases page.");
     return wxString::Format(_("Chart Grabber CLI is too old. Install the current %s package."),
                             packageName());
 }
@@ -379,7 +392,7 @@ wxString noSourcesText() {
              "sources folder.");
 }
 
-wxString cliStatusText(CliStatus status, const std::string& version, const wxString& line) {
+wxString cliStatusText(CliStatus status, const std::string& version, const wxString& line, cg::Os os) {
     const wxString v = wxString::FromAscii(version.c_str());
     switch (status) {
     case CliStatus::Checking:
@@ -388,14 +401,25 @@ wxString cliStatusText(CliStatus status, const std::string& version, const wxStr
         return version.empty() ? _("Chart Grabber CLI is ready.")
                                : wxString::Format(_("Chart Grabber CLI %s is ready."), v);
     case CliStatus::NotInstalled:
+        if (os == cg::Os::Windows)
+            return wxString::Format(_("Chart Grabber CLI was not found. Download the Chart Grabber CLI zip "
+                                      "from the project's Releases page, unpack it and choose %s under "
+                                      "Advanced."),
+                                    exeName());
         return wxString::Format(_("Chart Grabber CLI was not found. Install the %s package, or choose the "
                                   "program under Advanced."),
                                 packageName());
     case CliStatus::NotRunnable:
         return _("This file cannot be run as a program. Use default to go back to the installed one.");
     case CliStatus::TooOld:
+        if (os == cg::Os::Windows)
+            return version.empty() ? cliTooOldText(os)
+                                   : wxString::Format(_("Chart Grabber CLI %s is too old. Download the "
+                                                        "current Chart Grabber CLI zip from the project's "
+                                                        "Releases page."),
+                                                      v);
         return version.empty()
-                   ? cliTooOldText()
+                   ? cliTooOldText(os)
                    : wxString::Format(_("Chart Grabber CLI %s is too old. Install the current %s package."),
                                       v, packageName());
     case CliStatus::Fails:

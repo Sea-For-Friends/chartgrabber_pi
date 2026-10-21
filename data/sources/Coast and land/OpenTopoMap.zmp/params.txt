@@ -1,0 +1,12 @@
+﻿[PARAMS]
+GUID={51C1079B-B55D-4DF7-A410-ADC118F53AB1}
+name=OpenTopoMap
+ParentSubMenu=Coast and land
+DefURLBase=https://a.tile.opentopomap.org/{z}/{x}/{y}.png
+ContentType=image/png
+Ext=.png
+EPSG=3857
+NameInCache=Osm_Topo_Map
+License=Map data (c) OpenStreetMap contributors, SRTM; map style (c) OpenTopoMap (CC-BY-SA)
+MaxConnectToServerCount=1
+TermsOfUseWarning=https://opentopomap.org/about

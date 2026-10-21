@@ -13,7 +13,9 @@
 #include <wx/log.h>
 #include <wx/menuitem.h>
 
+#ifndef __WINDOWS__
 #include <dlfcn.h>
+#endif
 #include <optional>
 #include <utility>
 
@@ -67,7 +69,8 @@ ChartGrabberPi::~ChartGrabberPi() = default;
 
 int ChartGrabberPi::Init() {
     g_closing = false;
-    // Load guard : the host wx has hotkey support exactly when it exports this symbol.
+#ifndef __WINDOWS__
+    // Load guard: the host wx has hotkey support exactly when it exports this symbol.
     if (cg::loadGuardOff(dlsym(RTLD_DEFAULT, "_ZN12wxWindowBase14RegisterHotKeyEiii") != nullptr,
                          wxUSE_HOTKEY != 0)) {
         g_disabled = true;
@@ -75,6 +78,7 @@ int ChartGrabberPi::Init() {
                     "differs); the plugin stays off");
         return 0;
     }
+#endif
     g_disabled = false;
     toolBusy_ = false;
     return cg::guardedOr("Init", 0, [this] {

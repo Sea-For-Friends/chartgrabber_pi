@@ -34,9 +34,9 @@ public:
     JobController(ConfigStore& config, const Look& look, AreaTool& area); // creates no window
     // What start passes to resolveCli; production keeps the defaults, tests set a temp path and
     // PATH.
-    std::string cliDefaultPath = cg::defaultCliPath();
-    std::optional<std::string> cliPathEnv; // nullopt = getenv("PATH")
-    ~JobController(); // closing_, timers, hooks cleared, runner reset, record saved, strip deleted
+    std::vector<std::string> cliDefaultPaths = hostCliPaths();
+    std::optional<std::string> cliPathEnv; // nullopt = the PATH variable
+    ~JobController(); //: closing_, timers, hooks cleared, runner reset, record saved, strip deleted
 
     bool busy() const { return phase_ != Phase::Idle; } // from start until the result is shown
     // Precondition !busy (else logged and ignored). Reads the settings fresh; the job file is
@@ -97,9 +97,7 @@ private:
     bool newChart_ = false;                                     // the record was Running when start got it
     cg::ChartState restoreState_ = cg::ChartState::Interrupted; // the state start got
     cg::RetryState retry_;
-    int countdown_ = 0;         // seconds left of a retry wait
-    int stopSeconds_ = 0;       // seconds since the stop request
-    bool forceOffered_ = false; // the button reads "Force stop"
+    int countdown_ = 0; // seconds left of a retry wait
     bool userStopped_ = false, budgetStopped_ = false;
     std::int64_t finishedBytes_ = 0;               // downloaded bytes of the runs of this job that ended
     std::map<std::string, std::int64_t> runBytes_; // downloaded bytes per GUID of the current run

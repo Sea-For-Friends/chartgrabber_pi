@@ -17,6 +17,7 @@
 #include "my_charts_panel.h"
 #include "ocpn_fakes.h"
 #include "question_probe.h"
+#include "sources_stub.h"
 #include "wx_env.h"
 
 #include <gtest/gtest.h>
@@ -59,8 +60,9 @@ using Clock = std::chrono::steady_clock;
 const std::string kBase = "{11111111-1111-1111-1111-111111111111}";
 const std::string kCyr = "\xD0\x9A\xD0\xB0\xD1\x80\xD1\x82\xD0\xB0 d'x"; // "Карта d'x"
 
-const char* const kScript = R"SH(#!/bin/sh
-[ "$1" = --version ] && { echo 'chart-grabber-cli 2026.10.6 (test)'; exit 0; } # probeCli: supported
+const std::string kScript =
+    std::string("#!/bin/sh\n") + stub::kStopPrelude +
+    R"SH([ "$1" = --version ] && { echo 'chart-grabber-cli 2026.10.8 (test)'; exit 0; } # probeCli: supported
 prev=
 for a in "$@"; do
   if [ "$prev" = --job ]; then ini=$a; fi
@@ -285,7 +287,8 @@ protected:
                 "--progress=lines",
                 "--cache",
                 (root_ / "private" / "plugins" / "chartgrabber" / "cache").string(),
-                "--overwrite"};
+                "--overwrite",
+                "--stop-on-stdin"};
     }
 
     // ---- dialog and window access
@@ -574,7 +577,7 @@ TEST_F(ChartsTest, UpdateChoiceStartsTheJobWithTheDateCancelAndBudgetNoStartNoth
     EXPECT_EQ(argsOf(chart.id, 1),
               (std::vector<std::string>{"run", "--job", head[2], "--format=tsv", "--progress=lines",
                                         "--cache", head[6], "--threads", "1", "--overwrite", "--replace",
-                                        "--replace-older-than=2026-02-28T07:08:09"}));
+                                        "--replace-older-than=2026-02-28T07:08:09", "--stop-on-stdin"}));
     EXPECT_EQ(rows()[0].texts.back(), "Complete");
 
     s.dataBudgetMb = 1; // Yes: starts, with the 6 months date
@@ -588,7 +591,7 @@ TEST_F(ChartsTest, UpdateChoiceStartsTheJobWithTheDateCancelAndBudgetNoStartNoth
     ASSERT_TRUE(runUntil([&] { return !argsOf(chart.id, 2).empty(); }));
     jobs_->stop();
     ASSERT_TRUE(waitIdle());
-    EXPECT_EQ(argsOf(chart.id, 2).back(), "--replace-older-than=2025-09-30T07:08:09");
+    EXPECT_EQ(argsOf(chart.id, 2).rbegin()[1], "--replace-older-than=2025-09-30T07:08:09");
 
     s.slowConnection = false;
     store_->saveSettings(s);
@@ -598,7 +601,7 @@ TEST_F(ChartsTest, UpdateChoiceStartsTheJobWithTheDateCancelAndBudgetNoStartNoth
     EXPECT_EQ(argsOf(chart.id, 3),
               (std::vector<std::string>{"run", "--job", head[2], "--format=tsv", "--progress=lines",
                                         "--cache", head[6], "--overwrite", "--replace",
-                                        "--replace-older-than=2025-09-30T07:08:09"}));
+                                        "--replace-older-than=2025-09-30T07:08:09", "--stop-on-stdin"}));
     EXPECT_EQ(rows()[0].texts.back(), "Complete");
 }
 
@@ -947,7 +950,7 @@ TEST_F(ChartsTest, TheUpdateChoiceAndTheBudgetQuestionAreWindowsAndTheJobStartsA
     EXPECT_EQ(nowCalls, 1);
     ASSERT_TRUE(jobs_->busy());
     ASSERT_TRUE(waitIdle());
-    EXPECT_EQ(argsOf(chart.id, 1).back(), "--replace-older-than=2026-02-28T07:08:09");
+    EXPECT_EQ(argsOf(chart.id, 1).rbegin()[1], "--replace-older-than=2026-02-28T07:08:09");
 }
 
 // Stale Update answers: a job started while the choice / budget question was open starts nothing.

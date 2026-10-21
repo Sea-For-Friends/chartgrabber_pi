@@ -257,7 +257,7 @@ protected:
     // The arguments of a sources run with empty MapsDir / CacheDir, ).
     std::string defaultSourcesArgv(const std::string& format = " --format=tsv") const {
         return "sources" + format + " --cache " + (root_ / "private").string() +
-               "/plugins/chartgrabber/cache";
+               "/plugins/chartgrabber/cache --stop-on-stdin";
     }
 
     // ---- fixture
@@ -667,10 +667,11 @@ std::string slurpText(const fs::path& p) {
     return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 }
 
-// The real `note:` line of the first start (cli-2026.10.6/sources-first-start-note: stdout the 3 records, stderr
-// a `note:` line and a `warning:`, exit 0) changes nothing: the same choice and status as without stderr.
+// the real `note:` line of the first start (cli-2026.10.8/sources-first-start-note: stdout
+// the 3 records, stderr a `note:` line and a `warning:`, exit 0) changes nothing: the same choice and status
+// as without stderr.
 TEST_F(PanelTest, TheFirstStartNoteOfTheCliChangesNothingInTheChoice) {
-    const fs::path fx = fs::path(CG_FIXTURES_DIR) / "cli-2026.10.6";
+    const fs::path fx = fs::path(CG_FIXTURES_DIR) / "cli-2026.10.8";
     const std::string err = slurpText(fx / "sources-first-start-note.stderr");
     ASSERT_EQ(err.rfind("note: moved ", 0), 0u) << err;
     sources_->rawRecords(slurpText(fx / "sources-first-start-note.stdout"));
@@ -826,7 +827,7 @@ TEST_F(PanelTest, AReloadReadsTheSettingsAgainAndKeepsTheUsersPick) {
     EXPECT_EQ(selected(), kNameMapnik) << "the user's pick is LastSource of the session";
     EXPECT_EQ(other.argv(), std::vector<std::string>{"sources --format=tsv --maps " + bundled + " --maps " +
                                                      mapsDir + " --cache " + (root_ / "private").string() +
-                                                     "/plugins/chartgrabber/cache"});
+                                                     "/plugins/chartgrabber/cache --stop-on-stdin"});
     EXPECT_EQ(sources_->argv().size(), 1u) << "the old settings were not used again";
 }
 
@@ -846,9 +847,9 @@ TEST_F(PanelTest, WithTheBundledSourcesAndNoFolderTheChoiceIsFilled) {
         << "Bing, Navionics, Google have no record (skipped); Beta and the seamark layer are not curated "
            "bases";
     EXPECT_EQ(selected(), kNameEsri) << "no LastSource: the first curated base";
-    EXPECT_EQ(other.argv(),
-              std::vector<std::string>{"sources --format=tsv --maps " + bundled + " --cache " +
-                                       (root_ / "private").string() + "/plugins/chartgrabber/cache"});
+    EXPECT_EQ(other.argv(), std::vector<std::string>{"sources --format=tsv --maps " + bundled + " --cache " +
+                                                     (root_ / "private").string() +
+                                                     "/plugins/chartgrabber/cache --stop-on-stdin"});
 }
 
 // ---- the seamarks checkbox ----
@@ -1787,9 +1788,9 @@ TEST_F(PanelTest, AChosenBaseThatBecomesRefusedAfterReloadLeavesTheChoiceAndTheN
 // =====================================================================================================
 // the estimate the enable order and the Download flow Advanced threads and
 // chart folder. The tile program is the stand-in of tests/sources_stub.h; its `estimate` and `run`
-// answers are CR 2 records (the tsv level, version 2026.10.0); the real CLI is NOT used here (the real CLI
-// is covered by contract_test.cpp). Expected values are literals or the captures in
-// tests/fixtures/cli-2026.10.6/.
+// answers are CR 2 records (the tsv level, version 2026.10.0); the real CLI is NOT used here (the manual
+// proof is in handoffs/.md). Expected values are literals of the spec or of the captures in
+// tests/fixtures/cli-2026.10.8/.
 // =====================================================================================================
 
 const char* const kTooLarge = "Area too large for this detail - choose a smaller area or less detail"; // 7.5
@@ -1982,7 +1983,7 @@ TEST_F(DownloadTest, TheEstimateLineShowsTheSumsAndTheCliGetsTheArgumentsOfSpec8
               std::vector<std::string>{
                   "estimate --format=tsv --progress=lines --cache " + (root_ / "private").string() +
                   "/plugins/chartgrabber/cache --source " + kEsri + " --overlay " + kSeamarkLayer +
-                  " --bbox 5.00000000,45.00000000,15.00000000,55.00000000 --zooms 8-14"});
+                  " --bbox 5.00000000,45.00000000,15.00000000,55.00000000 --zooms 8-14 --stop-on-stdin"});
     EXPECT_EQ(sources_->estimateLcAll(), std::vector<std::string>{"C.UTF-8"});
     EXPECT_EQ(status(), "");
     EXPECT_EQ(u(nameField()->GetValue()), kNameDefaultEsri);
@@ -2009,7 +2010,7 @@ TEST_F(DownloadTest, APickedMapsFolderIsPassedToTheEstimateAndTheRun) {
               std::vector<std::string>{
                   "estimate --format=tsv --progress=lines --maps " + bundled + " --maps " + maps +
                   " --cache " + cache + " --source " + kEsri + " --overlay " + kSeamarkLayer +
-                  " --bbox 5.00000000,45.00000000,15.00000000,55.00000000 --zooms 8-14"});
+                  " --bbox 5.00000000,45.00000000,15.00000000,55.00000000 --zooms 8-14 --stop-on-stdin"});
     Answerer answers({});
     download();
     ASSERT_TRUE(runUntil([&] { return !sources_->runArgv().empty(); }));
@@ -2017,7 +2018,7 @@ TEST_F(DownloadTest, APickedMapsFolderIsPassedToTheEstimateAndTheRun) {
     EXPECT_EQ(sources_->runArgv(),
               std::vector<std::string>{"run --job " + (jobDirs()[0] / "job.ini").string() +
                                        " --format=tsv --progress=lines --maps " + bundled + " --maps " +
-                                       maps + " --cache " + cache});
+                                       maps + " --cache " + cache + " --stop-on-stdin"});
     sources_->holdRun(false);
     destroyDialog();
 }
@@ -2112,7 +2113,7 @@ TEST_F(DownloadTest, ARouteIsEstimatedAsACorridorFromTheGpxFileOfTheJobsFolder) 
     const std::string expected = "estimate --format=tsv --progress=lines --cache " +
                                  (root_ / "private").string() + "/plugins/chartgrabber/cache --source " +
                                  kEsri + " --overlay " + kSeamarkLayer + " --route " + gpx +
-                                 " --corridor-nm 2.0 --zooms 8-14";
+                                 " --corridor-nm 2.0 --zooms 8-14 --stop-on-stdin";
     EXPECT_EQ(sources_->estimateArgv().back(), expected) << "a route is a corridor, never a --bbox";
     const std::string text = slurpText(gpx);
     EXPECT_NE(text.find("<name>\xD0\x90\xD0\xBB\xD1\x84\xD0\xB0 d&apos;x</name>"), std::string::npos) << text;
@@ -2128,7 +2129,7 @@ TEST_F(DownloadTest, ARouteIsEstimatedAsACorridorFromTheGpxFileOfTheJobsFolder) 
 }
 
 TEST_F(DownloadTest, EveryEstimateFailureShowsItsTextInPlaceOfTheLineAndDownloadStaysOff) {
-    const fs::path fx = fs::path(CG_FIXTURES_DIR) / "cli-2026.10.6";
+    const fs::path fx = fs::path(CG_FIXTURES_DIR) / "cli-2026.10.8";
     struct Row {
         const char* name;
         int exitCode;
@@ -2361,7 +2362,7 @@ TEST_F(DownloadTest, DownloadWritesTheJobFilesSavesTheChoiceStartsTheJobAndHides
                   std::vector<std::string>{"run --job " + (job / "job.ini").string() +
                                            " --format=tsv --progress=lines --cache " +
                                            (root_ / "private").string() + "/plugins/chartgrabber/cache" +
-                                           (row.slow ? " --threads 1" : "")});
+                                           (row.slow ? " --threads 1" : "") + " --stop-on-stdin"});
         EXPECT_FALSE(dialog_->IsShown()) << "onStarted hides the dialog";
         EXPECT_TRUE(jobs_->busy());
         // LastChoice and the settings of the page (step 8)
@@ -2526,6 +2527,7 @@ TEST_F(DownloadTest, AnExistingChartFileAsksReplaceAndNoStartsNothingYesRunsWith
         bool seamarks;
         bool yes;
         bool asked;
+        const char* title = "T"; // the chart name typed
     };
     const char* const base = "T.mbtiles";
     const char* const over = "T - Seamarks.mbtiles";
@@ -2535,6 +2537,11 @@ TEST_F(DownloadTest, AnExistingChartFileAsksReplaceAndNoStartsNothingYesRunsWith
         {"overlay file exists, Yes", over, true, true, true},
         {"overlay file exists but no seamarks", over, false, false, false},
         {"none exists", "other.mbtiles", true, false, false},
+        // a file saved under the pre-name ("T:x" kept its colon) counts; the new name is
+        // "T_x".
+        {"legacy base file exists", "T:x.mbtiles", true, false, true, "T:x"},
+        {"legacy overlay file exists", "T:x - Seamarks.mbtiles", true, false, true, "T:x"},
+        {"legacy overlay file but no seamarks", "T:x - Seamarks.mbtiles", false, false, false, "T:x"},
     };
     for (const Row& row : rows) {
         SCOPED_TRACE(row.name);
@@ -2547,7 +2554,7 @@ TEST_F(DownloadTest, AnExistingChartFileAsksReplaceAndNoStartsNothingYesRunsWith
         ready();
         if (seamarks()->GetValue() != row.seamarks)
             tick(seamarks());
-        typeInto(nameField(), "T");
+        typeInto(nameField(), row.title);
         waitEstimate();
         Answerer answers(std::vector<Answerer::Answer>{{row.yes}});
         download();
@@ -2836,10 +2843,10 @@ TEST_F(DownloadTest, AJobFolderThatAlreadyExistsGetsTheSuffixMinusTwo) {
 
 // ---- the range in the job, LastZooms and the cost lines ----
 
-// The 10 `estimate` records of the captured run (cli-2026.10.6/run-continued.stdout, base + seamarks, zooms
+// The 10 `estimate` records of the captured run (cli-2026.10.8/run-continued.stdout, base + seamarks, zooms
 // 9-13).
 static std::string capturedEstimates() {
-    std::istringstream in(slurpText(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.6" / "run-continued.stdout"));
+    std::istringstream in(slurpText(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.8" / "run-continued.stdout"));
     std::string out;
     for (std::string line; std::getline(in, line);)
         if (line.rfind("estimate\t", 0) == 0)
@@ -2882,11 +2889,11 @@ TEST_F(DownloadTest, TheCostLinesFollowTheEstimateOfTheCapturedRecords) {
     EXPECT_EQ(nextLevelLine(), "") << "range 8-14: the records end at 13, no record at 14";
     pickZooms(9, 13);
     waitEstimate();
-    // centre latitude 50: z13 1:46k, z14 1:23k; 4 x (1795874 + 411675) = 8830196 bytes
-    EXPECT_EQ(nextLevelLine(), "One more level (1:23k) would add about 8.7 MB.");
+    // centre latitude 50: z13 1:46k, z14 1:23k; 4 x (1795874 + 441283) = 8948628 bytes
+    EXPECT_EQ(nextLevelLine(), "One more level (1:23k) would add about 8.9 MB.");
     EXPECT_TRUE(
-        shows("5 levels. The finest, 1:46k, is about 0.4 MB of 0.4 MB; one more level (1:23k) would add "
-              "about 8.7 MB."));
+        shows("5 levels. The finest, 1:46k, is about 0.4 MB of 0.5 MB; one more level (1:23k) would add "
+              "about 8.9 MB."));
     // while estimating the main line is hidden and the Advanced line has no cost
     sources_->holdEstimate(true);
     pickZooms(9, 12);
@@ -2894,10 +2901,11 @@ TEST_F(DownloadTest, TheCostLinesFollowTheEstimateOfTheCapturedRecords) {
     EXPECT_TRUE(shows("4 levels."));
     sources_->holdEstimate(false);
     waitEstimate();
-    EXPECT_EQ(nextLevelLine(), "One more level (1:46k) would add about 2.7 MB."); // 4 x (501463 + 182320)
+    EXPECT_EQ(nextLevelLine(),
+              "One more level (1:46k) would add about 2.9 MB."); // 4 x (501463 + 212013) = 2853904
     EXPECT_TRUE(
-        shows("4 levels. The finest, 1:93k, is about 0.0 MB of 0.4 MB; one more level (1:46k) would add "
-              "about 2.7 MB."));
+        shows("4 levels. The finest, 1:93k, is about 0.1 MB of 0.5 MB; one more level (1:46k) would add "
+              "about 2.9 MB."));
     // after a failed estimate
     sources_->estimateExit(7);
     pickZooms(9, 11);
@@ -2926,7 +2934,7 @@ TEST_F(DownloadTest, NoCostIsShownWhenTheNextLevelIsAboveTheSourceLimit) {
         ready();
         pickZooms(9, 13);
         waitEstimate();
-        EXPECT_EQ(nextLevelLine(), limit == 13 ? "" : "One more level (1:23k) would add about 8.7 MB.");
+        EXPECT_EQ(nextLevelLine(), limit == 13 ? "" : "One more level (1:23k) would add about 8.9 MB.");
         destroyDialog();
     }
 }
@@ -3346,8 +3354,9 @@ TEST_F(DetailWarningTest, TheQuestionFitsEightHundredByFourEightyInTouchMode) {
 }
 
 // ---- Weather on top ----
-// The stand-in prints the lines of the real CLI 2026.10.6 `sources` output (tests/fixtures/cli-2026.10.6/
-// sources-bundled-all.stdout, 16 rows) unless a case edits one line; every edit is named at its test.
+// The stand-in prints the lines of the real CLI 2026.10.8 `sources` output (tests/fixtures/cli-2026.10.8/
+// sources-bundled-all.stdout, 24 rows since ) unless a case edits one line; every edit is named at its
+// test.
 
 const char* const kRainViewer = "{1A696D82-F258-41A4-BCD6-7648D9E08DE2}";
 const char* const kDwd = "{25E4232E-08A5-47C5-8D97-E38B5F418A2D}";
@@ -3364,16 +3373,33 @@ const std::vector<std::string> kWeatherLabels = {
     "RainViewer radar (worldwide, current)", "DWD weather radar (Germany, North Sea and weste...",
     "NOAA nowCOAST weather radar (contiguous US)", "EUMETSAT H SAF precipitation rate H60B (Europe,...",
     "NASA IMERG precipitation rate (30 min, worldwide)"};
+// the three snapshot layers the base set added (NOAA clouds, NASA SST, NASA sea ice) come after the
+// curated five, in the CLI's order: `sources-bundled-all.stdout` lists them sorted by name.
+const std::vector<std::string> kNewWeatherLabels = {"NASA sea ice concentration (daily, MUR)",
+                                                    "NASA sea surface temperature (daily, MUR)",
+                                                    "NOAA nowCOAST clouds, infrared (worldwide)"};
+// The whole choice of the unedited fixture.
+std::vector<std::string> allWeatherLabels() {
+    std::vector<std::string> all = kWeatherLabels;
+    all.insert(all.end(), kNewWeatherLabels.begin(), kNewWeatherLabels.end());
+    return all;
+}
 
 class PanelWeatherTest : public DownloadTest {
 protected:
-    // Removes the Marine rows (the two vessel-density layers) of the fixture: the weather tests that count
-    // the choice entries predate them (hand-made from the real lines: a line is dropped, none edited).
+    // Removes the two EMODnet vessel-density rows (by GUID) of the fixture: the weather tests that count the
+    // choice entries predate them (hand-made from the real lines: a line is dropped, none edited).
     static void dropMarine(std::vector<std::string>& lines) {
-        lines.erase(
-            std::remove_if(lines.begin(), lines.end(),
-                           [](const std::string& l) { return l.find("\tMarine\t") != std::string::npos; }),
-            lines.end());
+        const std::string guids[] = {"{99D06D6A-F7FA-4F06-8C00-D9F96307C0F3}",
+                                     "{478CBB2F-70D1-4573-8C50-B5361CE2AA46}"};
+        lines.erase(std::remove_if(lines.begin(), lines.end(),
+                                   [&](const std::string& l) {
+                                       return std::any_of(
+                                           std::begin(guids), std::end(guids), [&](const std::string& g) {
+                                               return l.find("\t" + g + "\t") != std::string::npos;
+                                           });
+                                   }),
+                    lines.end());
     }
     // Edits the line of the fixture whose second field is `guid`: `from` becomes `to` (the line must have
     // it).
@@ -3397,7 +3423,7 @@ protected:
         return lines;
     }
     // The stand-in prints the fixture of `dir`, after `edit`.
-    void useFixture(const char* dir = "cli-2026.10.6",
+    void useFixture(const char* dir = "cli-2026.10.8",
                     const std::function<void(std::vector<std::string>&)>& edit = {}) {
         std::vector<std::string> lines = fixture(dir);
         if (edit)
@@ -3409,7 +3435,7 @@ protected:
     }
     // Field `n` (0 = "source") of the fixture line of `guid`.
     std::string fieldOf(const char* guid, int n) const {
-        for (const std::string& l : fixture("cli-2026.10.6"))
+        for (const std::string& l : fixture("cli-2026.10.8"))
             if (l.find(std::string("\t") + guid + "\t") != std::string::npos) {
                 std::vector<std::string> f;
                 std::istringstream in(l);
@@ -3472,7 +3498,7 @@ TEST_F(PanelWeatherTest, WithoutFieldElevenThereIsNoWeatherControlAndThePageKeep
     });
     // The dialog size after the stand-in printed the lines of the fixture, `edit`ed.
     const auto sizeWith = [&](const std::function<void(std::vector<std::string>&)>& edit) {
-        useFixture("cli-2026.10.6", edit);
+        useFixture("cli-2026.10.8", edit);
         makeDialog();
         waitEstimate();
         const wxSize size = dialog_->GetSize();
@@ -3516,7 +3542,7 @@ TEST_F(PanelWeatherTest,
     makeDialog();
     waitEstimate();
     ASSERT_TRUE(weather()->IsShown());
-    EXPECT_EQ(weatherEntries(), kWeatherLabels) << "never GeoColour, VIIRS or the seamark layer";
+    EXPECT_EQ(weatherEntries(), allWeatherLabels()) << "never GeoColour, VIIRS or the seamark layer";
     EXPECT_FALSE(weather()->GetValue());
     EXPECT_FALSE(weatherChoice()->IsEnabled());
     EXPECT_EQ(weatherLine(), "");
@@ -3531,12 +3557,12 @@ TEST_F(PanelWeatherTest,
         EXPECT_EQ(u(weatherChoice()->GetToolTipText()), fullNames[i]);
     }
     destroyDialog();
-    useFixture("cli-2026.10.6", [&](std::vector<std::string>& lines) {
+    useFixture("cli-2026.10.8", [&](std::vector<std::string>& lines) {
         editLine(lines, kDwd, "\tok\t", std::string("\t") + kRefusedVerdict + "\t");
     });
     makeDialog();
     waitEstimate();
-    std::vector<std::string> withoutDwd = kWeatherLabels;
+    std::vector<std::string> withoutDwd = allWeatherLabels();
     withoutDwd.erase(withoutDwd.begin() + 1);
     EXPECT_EQ(weatherEntries(), withoutDwd) << "a weather layer whose verdict is not ok is not listed";
 }
@@ -3563,7 +3589,7 @@ TEST_F(PanelWeatherTest, TickingShowsTheScaleAndCreditLineAndTheCoverageLineAndU
     EXPECT_FALSE(shows(kCoverage));
     EXPECT_FALSE(weatherChoice()->IsEnabled());
     destroyDialog();
-    useFixture("cli-2026.10.6",
+    useFixture("cli-2026.10.8",
                [&](std::vector<std::string>& lines) { editLine(lines, kRainViewer, kRainViewerCredit, ""); });
     makeDialog();
     waitEstimate();
@@ -3608,7 +3634,7 @@ TEST_F(PanelWeatherTest, LastWeatherAndItsSourceSelectTheLayerAndCloseSavesNothi
 // and a Cyrillic name put FIRST in CLI order; the RainViewer line dropped.
 TEST_F(PanelWeatherTest, TheShippedLayersComeFirstInTheFixedOrderAndRainViewerIsTheDefault) {
     const char* const kExtra = "{00000000-0000-4000-8000-0000000000AA}";
-    useFixture("cli-2026.10.6", [&](std::vector<std::string>& lines) {
+    useFixture("cli-2026.10.8", [&](std::vector<std::string>& lines) {
         std::string extra;
         for (const std::string& l : lines)
             if (l.find(kRainViewer) != std::string::npos)
@@ -3623,10 +3649,11 @@ TEST_F(PanelWeatherTest, TheShippedLayersComeFirstInTheFixedOrderAndRainViewerIs
     waitEstimate();
     std::vector<std::string> expected = kWeatherLabels;
     expected.push_back("\xD0\x94\xD0\xBE\xD0\xB6\xD0\xB4\xD1\x8C radar");
+    expected.insert(expected.end(), kNewWeatherLabels.begin(), kNewWeatherLabels.end());
     EXPECT_EQ(weatherEntries(), expected);
     EXPECT_EQ(weatherChoice()->GetSelection(), 0) << "no LastWeatherSource: RainViewer";
     destroyDialog();
-    useFixture("cli-2026.10.6", [&](std::vector<std::string>& lines) {
+    useFixture("cli-2026.10.8", [&](std::vector<std::string>& lines) {
         lines.erase(
             std::remove_if(lines.begin(), lines.end(),
                            [&](const std::string& l) { return l.find(kRainViewer) != std::string::npos; }),
@@ -3641,7 +3668,7 @@ TEST_F(PanelWeatherTest, TheShippedLayersComeFirstInTheFixedOrderAndRainViewerIs
 
 // and 3.
 TEST_F(PanelWeatherTest, TheWeatherPicturesAreBasesAfterTheCuratedMapsWithoutImageryLineTermsNoteOrSeamarks) {
-    useFixture("cli-2026.10.6", dropMarine);
+    useFixture("cli-2026.10.8", dropMarine);
     makeDialog();
     waitEstimate();
     const std::string geoLabel = "EUMETSAT MTG GeoColour (Europe, Africa, Atlanti...";
@@ -3805,10 +3832,32 @@ TEST_F(PanelWeatherTest, AnExistingWeatherFileAloneAsksToReplace) {
     EXPECT_EQ(jobDirs().size(), 1u);
 }
 
+// a weather file saved under the pre-name ("T:x" kept its colon) counts too. The legacy
+// table above has no weather control (no field 11), so the weather row of it lives here.
+TEST_F(PanelWeatherTest, ALegacyNamedWeatherFileAsksToReplace) {
+    useFixture();
+    store_->setDisclaimerShown();
+    sources_->holdRun(true);
+    saveLast([&](ConfigStore::LastChoice& c) {
+        c.weather = true;
+        c.weatherGuid = kRainViewer;
+    });
+    fs::create_directories(chartFolder());
+    std::ofstream(fs::path(chartFolder()) / "T:x - Weather.mbtiles") << "x";
+    makeDialog();
+    typeInto(nameField(), "T:x");
+    waitEstimate();
+    Answerer answers(std::vector<Answerer::Answer>{{false}});
+    download();
+    ASSERT_EQ(answers.shown.size(), 1u);
+    EXPECT_EQ(answers.shown[0], kReplace);
+    EXPECT_TRUE(jobDirs().empty());
+}
+
 // Proof 8. Edited fixture line: the seamark layer's maxZoom (field 13, empty) set to 6; hand-made from the
 // real line.
 TEST_F(PanelWeatherTest, TheSeamarkLayersLimitAddsItsZoomAndTheEstimateAndJobIniCarryTheList) {
-    useFixture("cli-2026.10.6", [&](std::vector<std::string>& lines) {
+    useFixture("cli-2026.10.8", [&](std::vector<std::string>& lines) {
         editLine(lines, kSeamarkLayer, "CC-BY-SA\t", "CC-BY-SA\t6");
     });
     store_->setDisclaimerShown();
@@ -3892,7 +3941,7 @@ TEST_F(PanelWeatherTouchTest, TheLongestCreditStillFitsEightHundredByFourEightyA
     ocpn_fake::scale = 1.0;
     store_->setDisclaimerShown();
     sources_->rawRecords(
-        slurpText(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.6" / "sources-bundled-all.stdout"));
+        slurpText(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.8" / "sources-bundled-all.stdout"));
     sources_->holdRun(true);
     addRoute("cccccccc-0000-4000-8000-000000000003", "Long", {{45.0, 0.0}, {46.0, 10.0}});
     saveLast([&](ConfigStore::LastChoice& c) {
@@ -3941,7 +3990,7 @@ TEST_F(PanelWeatherTouchTest, TheLongestCreditStillFitsEightHundredByFourEightyA
 }
 
 // ---- Marine vessel-density layers ----
-// The stand-in prints tests/fixtures/cli-2026.10.6/sources-bundled-all.stdout: it holds the two
+// The stand-in prints tests/fixtures/cli-2026.10.8/sources-bundled-all.stdout: it holds the two
 // vessel-density records of data/sources/Marine (kind layer, maxZoom 9), verbatim.
 const char* const kVesselAll = "{99D06D6A-F7FA-4F06-8C00-D9F96307C0F3}";
 const char* const kVesselSailing = "{478CBB2F-70D1-4573-8C50-B5361CE2AA46}";
@@ -3950,7 +3999,7 @@ const char* const kVesselAllName = "EMODnet vessel density 2023, all ship types 
 class PanelVesselTest : public PanelWeatherTest {
 protected:
     void useVessels(const std::function<void(std::vector<std::string>&)>& edit = {}) {
-        useFixture("cli-2026.10.6", edit);
+        useFixture("cli-2026.10.8", edit);
     }
 };
 
@@ -3985,7 +4034,7 @@ TEST_F(PanelVesselTest, TheTwoLayersFollowTheWeatherBasesAndDownloadRunsThemAsAB
 
 // Proof 3: a CLI without them leaves the choice as it was; a refused record is not offered.
 TEST_F(PanelVesselTest, WithoutTheRecordsOrWithARefusedOneTheChoiceIsUnchanged) {
-    useFixture("cli-2026.10.6", dropMarine);
+    useFixture("cli-2026.10.8", dropMarine);
     makeDialog();
     waitEstimate();
     EXPECT_EQ(entries().size(), 8u);

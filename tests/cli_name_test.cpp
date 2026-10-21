@@ -54,10 +54,11 @@ TEST_F(CliNameTest, PathSearchFindsChartGrabberCliAndNotTheOldName) {
     const std::string oldOnly = makeExecutable("old-tiles");
     setenv("PATH", dir_.string().c_str(), 1);
     std::string why;
-    EXPECT_FALSE(resolveCli(cg::Settings(), &why, "/nonexistent/none", std::string(getenv("PATH"))))
+    EXPECT_FALSE(resolveCli(cg::Settings(), &why, {"/nonexistent/none"}, std::string(getenv("PATH"))))
         << "an old old-tiles on PATH must not be picked by default";
     const std::string fresh = makeExecutable("chart-grabber-cli");
-    const auto found = resolveCli(cg::Settings(), nullptr, "/nonexistent/none", std::string(getenv("PATH")));
+    const auto found =
+        resolveCli(cg::Settings(), nullptr, {"/nonexistent/none"}, std::string(getenv("PATH")));
     ASSERT_TRUE(found);
     EXPECT_EQ(*found, fresh);
     (void)oldOnly;
@@ -70,7 +71,7 @@ TEST_F(CliNameTest, ExplicitPathToAnOldOldTilesStillWorks) {
     cg::Settings s;
     s.cliPath = oldCli;
     std::string why = "untouched";
-    const auto found = resolveCli(s, &why, "/nonexistent/none");
+    const auto found = resolveCli(s, &why, {"/nonexistent/none"});
     ASSERT_TRUE(found);
     EXPECT_EQ(*found, oldCli);
     EXPECT_EQ(why, "untouched");

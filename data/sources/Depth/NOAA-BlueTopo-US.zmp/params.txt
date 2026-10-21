@@ -1,0 +1,13 @@
+﻿[PARAMS]
+GUID={D73ACBDA-4E01-4C81-A36A-A069F38CF90C}
+name=NOAA BlueTopo bathymetry (US coast)
+ParentSubMenu=Depth
+DefURLBase=https://nowcoast.noaa.gov/geoserver/bluetopo/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=bathymetry&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE
+ContentType=image/png
+Ext=.png
+EPSG=3857
+NameInCache=Depth_NOAA_BlueTopo_US
+License=NOAA National Bathymetric Source, BlueTopo via nowCOAST (US government, public domain)
+MaxConnectToServerCount=1
+MaxZoom=16
+NavigationWarning=1

@@ -212,6 +212,12 @@ TEST(Arguments, EnvThenOptionalNiceCommand) {
     EXPECT_EQ(cliCommand("cli", {}, false), (Args{"env", "LC_ALL=C.UTF-8", "cli"}));
 }
 
+TEST(Arguments, WindowsCommandHasNoEnvAndNoNice) {
+    EXPECT_EQ(cliCommand("C:\\Program Files\\cli.exe", {"run", "it's"}, false, Os::Windows),
+              (Args{"C:\\Program Files\\cli.exe", "run", "it's"}));
+    EXPECT_EQ(cliCommand("C:\\cli.exe", {"run"}, true, Os::Windows), (Args{"C:\\cli.exe", "run"}));
+}
+
 TEST(Locale, NumbersUseDotUnderGermanLocale) {
     const std::string old = std::setlocale(LC_ALL, nullptr);
     if (std::setlocale(LC_ALL, "de_DE.UTF-8") == nullptr) {
@@ -231,6 +237,11 @@ TEST(DisplayCommand, QuotesSpaceAndApostrophe) {
               "nice -n 10 '/a b/cli' 'it'\\''s' --x=1 ''");
 }
 
+TEST(DisplayCommand, WindowsIsTheCommandLineTheCliGets) {
+    EXPECT_EQ(displayCommand({"C:\\My dir\\cli.exe", "--cache", "D:\\cache\\"}, Os::Windows),
+              "\"C:\\My dir\\cli.exe\" --cache D:\\cache\\");
+}
+
 TEST(Names, DefaultSeamarksAndFile) {
     EXPECT_EQ(defaultChartName("Solent", "Google Sat"), "Solent - Google Sat");
     EXPECT_EQ(seamarksName("Solent - Sat"), "Solent - Sat - Seamarks");
@@ -238,6 +249,33 @@ TEST(Names, DefaultSeamarksAndFile) {
     EXPECT_EQ(chartFileName(std::string("a\tb\nc\x01") + "d"), "a_b_c_d.mbtiles");
     EXPECT_EQ(chartFileName("Skipper's"), "Skippers.mbtiles");
     EXPECT_EQ(chartFileName("Plain"), "Plain.mbtiles");
+    EXPECT_EQ(chartFileName("Карты моря"), "Карты моря.mbtiles");
+}
+
+// the file name rule before , kept so that the replace question sees older charts.
+TEST(Names, LegacyFileNameKeepsWhatWindowsForbids) {
+    EXPECT_EQ(chartFileNameLegacy("A/B"), "A_B.mbtiles");
+    EXPECT_EQ(chartFileNameLegacy(std::string("a\tb\x7f") + "c"), "a_b_c.mbtiles");
+    EXPECT_EQ(chartFileNameLegacy("Skipper's"), "Skippers.mbtiles");
+    EXPECT_EQ(chartFileNameLegacy("a:b*c\\d"), "a:b*c\\d.mbtiles");
+    EXPECT_EQ(chartFileNameLegacy("CON"), "CON.mbtiles");
+}
+
+// one rule on every system; a chart named on Linux is named the same on Windows.
+TEST(Names, ChartFileNameWindowsCharactersAndDeviceNames) {
+    EXPECT_EQ(chartFileName("a/b\\c:d*e?f\"g<h>i|j"), "a_b_c_d_e_f_g_h_i_j.mbtiles");
+    EXPECT_EQ(chartFileName(std::string("a\x01") + "\x7f" + "b"), "a__b.mbtiles");
+    EXPECT_EQ(chartFileName("CON"), "_CON.mbtiles");
+    EXPECT_EQ(chartFileName("con"), "_con.mbtiles");
+    EXPECT_EQ(chartFileName("Nul"), "_Nul.mbtiles");
+    EXPECT_EQ(chartFileName("COM1"), "_COM1.mbtiles");
+    EXPECT_EQ(chartFileName("LPT9"), "_LPT9.mbtiles");
+    EXPECT_EQ(chartFileName("aux.backup"), "_aux.backup.mbtiles");
+    EXPECT_EQ(chartFileName("CON "), "_CON .mbtiles");
+    EXPECT_EQ(chartFileName("CONSOLE"), "CONSOLE.mbtiles");
+    EXPECT_EQ(chartFileName("COM10"), "COM10.mbtiles");
+    EXPECT_EQ(chartFileName("COM0"), "COM0.mbtiles");
+    EXPECT_EQ(chartFileName("Icon"), "Icon.mbtiles");
 }
 
 TEST(Names, AreaPlace) {
@@ -409,6 +447,24 @@ TEST_F(PathTest, EmptyEntriesSkipped) {
 TEST_F(PathTest, NotFound) {
     EXPECT_EQ(findOnPath("tool", (root / "a").string() + ":" + (root / "b").string()), std::nullopt);
     EXPECT_EQ(findOnPath("tool", ""), std::nullopt);
+}
+
+TEST_F(PathTest, WindowsSemicolonsQuotesEmptyEntriesAndExeSuffix) {
+    // Directories given with a trailing "/" so the joined candidate is a real Linux path (portable_test
+    // covers "\").
+    make(root / "a" / "tool.exe", 0644);
+    make(root / "b" / "tool.exe", 0644);
+    std::filesystem::create_directories(root / "c");
+    make(root / "c" / "tool", 0755); // no .exe: not a program on Windows
+    const std::string a = (root / "a").string() + "/";
+    const std::string b = (root / "b").string() + "/";
+    const std::string c = (root / "c").string() + "/";
+    const std::string want = (root / "b" / "tool.exe").string();
+    EXPECT_EQ(findOnPath("tool", "\"" + b + "\";;" + a, Os::Windows),
+              want);                                               // quoted, empty skipped, first wins
+    EXPECT_EQ(findOnPath("tool.exe", ";" + b, Os::Windows), want); // no second ".exe"
+    EXPECT_EQ(findOnPath("tool", c, Os::Windows), std::nullopt);
+    EXPECT_EQ(findOnPath("tool", ";;", Os::Windows), std::nullopt);
 }
 
 TEST_F(PathTest, DirectoryNamedLikeProgramIsNotFound) {

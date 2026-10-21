@@ -8,6 +8,7 @@
 #include "geo_math.h"
 #include "job_files.h"
 #include "job_progress.h"
+#include "portable.h"
 
 #include <wx/string.h>
 
@@ -43,7 +44,6 @@ wxString weatherPictureLine(const wxString& time); // Details: "Weather picture:
 // Strip texts and button labels of the job controller.
 wxString stoppingText();
 wxString stopButtonText();
-wxString forceStopButtonText();
 wxString showButtonText();
 wxString resumeButtonText();
 wxString closeButtonText();
@@ -66,13 +66,15 @@ wxString termsNoteText(); // one line under the Chart row for a source with a te
 wxString weatherNoteText(const wxString& scale, const wxString& credit);
 wxString weatherCoverageText();
 wxString sourceLimitText(const wxString& name, const wxString& scale);
-wxString cliNotFoundText();
-wxString cliTooOldText();
+// The CLI texts of the host system; `os` selects the Windows texts, tested on Linux.
+wxString cliNotFoundText(cg::Os os = cg::kHostOs);
+wxString cliTooOldText(cg::Os os = cg::kHostOs);
 wxString noSourcesText();
 
 // Settings status lines. `version` may be empty; `line` is the last error line (Fails).
 enum class CliStatus { Checking, Ready, NotInstalled, NotRunnable, TooOld, Fails };
-wxString cliStatusText(CliStatus status, const std::string& version, const wxString& line);
+wxString cliStatusText(CliStatus status, const std::string& version, const wxString& line,
+                       cg::Os os = cg::kHostOs);
 // Found: `records` source records, folder = the state of the sailor's own folder.
 // BundledMissing: the plugin's own sources are missing (the CLI is not run).
 enum class SourcesStatus { Checking, CliNotReady, BundledMissing, RunFailed, Found };

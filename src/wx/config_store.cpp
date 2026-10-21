@@ -3,6 +3,7 @@
 
 #include "geo_math.h"
 #include "plugin_log.h"
+#include "portable.h"
 #include "sources_folder.h"
 #include "wx_util.h"
 
@@ -94,10 +95,10 @@ double readDouble(const wxConfigBase* cfg, Logged& logged, const char* name, dou
     return def;
 }
 
-// Empty, or absolute (`/` first) without a control character.
+// Empty, or absolute (cg::isAbsolutePath) without a control character.
 std::string readPath(const wxConfigBase* cfg, Logged& logged, const char* name) {
     const wxString raw = readText(cfg, name);
-    bool ok = raw.empty() || raw[0] == '/';
+    bool ok = raw.empty() || cg::isAbsolutePath(cg::toUtf8(raw));
     for (wxUniChar c : raw)
         ok = ok && c.GetValue() >= 0x20 && c.GetValue() != 0x7f;
     if (ok)
@@ -420,7 +421,7 @@ std::vector<std::string> jobIdsNewestFirst(const std::string& root) {
 }
 
 std::optional<cg::ChartRecord> readChartIni(const std::string& root, const std::string& id) {
-    std::ifstream in(root + "/" + id + "/chart.ini", std::ios::binary);
+    std::ifstream in(cg::fsPath(root + "/" + id + "/chart.ini"), std::ios::binary);
     if (!in)
         return std::nullopt;
     const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
@@ -451,7 +452,7 @@ void ConfigStore::saveChart(const cg::ChartRecord& r) {
     const std::string dir = jobsDir() + "/" + r.id;
     if (!wxFileName::Mkdir(cg::fromUtf8(dir), wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL))
         cg::logWarning(wxString::Format("cannot create %s", dir.c_str()));
-    std::ofstream out(dir + "/chart.ini", std::ios::binary | std::ios::trunc);
+    std::ofstream out(cg::fsPath(dir + "/chart.ini"), std::ios::binary | std::ios::trunc);
     const std::string text = cg::chartIni(r);
     out.write(text.data(), static_cast<std::streamsize>(text.size()));
     if (!out)

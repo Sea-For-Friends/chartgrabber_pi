@@ -6,15 +6,15 @@ tiles and exports them to MBTiles; the plugin adds the result to OpenCPN's chart
 internet afterwards.
 
 Display name "Chart Grabber"; OpenCPN common name `ChartGrabber`; library `libchartgrabber_pi.so`.
-Version 2026.10.1. Source for release binaries: tag `v2026.10.1`.
+Version 2026.10.2. Source for release binaries: tag `v2026.10.2`.
 
 ## Requirements
 
 - OpenCPN 5.10.2 or newer (plugin API 1.18), Linux, wxWidgets 3.2 / GTK 3 (the build OpenCPN itself uses).
-- **Chart Grabber CLI 2026.10.6 or newer** (the tile program, executable `chart-grabber-cli`). The plugin does not
+- **Chart Grabber CLI 2026.10.8 or newer** (the tile program, executable `chart-grabber-cli`). The plugin does not
   contain it. The CLI comes as one `.deb` per system (same package name): Debian 12 amd64, Debian 13 amd64 / arm64,
   Ubuntu 24.04 and 26.04 amd64 / arm64. The plugin looks for it at `/usr/bin/chart-grabber-cli`, else on `PATH`; the path is also a setting
-  (Chart Grabber settings, "Tile program"). The settings page shows "Chart Grabber CLI 2026.10.6 is ready." when it is
+  (Chart Grabber settings, "Tile program"). The settings page shows "Chart Grabber CLI 2026.10.8 is ready." when it is
   found and new enough; an older CLI is reported as too old.
   TODO (owner): the CLI has no public download location in this repository's documents. Insert the URL of the CLI
   repository / release page / package here before publishing.
@@ -32,6 +32,30 @@ Version 2026.10.1. Source for release binaries: tag `v2026.10.1`.
 
 Saved charts go to `~/Charts/ChartGrabber` by default. The chart sources (ZMP definitions) are bundled; you can
 point the settings at your own folder of `.zmp` sources too (see `data/sources/README.md` for the terms of each).
+
+## Chart sources
+
+The plugin ships 24 chart sources in `data/sources/`, in seven groups that the New chart page shows as menus. Each was
+tried with the tile program and a real small download. Details, terms and credits per source: `data/sources/README.md`.
+
+| Group | What it is for a sailor |
+|---|---|
+| Nautical charts | Official sea charts as tiles: Norway (Kartverket), Finland (Traficom), the US coast (NOAA). Not for navigation. |
+| Seamarks and traffic | OpenSeaMap seamarks (buoys, lights) and EMODnet ship traffic density, as overlays on a chart. |
+| Depth | Depth shading: EMODnet (Europe, world), GEBCO (world), NOAA BlueTopo (US coast). Not for navigation. |
+| Satellite | Sentinel-2 (10 m, worldwide), USGS (USA), Esri World Imagery (grey: its terms may forbid offline use). |
+| Coast and land | OpenTopoMap, a land and relief chart (grey: throttled, one connection). |
+| Weather now | One picture of the weather as it is now: rain radar, clouds, precipitation (Europe, US, worldwide). |
+| Ocean | Sea surface temperature and sea ice, one daily picture. |
+
+The satellite gap: what sailors ask for most, Google, Bing and Esri high-resolution imagery for reefs, cannot be shipped;
+those providers forbid saving their tiles. The imagery that can be shipped, Sentinel-2 at 10 m and USGS, shows reef edges,
+banks and passes, but not single coral heads.
+
+Sources that need a key, and Navionics, are not in this repository. They live in a separate folder outside it, one folder
+with a short README per source. To add one, put its `.zmp` folder (with your own key where the file says `KEY`) into a
+folder of your own (by default `Charts/Chart sources` in your home folder) and, if you use another folder, choose it in
+Preferences, row "Chart sources"; it is read after the bundled sources.
 
 ## Build from source
 
@@ -86,7 +110,7 @@ definitions in `data/sources` are CC0-1.0; see `data/sources/LICENSE`, `NOTICE` 
 
 - One GitHub Release per version (tag `v<version>`), all platform tarballs as assets, each with a `.sha256` next to it.
 - Name: `chartgrabber_pi-<version>-<target>-<target-version-for-humans>-<arch>.tar.gz`, for example
-  `chartgrabber_pi-2026.10.1-debian-x86_64-13-x86_64.tar.gz`. The top directory inside has the same name without `.tar.gz`.
+  `chartgrabber_pi-2026.10.2-debian-x86_64-13-x86_64.tar.gz`. The top directory inside has the same name without `.tar.gz`.
   The file name never matters to OpenCPN's import; it is for you to pick the right file.
 - `metadata.xml` carries the OpenCPN host tuple exactly (`<target>`, `<target-version>`): `lsb_release -is` / `-rs`
   lowercased plus the architecture; Ubuntu needs the exact version, other systems the major. Debian 13 (trixie) builds

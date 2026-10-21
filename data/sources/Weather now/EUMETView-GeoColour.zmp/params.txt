@@ -1,0 +1,16 @@
+﻿[PARAMS]
+GUID={FE84A175-2C0F-420F-86DF-5900DE16A33C}
+name=EUMETSAT MTG GeoColour (Europe, Africa, Atlantic; clouds day and night)
+ParentSubMenu=Weather now
+DefURLBase=https://view.eumetsat.int/geoserver/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=mtg_fd:rgb_geocolour&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg&TIME={ver}
+ContentType=image/jpeg
+Ext=.jpg
+EPSG=3857
+NameInCache=Weather_EUMETView_MTG_GeoColour
+CacheType=71
+License=Contains modified EUMETSAT Meteosat data {year}
+MaxConnectToServerCount=2
+MaxZoom=8
+SnapshotIndex=https://view.eumetsat.int/geoserver/mtg_fd/rgb_geocolour/ows?service=WMS&version=1.3.0&request=GetCapabilities
+SnapshotIndexType=wms-default
+SnapshotItem=mtg_fd:rgb_geocolour

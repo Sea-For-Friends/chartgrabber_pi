@@ -3,6 +3,7 @@
 // record, route GPX, program lookup. No wx.
 #pragma once
 
+#include "portable.h"
 #include "settings.h"
 #include "types.h"
 
@@ -44,20 +45,28 @@ std::string olderThanDate(int y, int mo, int d, int h, int mi, int s, int months
 std::vector<std::string> niced(const std::string& program, const std::vector<std::string>& args);
 // The argv of every child : "env", "LC_ALL=C.UTF-8", then niced(program, args) when `nice`, else
 // program, args... (env and nice both exec: the pid stays the CLI's).
+// Windows: {program} + args, no env and no nice (the runner sets the priority, 18.4).
 std::vector<std::string> cliCommand(const std::string& program, const std::vector<std::string>& args,
-                                    bool nice);
-std::string displayCommand(const std::vector<std::string>& argv); // shell-quoted, for Details
+                                    bool nice, Os os = kHostOs);
+// Posix: shell-quoted, for Details; Windows: windowsCommandLine(argv), the line the CLI got.
+std::string displayCommand(const std::vector<std::string>& argv, Os os = kHostOs);
 std::string defaultChartName(const std::string& place, const std::string& sourceName); // "<place> - <source>"
 std::string areaPlace(const BBox& box); // "Area 50.75N 1.30W" (centre, 2 decimals)
-std::string
-chartFileName(const std::string& chartName);            // '/', control chars -> '_'; '\'' removed; ".mbtiles"
+// One rule on every system: '\'' removed; each of / \ : * ? " < > | and every byte < 0x20 or 0x7f
+// -> '_'; a Windows device name (CON, NUL, COM1...) gets a '_' in front; ".mbtiles".
+std::string chartFileName(const std::string& chartName);
+// The file name rule before ('\'' removed; '/', bytes < 0x20 and 0x7f -> '_'). Only so that the
+// replace question also sees a chart a release before saved. ponytail: delete after one release.
+std::string chartFileNameLegacy(const std::string& chartName);
 std::string seamarksName(const std::string& chartName); // "<name> - Seamarks"
 std::string weatherName(const std::string& chartName);  // "<name> - Weather"
 // A source name for a drop-down : at most 50 code points; longer: the first 47 + "..." (UTF-8, cut
 // at a code point boundary).
 std::string choiceLabel(std::string_view name);
 std::string routeGpx(const std::string& name, const std::vector<LatLon>& points); // GPX 1.1, one <rte>
-std::optional<std::string> findOnPath(std::string_view name, std::string_view pathEnv);
+// Posix: ':' separated, access(X_OK). Windows: ';' separated, quotes around an entry removed, ".exe" added to
+// the name when missing.
+std::optional<std::string> findOnPath(std::string_view name, std::string_view pathEnv, Os os = kHostOs);
 
 enum class ChartState { Running, Complete, Missing, Interrupted, Failed };
 struct ChartRecord {

@@ -2,6 +2,15 @@
 
 Versions are calendar-based: `YYYY.MM.N` (year and month of the release, N = release count within that month, from 0).
 
+## 2026.10.2
+
+- Needs Chart Grabber CLI 2026.10.8 or newer.
+- Stop now asks the CLI to stop and save, and ends it after 10 seconds if it does not; the Force stop button is gone.
+- Each weather Update gets its own chart name with the time of the picture.
+- The chart sources are regrouped into seven groups (Nautical charts, Seamarks and traffic, Depth, Satellite, Coast and
+  land, Weather now, Ocean), with eight new sources (24 in all). Sources that need a key, and Navionics, are not bundled.
+- Chart Grabber CLI 2026.10.8 no longer supports BerkeleyDB tile caches; the default SQLite cache is unchanged.
+
 ## 2026.10.1
 
 - Needs Chart Grabber CLI 2026.10.6 or newer.

@@ -3,6 +3,7 @@
 
 #include "job_files.h"
 #include "plugin_version.h"
+#include "portable.h"
 #include "session_log.h"
 #include "wx_util.h"
 
@@ -14,7 +15,9 @@
 #include <chrono>
 #include <cstdint>
 #include <ctime>
+#ifndef __WINDOWS__
 #include <dlfcn.h>
+#endif
 #include <filesystem>
 #include <memory>
 #include <system_error>
@@ -33,9 +36,7 @@ std::string stamp() {
     const std::time_t secs = std::chrono::system_clock::to_time_t(now);
     const int ms = static_cast<int>(
         std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() % 1000);
-    std::tm tm{};
-    localtime_r(&secs, &tm);
-    return cg::formatLogStamp(tm, ms);
+    return cg::formatLogStamp(cg::localTime(secs), ms);
 }
 
 void write(const char* prefix, const wxString& text) {
@@ -53,6 +54,10 @@ wxString envValue(const char* name) {
 }
 
 std::string libraryText() {
+#ifdef __WINDOWS__
+    // ponytail: GetModuleHandleExW(FROM_ADDRESS) + GetModuleFileNameW when the UAT log needs the DLL path
+    return "library unknown";
+#else
     Dl_info info{};
     if (!dladdr(reinterpret_cast<void*>(&cg::writePluginLogHeader), &info) || !info.dli_fname)
         return "library unknown";
@@ -71,10 +76,9 @@ std::string libraryText() {
     const std::time_t secs = std::chrono::system_clock::to_time_t(
         std::chrono::system_clock::now() + std::chrono::duration_cast<std::chrono::system_clock::duration>(
                                                time - fs::file_time_type::clock::now()));
-    std::tm tm{};
-    localtime_r(&secs, &tm);
     return text + " (" + std::to_string(size) + " bytes, modified " +
-           cg::formatLogStamp(tm, 0).substr(0, 19) + ")";
+           cg::formatLogStamp(cg::localTime(secs), 0).substr(0, 19) + ")";
+#endif
 }
 
 std::string programText() {

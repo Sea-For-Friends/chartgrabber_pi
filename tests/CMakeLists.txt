@@ -20,6 +20,7 @@ set(CG_TEST_SOURCES
     toolbar_icons_test.cpp
     session_log_test.cpp
     job_progress_test.cpp
+    portable_test.cpp
 )
 
 # Window tests (see the rule in wx_env.h): a second binary with a GUI wxApp, ctest label "gui".

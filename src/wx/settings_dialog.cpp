@@ -8,6 +8,7 @@
 #include "look.h"
 #include "messages.h"
 #include "plugin_log.h"
+#include "portable.h"
 #include "sources_folder.h"
 #include "wx_util.h"
 
@@ -46,14 +47,7 @@ std::int64_t cacheBytes(const std::string& root) {
     return total == wxInvalidSize ? 0 : static_cast<std::int64_t>(total.GetValue());
 }
 
-// A path compared as given, after removing one trailing '/' .
-std::string withoutSlash(std::string p) {
-    if (p.size() > 1 && p.back() == '/')
-        p.pop_back();
-    return p;
-}
-
-// Touch : every control at least `minHeight` high.
+// Touch: every control at least `minHeight` high.
 void sizeControls(wxWindow* w, int minHeight) {
     for (wxWindow* c : w->GetChildren()) {
         if (dynamic_cast<wxButton*>(c) || dynamic_cast<wxTextCtrl*>(c) || dynamic_cast<wxSpinCtrl*>(c) ||
@@ -292,7 +286,7 @@ std::string& SettingsDialog::key(PathKind kind) {
 // with no chosen program: /usr/bin, else PATH; empty = none.
 std::string SettingsDialog::automaticCli() const {
     std::string why;
-    return resolveCli(cg::Settings{}, &why, cliDefaultPath, cliPathEnv).value_or(std::string());
+    return resolveCli(cg::Settings{}, &why, cliDefaultPaths, cliPathEnv).value_or(std::string());
 }
 
 std::string SettingsDialog::defaultPath(PathKind kind) const {
@@ -383,7 +377,7 @@ void SettingsDialog::changePath(PathKind kind) {
     if (!chosen)
         return;
     const std::string path = cg::toUtf8(*chosen);
-    key(kind) = withoutSlash(path) == withoutSlash(defaultPath(kind)) ? std::string() : path;
+    key(kind) = cg::sameDir(path, defaultPath(kind)) ? std::string() : path;
     showRow(kind);
 }
 
@@ -521,7 +515,7 @@ void SettingsDialog::startCheck() {
     sourcesStatus_->SetLabel(sourcesStatusText(SourcesStatus::Checking));
 
     std::string why;
-    const auto cli = resolveCli(pending_, &why, cliDefaultPath, cliPathEnv);
+    const auto cli = resolveCli(pending_, &why, cliDefaultPaths, cliPathEnv);
     if (!cli) {
         notReady(cliStatusText(pending_.cliPath.empty() ? CliStatus::NotInstalled : CliStatus::NotRunnable,
                                {}, {}),
@@ -543,9 +537,10 @@ void SettingsDialog::startCheck() {
     const cg::Settings forCli = config_.cliSettings(pending_);
     const std::string folder = config_.sourcesDir(pending_);
     std::error_code ec;
-    const FolderState folderState = forCli.cliMaps.size() > 1                   ? FolderState::Holds
-                                    : std::filesystem::is_directory(folder, ec) ? FolderState::Empty
-                                                                                : FolderState::Missing;
+    const FolderState folderState = forCli.cliMaps.size() > 1 ? FolderState::Holds
+                                    : std::filesystem::is_directory(cg::fsPath(folder), ec)
+                                        ? FolderState::Empty
+                                        : FolderState::Missing;
     if (!runner_)
         runner_ = std::make_unique<CliRunner>();
     struct Run {

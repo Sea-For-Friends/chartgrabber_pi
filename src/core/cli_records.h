@@ -4,6 +4,7 @@
 // throws.
 #pragma once
 
+#include "portable.h"
 #include "settings.h"
 
 #include <cstddef>
@@ -161,6 +162,10 @@ enum class Outcome {
 };
 // exitCode as wx reports it (>= 0 normal, < 0 = -signal). lastError: last MessageLine Error text.
 Outcome classifyExit(int exitCode, std::string_view lastError, bool startFailed);
+// The wx exit code as the exit code of the CLI. Posix: a code below -64 is 256 + code (a normal
+// exit seen as a signed byte). Windows: killedByUs with -1 is our TerminateProcess(-1) -> -9 (Killed, as on
+// Linux); any other negative code (an NTSTATUS crash) -> 1 (InternalError); else unchanged.
+int normalizeExit(int wxCode, Os os, bool killedByUs);
 bool resumable(Outcome o); // Stalled, StorageError, DownloadIncomplete, Interrupted, Killed
 
 enum class Preflight {

@@ -9,6 +9,7 @@ geo_math.cpp
     sources_folder.cpp
     session_log.cpp
     job_progress.cpp
+    portable.cpp
 )
 
 if(CG_CORE_SOURCES)

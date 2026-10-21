@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // the job's permille and the frozen bar of a row.
-// Literals come from the spec and from tests/fixtures/cli-2026.10.6/run-continued.stderr line 12.
+// Literals come from the spec and from tests/fixtures/cli-2026.10.8/run-continued.stderr line 12.
 #include "job_progress.h"
 
 #include <gtest/gtest.h>

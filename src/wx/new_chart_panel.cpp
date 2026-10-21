@@ -10,6 +10,7 @@
 #include "look.h"
 #include "messages.h"
 #include "plugin_log.h"
+#include "portable.h"
 #include "settings_dialog.h"
 #include "sources_dialog.h"
 #include "wx_util.h"
@@ -35,7 +36,9 @@
 #include <initializer_list>
 #include <limits>
 #include <string_view>
+#ifndef __WINDOWS__
 #include <sys/stat.h>
+#endif
 #include <utility>
 #include <variant>
 
@@ -69,19 +72,21 @@ constexpr Curated kCurated[] = {
     {"{E05EDD5E-C6C3-483C-8BA7-8DE1D9892ED8}", true, false},  // Satellite/USGS-Imagery-USA.zmp
     {"{A830C100-49C8-4623-957A-60B85C39FBE0}", false, false}, // Navionics: Navionics/navionics.zmp:2
     {"{D643C5A1-4331-4387-9BE2-DDDF185C117E}", false, false}, // OSM Mapnik: _osm/Mapnik.zmp:4
-    {"{51C1079B-B55D-4DF7-A410-ADC118F53AB1}", false, true},  // Topo/OpenTopoMap.zmp
-    {"{C44877A0-D455-4238-B5E2-C8BFF25FC0D4}", false, false}, // Sea/EMODnet-Bathymetry-World.zmp
-    {"{91D4F1B4-A7CD-4FC8-95F1-637609068FB2}", false, false}, // Sea/EMODnet-Bathymetry-Europe.zmp
-    // the two weather pictures are bases (kind map, ), core 9b2ef52c, line 2 of params.txt
-    {"{FE84A175-2C0F-420F-86DF-5900DE16A33C}", false, false}, // Weather/EUMETView-GeoColour.zmp:2
-    {"{8B9C244E-E978-4267-8FE4-D703534C0789}", false, false}, // Weather/NASA-GIBS-VIIRS-TrueColor.zmp:2
-    // the two EMODnet vessel-density layers (kind layer, group Marine): GUIDs from the
-    // CLI 2026.10.6 `sources` records, tests/fixtures/cli-2026.10.6/sources-bundled-all.stdout
-    {"{99D06D6A-F7FA-4F06-8C00-D9F96307C0F3}", false, false}, // Marine/EMODnet-Vessel-Density.zmp
-    {"{478CBB2F-70D1-4573-8C50-B5361CE2AA46}", false, false}, // Marine/EMODnet-Vessel-Density-Sailing.zmp
+    {"{51C1079B-B55D-4DF7-A410-ADC118F53AB1}", false, true},  // Coast and land/OpenTopoMap.zmp
+    {"{C44877A0-D455-4238-B5E2-C8BFF25FC0D4}", false, false}, // Depth/EMODnet-Bathymetry-World.zmp
+    {"{91D4F1B4-A7CD-4FC8-95F1-637609068FB2}", false, false}, // Depth/EMODnet-Bathymetry-Europe.zmp
+    // the two weather pictures are bases, core 9b2ef52c, line 2 of params.txt
+    {"{FE84A175-2C0F-420F-86DF-5900DE16A33C}", false, false}, // Weather now/EUMETView-GeoColour.zmp:2
+    {"{8B9C244E-E978-4267-8FE4-D703534C0789}", false, false}, // Weather now/NASA-GIBS-VIIRS-TrueColor.zmp:2
+    // the two EMODnet vessel-density layers:
+    // GUIDs from the CLI 2026.10.8 `sources` records, tests/fixtures/cli-2026.10.8/sources-bundled-all.stdout
+    {"{99D06D6A-F7FA-4F06-8C00-D9F96307C0F3}", false,
+     false}, // Seamarks and traffic/EMODnet-Vessel-Density.zmp
+    {"{478CBB2F-70D1-4573-8C50-B5361CE2AA46}", false,
+     false}, // Seamarks and traffic/EMODnet-Vessel-Density-Sailing.zmp
 };
 // order of the weather choice (the first present is the default), core 9b2ef52c,
-// data/map-sources/Weather/<file>.zmp/params.txt:2
+// data/sources/Weather now/<file>.zmp/params.txt:2
 constexpr std::string_view kWeatherOrder[] = {
     "{1A696D82-F258-41A4-BCD6-7648D9E08DE2}", // RainViewer-Radar.zmp
     "{25E4232E-08A5-47C5-8D97-E38B5F418A2D}", // DWD-Radar-Germany.zmp
@@ -186,10 +191,14 @@ std::optional<std::uint64_t> freeBytes(const wxString& dir) {
 
 // Equal st_dev of the two nearest existing ancestors.
 bool sameFileSystem(const wxString& a, const wxString& b) {
-    struct stat sa{}, sb{};
     const wxString pa = existingAncestor(a), pb = existingAncestor(b);
+#ifdef __WINDOWS__
+    return !pa.empty() && !pb.empty() && cg::sameVolume(cg::toUtf8(pa), cg::toUtf8(pb));
+#else
+    struct stat sa{}, sb{};
     return !pa.empty() && !pb.empty() && ::stat(pa.fn_str(), &sa) == 0 && ::stat(pb.fn_str(), &sb) == 0 &&
            sa.st_dev == sb.st_dev;
+#endif
 }
 
 bool writeText(const wxString& path, const std::string& text) {
@@ -1511,8 +1520,16 @@ void NewChartPanel::continueDownload(int step) {
         return;
     wxString outFile, overlayFile, weatherFile; // 3: files
     chartFiles(&outFile, &overlayFile, &weatherFile);
-    if (step <= 3 && (wxFileExists(outFile) || (!overlayFile.empty() && wxFileExists(overlayFile)) ||
-                      (!weatherFile.empty() && wxFileExists(weatherFile))))
+    // A chart saved under the pre-file name counts too (cg::chartFileNameLegacy).
+    const auto exists = [&](const std::string& chartName, bool wanted) {
+        return wanted &&
+               (wxFileExists(joinPath(outputFolder(), cg::fromUtf8(cg::chartFileName(chartName)))) ||
+                wxFileExists(joinPath(outputFolder(), cg::fromUtf8(cg::chartFileNameLegacy(chartName)))));
+    };
+    const std::string chartTitle = cg::toUtf8(chartName());
+    if (step <= 3 &&
+        (exists(chartTitle, true) || exists(cg::seamarksName(chartTitle), !overlayFile.empty()) ||
+         exists(cg::weatherName(chartTitle), !weatherFile.empty())))
         return askDownload(Question::Buttons::YesNo, replaceQuestion(), wxString(), 4);
     beginDownload(step == 4);
 }

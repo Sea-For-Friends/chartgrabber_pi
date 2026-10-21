@@ -264,10 +264,12 @@ TEST_F(MapsContractTest, TheUnionOfTwoFoldersAndTheLaterOneWinsADuplicate) {
     const fs::path bundled = tmp_ / "bundled", sailor = tmp_ / "sailor d'x";
     fs::create_directories(bundled);
     fs::create_directories(sailor);
-    fs::copy(src / "Topo" / "OpenTopoMap.zmp", bundled / "OpenTopoMap.zmp", fs::copy_options::recursive);
+    fs::copy(src / "Coast and land" / "OpenTopoMap.zmp", bundled / "OpenTopoMap.zmp",
+             fs::copy_options::recursive);
     fs::copy(src / "Satellite" / "Esri-World-Imagery.zmp", bundled / "Esri-World-Imagery.zmp",
              fs::copy_options::recursive);
-    fs::copy(src / "Topo" / "OpenTopoMap.zmp", sailor / "Copy-Topo.zmp", fs::copy_options::recursive);
+    fs::copy(src / "Coast and land" / "OpenTopoMap.zmp", sailor / "Copy-Topo.zmp",
+             fs::copy_options::recursive);
     settings_.cliMaps = {bundled.string(), sailor.string()};
     Result r;
     ASSERT_TRUE(exec(r, sourcesArguments(settings_), false, 60000));
@@ -356,7 +358,57 @@ TEST_F(ContractTest, SourcesEstimateAndWhenAskedRunExport) {
     EXPECT_TRUE(fs::exists(written2[0].path)) << written2[0].path;
 }
 
-// OQ-6 : an estimate of the same source with the same --cache while a run downloads: both end with
+// the stop line through CliRunner against the pinned CLI. An estimate
+// stopped at once ends 143 with the CLI's own last line; with CG_RUN=1 a run stopped after its first progress
+// record ends 143 within the grace and the same run again ends 0. A kill would show as exit -9 and as a run
+// slower than the grace.
+TEST_F(ContractTest, StopThroughStdinGives143AndTheSessionContinues) {
+    const std::string line = "chart-grabber-cli: stop requested on stdin; exit 143";
+    const auto stopLine = [&](const Result& r) {
+        return r.hasStderr([&](const StderrLine& l) {
+            const auto* m = std::get_if<MessageLine>(&l);
+            return m != nullptr && m->kind == MessageLine::Kind::Other && m->text == line;
+        });
+    };
+    const auto map = findMap();
+    ASSERT_TRUE(map);
+    const JobSpec spec = job(*map, {0, 1, 2}, "stop.mbtiles");
+    {
+        Result est;
+        CliRunner runner;
+        ASSERT_TRUE(start(runner, est, estimateArguments(spec, settings_), false));
+        runner.terminate();
+        ASSERT_TRUE(runUntil([&] { return est.exits > 0; }, runner.stopGraceMs() + 5000));
+        EXPECT_EQ(est.exitCode, 143) << est.tail(5);
+        EXPECT_TRUE(stopLine(est)) << est.tail(5);
+    }
+    if (env("CG_RUN").value_or("") != "1") {
+        return;
+    }
+    const auto zooms = parseZooms(env("CG_STOP_ZOOMS").value_or("9-12"));
+    ASSERT_TRUE(zooms);
+    const JobSpec big = job(*map, *zooms, "stop-run.mbtiles");
+    const std::string ini = writeJob(big);
+    {
+        Result run;
+        CliRunner runner;
+        ASSERT_TRUE(start(runner, run, runArguments(ini, RunKind::Download, false, settings_), true));
+        ASSERT_TRUE(runUntil([&] { return !run.downloads().empty() || run.exits > 0; }, 120000));
+        ASSERT_EQ(run.exits, 0) << "the run ended before it could be stopped: " << run.tail(5);
+        const auto t0 = Clock::now();
+        runner.terminate();
+        ASSERT_TRUE(runUntil([&] { return run.exits > 0; }, runner.stopGraceMs() + 5000));
+        EXPECT_LT(Clock::now() - t0, std::chrono::milliseconds(runner.stopGraceMs()))
+            << "killed, not stopped";
+        EXPECT_EQ(run.exitCode, 143) << run.tail(5);
+        EXPECT_TRUE(stopLine(run)) << run.tail(5);
+    }
+    Result again;
+    ASSERT_TRUE(exec(again, runArguments(ini, RunKind::Download, false, settings_), true, 600000));
+    EXPECT_EQ(again.exitCode, 0) << again.tail(10);
+}
+
+// OQ-6: an estimate of the same source with the same --cache while a run downloads: both end with
 // exit 0 and no SQLite error.
 TEST_F(ContractTest, EstimateBesideRunningDownloadSharesTheCache) {
     if (env("CG_RUN").value_or("") != "1" || env("CG_OQ6").value_or("") != "1") {

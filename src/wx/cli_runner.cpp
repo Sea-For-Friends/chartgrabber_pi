@@ -5,6 +5,7 @@
 #include "job_files.h"
 #include "messages.h"
 #include "plugin_log.h"
+#include "portable.h"
 #include "wx_util.h"
 
 #include <wx/app.h>
@@ -14,6 +15,7 @@
 #include <wx/process.h>
 #include <wx/stream.h>
 #include <wx/utils.h>
+#include <wx/wfstream.h>
 
 #include <algorithm>
 #include <chrono>
@@ -22,7 +24,17 @@
 #include <map>
 #include <system_error>
 #include <tuple>
-#include <unistd.h>
+#ifdef __WINDOWS__
+#include <cstdint> // ocpn_plugin.h uses uint8_t / uint64_t without including it
+#include <memory>
+#include <vector>
+
+#include <ocpn_plugin.h> // GetPluginDataDir
+#else
+#include <csignal>
+#include <fcntl.h>
+#include <pthread.h>
+#endif
 
 namespace {
 
@@ -40,40 +52,38 @@ std::string versionText(const cg::VersionNumber& v) {
     return std::to_string(v.major) + "." + std::to_string(v.minor) + "." + std::to_string(v.patch);
 }
 
+// The PATH variable as UTF-8; empty when unset. Windows: wxGetEnv (std::getenv is ANSI there). Linux: the raw
+// bytes (wxGetEnv decodes through the locale: under the C locale a non-ASCII folder of PATH is lost).
+std::string pathFromEnv() {
+#ifdef __WINDOWS__
+    wxString path;
+    return wxGetEnv("PATH", &path) ? cg::toUtf8(path) : std::string();
+#else
+    const char* path = std::getenv("PATH");
+    return path ? path : "";
+#endif
+}
+
 // The cache key of a program; nullopt when its size or modification time cannot be read (never cached).
 std::optional<ProbeKey> probeKey(const std::string& program) {
     std::error_code ec;
-    const std::uintmax_t size = std::filesystem::file_size(program, ec);
+    const std::uintmax_t size = std::filesystem::file_size(cg::fsPath(program), ec);
     if (ec)
         return std::nullopt;
-    const auto mtime = std::filesystem::last_write_time(program, ec);
+    const auto mtime = std::filesystem::last_write_time(cg::fsPath(program), ec);
     if (ec)
         return std::nullopt;
     return ProbeKey{program, size, mtime};
 }
 
-// wx 3.2 on Unix reports a normal exit code as a signed 8-bit value (exit 143 -> -113, 130 -> -126) and a
-// signalled child as -signal (SIGTERM -15, SIGKILL -9).
-// Signals are 1..64, so a value below -64 is an exit code 129..191 and is restored here; the CLI's own codes
-// are 0-5, 130 and 143. -1 is ambiguous (execvp failure or SIGHUP); start checks the program first, so it
-// is practically SIGHUP.
-int normalizeExit(int wxCode) {
-    return wxCode < -64 ? wxCode + 256 : wxCode;
-}
-
-bool isExecutableFile(const std::string& path) {
-    std::error_code ec;
-    return std::filesystem::is_regular_file(path, ec) && ::access(path.c_str(), X_OK) == 0;
-}
-
 // wxExecute (wx 3.2, Unix) returns a pid even when the program does not exist: the forked child prints
-// "execvp(...) failed" to its stderr and exits (reported as -1). So the program is checked before the fork.
+// "execvp(...) failed" to its stderr and exits (reported as -1). So the program is checked before the fork:
+// a program with a directory part must be a program file, a bare name is looked up on PATH.
 bool programExists(const std::string& program) {
-    if (program.find('/') != std::string::npos) {
-        return isExecutableFile(program);
+    if (!cg::parentDir(program).empty()) {
+        return cg::isProgramFile(program);
     }
-    const char* path = std::getenv("PATH");
-    return cg::findOnPath(program, path ? path : "").has_value();
+    return cg::findOnPath(program, pathFromEnv()).has_value();
 }
 
 } // namespace
@@ -114,24 +124,41 @@ bool CliRunner::start(const std::vector<std::string>& argv, Callbacks cb, std::s
     for (const std::string& a : argv) {
         text.push_back(cg::fromUtf8(a));
     }
-    std::vector<const wchar_t*> raw;
-    for (const wxString& t : text) {
-        raw.push_back(t.wc_str());
-    }
-    raw.push_back(nullptr);
-
+    text.push_back("--stop-on-stdin"); // last; the caller's argv stays without it
     auto* process = new wxProcess(this);
     process->Redirect();
     long pid;
     {
         wxLogNull quiet; // a failure is reported through *error, not as a dialog
+#ifdef __WINDOWS__
+        // Our own command line: the argv overload of wxExecute breaks a trailing backslash.
+        std::vector<std::string> withStop = argv;
+        withStop.push_back("--stop-on-stdin");
+        process->SetPriority(40); // BELOW_NORMAL_PRIORITY_CLASS, the twin of nice -n 10
+        pid = wxExecute(cg::fromUtf8(cg::windowsCommandLine(withStop)), wxEXEC_ASYNC | wxEXEC_HIDE_CONSOLE,
+                        process);
+#else
+        std::vector<const wchar_t*> raw;
+        for (const wxString& t : text) {
+            raw.push_back(t.wc_str());
+        }
+        raw.push_back(nullptr);
         pid = wxExecute(raw.data(), wxEXEC_ASYNC, process);
+#endif
     }
     if (pid == 0) {
         delete process;
         return fail(wxString::Format(_("Cannot start %s."), text[0]));
     }
-    process->CloseOutput(); // the CLI reads no stdin: give it EOF instead of an open pipe
+#ifndef __WINDOWS__
+    // The stdin write end must not leak into children forked by others (OpenCPN, other plugins): they would
+    // hide the EOF. Ceiling: a fork between pipe() and this fcntl inside wxExecute still inherits it
+    // (cannot be closed with wxExecute).
+    if (auto* out = dynamic_cast<wxFileOutputStream*>(process->GetOutputStream()))
+        ::fcntl(out->GetFile()->fd(), F_SETFD, FD_CLOEXEC);
+    else
+        cg::logFile("cli start: no stdin pipe to mark close-on-exec");
+#endif
     process_ = process;
     pid_ = pid;
     cb_ = std::move(cb);
@@ -139,13 +166,15 @@ bool CliRunner::start(const std::vector<std::string>& argv, Callbacks cb, std::s
     errSplit_ = cg::LineSplitter();
     terminated_ = false;
     stopped_ = false;
+    killed_ = false;
+    killSent_ = false;
     proxy_.clear();
     for (std::size_t i = 0; i + 1 < argv.size(); ++i)
         if (argv[i] == "--proxy")
             proxy_ = argv[i + 1];
     timer_.Start(kPollMs);
     cg::logFile(wxString::Format("cli start pid %ld: %s (%d arguments)", pid, text[0],
-                                 static_cast<int>(argv.size()) - 1));
+                                 static_cast<int>(text.size()) - 1));
     if (cg::pluginLogDebug()) {
         std::vector<std::string> shown = argv;
         for (std::size_t i = 0; i + 1 < shown.size(); ++i)
@@ -161,14 +190,47 @@ void CliRunner::terminate() {
         stopped_ = true;
     if (process_ && !terminated_) {
         terminated_ = true;
-        wxProcess::Kill(static_cast<int>(pid_), wxSIGTERM);
+        stopDeadline_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(stopGraceMs_);
+        wxOutputStream* in = process_->GetOutputStream();
+        if (in) {
+            wxLogNull quiet; // wx logs EPIPE as a dialog
+#ifndef __WINDOWS__
+            // OpenCPN does not ignore SIGPIPE: a write to a child that closed its stdin must not end it.
+            sigset_t block, old, pending;
+            sigemptyset(&block);
+            sigaddset(&block, SIGPIPE);
+            pthread_sigmask(SIG_BLOCK, &block, &old);
+            sigpending(&pending);
+            const bool wasPending = sigismember(&pending, SIGPIPE) == 1;
+#endif
+            in->Write("stop\n", 5); // an error is ignored: the grace kill covers it
+#ifndef __WINDOWS__
+            if (!wasPending) {
+                const timespec zero{0, 0};
+                while (sigtimedwait(&block, nullptr, &zero) == SIGPIPE) {
+                }
+            }
+            pthread_sigmask(SIG_SETMASK, &old, nullptr);
+#endif
+            process_->CloseOutput();
+        }
+    }
+}
+
+// The grace is over and the child still runs: SIGKILL, once.
+void CliRunner::graceCheck() {
+    if (process_ && terminated_ && !killed_ && std::chrono::steady_clock::now() >= stopDeadline_) {
+        killed_ = true;
+        cg::logFile(wxString::Format("cli stop pid %ld: no exit after %d ms; killed", pid_, stopGraceMs_));
+        kill();
     }
 }
 
 void CliRunner::kill() {
     if (process_) {
         stopped_ = true;
-        wxProcess::Kill(static_cast<int>(pid_), wxSIGKILL);
+        killSent_ = true;
+        wxProcess::Kill(static_cast<int>(pid_), wxSIGKILL, wxKILL_NOCHILDREN);
     }
 }
 
@@ -184,6 +246,7 @@ bool CliRunner::stopAndWait(int timeoutMs) {
     }
     while (process_) {
         drain();
+        graceCheck();
         // The end of the process arrives as an event: let the loop run for a short while (a console loop
         // does not deliver it inside YieldFor).
         loop->DispatchTimeout(20);
@@ -198,7 +261,10 @@ bool CliRunner::stopAndWait(int timeoutMs) {
 }
 
 void CliRunner::onTimer(wxTimerEvent&) {
-    cg::guarded("runner timer", [this] { drain(); });
+    cg::guarded("runner timer", [this] {
+        drain();
+        graceCheck();
+    });
 }
 
 void CliRunner::onEnd(wxProcessEvent& event) {
@@ -207,7 +273,13 @@ void CliRunner::onEnd(wxProcessEvent& event) {
             return;
         }
         drain();
-        finish(normalizeExit(event.GetExitCode()));
+        const int raw = event.GetExitCode();
+        const int code = cg::normalizeExit(raw, cg::kHostOs, killSent_);
+#ifdef __WINDOWS__
+        if (code != raw) // an NTSTATUS crash code stays visible
+            cg::logFile(wxString::Format("cli exit pid %ld: raw code %d", pid_, raw));
+#endif
+        finish(code);
     });
 }
 
@@ -298,15 +370,20 @@ std::optional<cg::CliVersion> probeCli(const std::string& program) {
             return it->second.supported;
         }
     }
-    const wxString prog = cg::fromUtf8(program);
-    const wxString opt = "--version";
-    const wchar_t* argv[] = {prog.wc_str(), opt.wc_str(), nullptr};
     wxProcess child;
     child.Redirect();
     long rc;
     {
         wxLogNull quiet; // a failure is the answer "no version", not a dialog
+#ifdef __WINDOWS__
+        rc = wxExecute(cg::fromUtf8(cg::windowsCommandLine({program, "--version"})),
+                       wxEXEC_SYNC | wxEXEC_NOEVENTS | wxEXEC_HIDE_CONSOLE, &child);
+#else
+        const wxString prog = cg::fromUtf8(program);
+        const wxString opt = "--version";
+        const wchar_t* argv[] = {prog.wc_str(), opt.wc_str(), nullptr};
         rc = wxExecute(argv, wxEXEC_SYNC | wxEXEC_NOEVENTS, &child);
+#endif
     }
     std::string out;
     if (rc == 0 && child.GetInputStream()) {
@@ -348,7 +425,21 @@ std::string probedCliVersion(const std::string& program) {
     return it == g_probeCache.end() ? std::string() : it->second.version;
 }
 
-std::optional<std::string> resolveCli(const cg::Settings& s, std::string* why, const std::string& defaultPath,
+std::vector<std::string> hostCliPaths() {
+#ifdef __WINDOWS__
+    // ProgramW6432 first: OpenCPN is a 32-bit process, where %ProgramFiles% is "Program Files (x86)".
+    wxString programFiles;
+    if (!wxGetEnv("ProgramW6432", &programFiles))
+        wxGetEnv("ProgramFiles", &programFiles);
+    return cg::defaultCliPaths(cg::Os::Windows, cg::toUtf8(GetPluginDataDir("chartgrabber_pi")),
+                               cg::toUtf8(programFiles));
+#else
+    return cg::defaultCliPaths(cg::Os::Posix, "", "");
+#endif
+}
+
+std::optional<std::string> resolveCli(const cg::Settings& s, std::string* why,
+                                      const std::vector<std::string>& defaultPaths,
                                       std::optional<std::string> pathEnv) {
     auto fail = [&](const wxString& reason) -> std::optional<std::string> {
         if (why) {
@@ -357,19 +448,17 @@ std::optional<std::string> resolveCli(const cg::Settings& s, std::string* why, c
         return std::nullopt;
     };
     if (!s.cliPath.empty()) {
-        if (!isExecutableFile(s.cliPath)) {
+        if (!cg::isProgramFile(s.cliPath)) {
             return fail(wxString::Format(_("%s cannot be run as a program."), cg::fromUtf8(s.cliPath)));
         }
         return s.cliPath;
     }
-    if (isExecutableFile(defaultPath)) {
-        return defaultPath;
+    for (const std::string& path : defaultPaths) {
+        if (cg::isProgramFile(path)) {
+            return path;
+        }
     }
-    if (!pathEnv) {
-        const char* path = std::getenv("PATH");
-        pathEnv = path ? path : "";
-    }
-    if (auto found = cg::findOnPath(cg::kDefaultCliName, *pathEnv)) {
+    if (auto found = cg::findOnPath(cg::kDefaultCliName, pathEnv ? *pathEnv : pathFromEnv())) {
         return found;
     }
     return fail(cliNotFoundText());

@@ -2,7 +2,8 @@
 // CliRunner: one CLI child process with redirected pipes, parsed record callbacks, terminate / kill /
 // stop-and-wait. GUI thread only; no std::thread.
 // Needs a wx event loop (wxTimer, wxEVT_END_PROCESS); stopAndWait pumps it itself (false without one).
-// The child's stdin is closed right after start.
+// The child gets --stop-on-stdin and an open stdin pipe; terminate() writes "stop\n" and closes it, kill()
+// follows stopGraceMs() later when the child has not ended.
 #pragma once
 
 #include "cli_records.h"
@@ -12,6 +13,7 @@
 #include <wx/event.h>
 #include <wx/timer.h>
 
+#include <chrono>
 #include <functional>
 #include <optional>
 #include <string>
@@ -41,14 +43,20 @@ public:
     // (text lines: nothing), each stderr line through cg::parseStderrLine to onStderr, in order.
     bool start(const std::vector<std::string>& argv, Callbacks cb, std::string* error);
     bool running() const { return process_ != nullptr; }
-    void terminate();                // SIGTERM, once per run
-    void kill();                     // SIGKILL
-    bool stopAndWait(int timeoutMs); // SIGTERM, then drain and poll; true = the process ended
+    void terminate();                // the stop line on the child's stdin, then EOF; once per run
+    void kill();                     // SIGKILL (Linux) / TerminateProcess (Windows)
+    bool stopAndWait(int timeoutMs); // terminate(), then drain and poll; true = the process ended
+
+    // Grace between the stop line and the kill. setStopGraceMs is for tests only.
+    static constexpr int kDefaultStopGraceMs = 10000;
+    int stopGraceMs() const { return stopGraceMs_; }
+    void setStopGraceMs(int ms) { stopGraceMs_ = ms; }
 
 private:
     void onTimer(wxTimerEvent&);
     void onEnd(wxProcessEvent& event);
     void drain();
+    void graceCheck();
     void finish(int exitCode);
     void onStdoutLine(std::string_view line);
     void onStderrLine(std::string_view line);
@@ -64,10 +72,17 @@ private:
     bool draining_ = false;
     std::string proxy_; // the --proxy value of the last start: redacted in the debug copies of CLI lines
     int destructorWaitMs_ = kDefaultDestructorWaitMs;
+    int stopGraceMs_ = kDefaultStopGraceMs;
+    std::chrono::steady_clock::time_point stopDeadline_;
+    bool killed_ = false;   // the grace kill ran for this run
+    bool killSent_ = false; // kill() ran for this run: Windows reports our kill as -1 (normalizeExit)
 };
 
-// Settings::cliPath if set (an executable regular file, no fallback), else defaultPath when
-// executable, else kDefaultCliName on pathEnv (nullopt = getenv("PATH")).
+// The automatic places of the CLI before PATH on this system.
+std::vector<std::string> hostCliPaths();
+
+// Settings::cliPath if set (a program file, no fallback), else the first of defaultPaths that
+// is a program file, else kDefaultCliName on pathEnv (nullopt = the PATH variable).
 // nullopt: *why (may be null) says what is wrong, in English.
 // "<program> --version" synchronously (no env, no nice), the supported version from the version
 // line; cached per (path, size, modification time) for the session; the first probe of a key writes one log
@@ -79,5 +94,5 @@ std::optional<cg::CliVersion> probeCli(const std::string& program);
 std::string probedCliVersion(const std::string& program);
 
 std::optional<std::string> resolveCli(const cg::Settings& s, std::string* why,
-                                      const std::string& defaultPath = cg::defaultCliPath(),
+                                      const std::vector<std::string>& defaultPaths = hostCliPaths(),
                                       std::optional<std::string> pathEnv = std::nullopt);

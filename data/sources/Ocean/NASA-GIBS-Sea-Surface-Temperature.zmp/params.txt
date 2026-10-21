@@ -1,0 +1,16 @@
+﻿[PARAMS]
+GUID={AF87E1F3-ECD7-431F-81ED-E0C7E95458D0}
+name=NASA sea surface temperature (daily, MUR)
+ParentSubMenu=Ocean
+asLayer=1
+DefURLBase=https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/GHRSST_L4_MUR_Sea_Surface_Temperature/default/{ver}/GoogleMapsCompatible_Level7/{z}/{y}/{x}.png
+ContentType=image/png
+Ext=.png
+EPSG=3857
+NameInCache=Ocean_GIBS_MUR_Sea_Surface_Temperature
+CacheType=71
+License=Imagery: NASA Global Imagery Browse Services (GIBS), GHRSST MUR L4 sea surface temperature (JPL PO.DAAC)
+MaxConnectToServerCount=1
+MaxZoom=7
+SnapshotIndex=https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/GHRSST_L4_MUR_Sea_Surface_Temperature/default/GoogleMapsCompatible_Level7/all/2026-01-01--2100-01-01.xml
+SnapshotIndexType=wmts-domain

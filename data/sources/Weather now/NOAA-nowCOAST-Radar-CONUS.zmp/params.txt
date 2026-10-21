@@ -1,0 +1,17 @@
+﻿[PARAMS]
+GUID={076D1F9A-DC94-4184-B785-77362CD01B5B}
+name=NOAA nowCOAST weather radar (contiguous US)
+ParentSubMenu=Weather now
+asLayer=1
+DefURLBase=https://nowcoast.noaa.gov/geoserver/weather_radar/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=conus_base_reflectivity_mosaic&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE&TIME={ver}
+ContentType=image/png
+Ext=.png
+EPSG=3857
+NameInCache=Weather_NOAA_nowCOAST_Radar_CONUS
+CacheType=71
+License=NOAA nowCOAST, MRMS weather radar (US government, public domain)
+MaxConnectToServerCount=2
+MaxZoom=9
+SnapshotIndex=https://nowcoast.noaa.gov/geoserver/weather_radar/conus_base_reflectivity_mosaic/ows?service=WMS&version=1.3.0&request=GetCapabilities
+SnapshotIndexType=wms-default
+SnapshotItem=conus_base_reflectivity_mosaic

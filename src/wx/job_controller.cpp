@@ -8,6 +8,7 @@
 #include "look.h"
 #include "messages.h"
 #include "plugin_log.h"
+#include "portable.h"
 #include "progress_strip.h"
 #include "wx_util.h"
 
@@ -23,9 +24,7 @@
 
 namespace {
 
-constexpr std::size_t kMaxMessages = 200; // the last 200 stderr message lines
-constexpr int kForceStopAfterSec = 30;    //
-
+constexpr std::size_t kMaxMessages = 200; //: the last 200 stderr message lines
 
 } // namespace
 
@@ -222,7 +221,7 @@ void JobController::start(cg::ChartRecord record, cg::RunKind kind, bool overwri
             return;
         }
         std::string why;
-        const auto cli = resolveCli(settings_, &why, cliDefaultPath, cliPathEnv);
+        const auto cli = resolveCli(settings_, &why, cliDefaultPaths, cliPathEnv);
         if (!cli) {
             startFailed(why);
             return;
@@ -381,8 +380,6 @@ void JobController::onStderr(const cg::StderrLine& l) {
 
 void JobController::requestTerminate() {
     setPhase(Phase::Stopping);
-    stopSeconds_ = 0;
-    forceOffered_ = false;
     runner_->terminate();
     strip().showProgress(stoppingText(), -1, stopButtonText());
 }
@@ -396,9 +393,7 @@ void JobController::stop() {
             userStopped_ = true;
             requestTerminate();
             break;
-        case Phase::Stopping:
-            if (forceOffered_ && runner_)
-                runner_->kill();
+        case Phase::Stopping: // a second press does nothing: the runner kills after its grace
             break;
         case Phase::RetryWait:
             tick_.Stop();
@@ -418,10 +413,7 @@ void JobController::onTick(wxTimerEvent&) {
     cg::guarded("job timer", [&] {
         if (closing_)
             return;
-        if (phase_ == Phase::Stopping && !forceOffered_ && ++stopSeconds_ >= kForceStopAfterSec) {
-            forceOffered_ = true;
-            strip().showProgress(stoppingText(), -1, forceStopButtonText());
-        } else if (phase_ == Phase::Running && kind_ != cg::RunKind::BuildFromSaved && ++quietTicks_ >= 60) {
+        if (phase_ == Phase::Running && kind_ != cg::RunKind::BuildFromSaved && ++quietTicks_ >= 60) {
             // a power cut leaves a value at most a minute old; no onChartsChanged (it rebuilds every row)
             quietTicks_ = 0;
             stampDone();
@@ -544,20 +536,14 @@ void JobController::finishJob(cg::Outcome outcome) {
     if (outcome == cg::Outcome::Done) {
         if (settings_.registerCharts && !files.empty()) {
             // one rescan of OpenCPN's chart folders plus the job's folders (a per-file add hangs 5.14+)
-            const auto bare = [](wxString d) {
-                if (d.EndsWith("/"))
-                    d.RemoveLast();
-                return d;
-            };
             wxArrayString dirs = GetChartDBDirArrayString();
             for (const std::string& f : files) {
-                const std::size_t slash = f.rfind('/');
-                const wxString dir = cg::fromUtf8(slash == std::string::npos ? "" : f.substr(0, slash));
+                const std::string dir = cg::parentDir(f);
                 bool listed = false;
                 for (const wxString& d : dirs)
-                    listed = listed || bare(d) == bare(dir);
+                    listed = listed || cg::sameDir(cg::toUtf8(d), dir);
                 if (!listed)
-                    dirs.Add(dir);
+                    dirs.Add(cg::fromUtf8(dir));
             }
             UpdateChartDBInplace(dirs, false, false);
             cg::logLine(
