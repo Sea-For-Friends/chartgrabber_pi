@@ -60,7 +60,7 @@ public:
     bool waitExec(const std::string& dir) const {
         const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(10);
         while (std::chrono::steady_clock::now() < until) {
-            std::ifstream in("/proc/" + std::to_string(pid_) + "/cmdline", std::ios::binary);
+            std::ifstream in(std::string("/proc/") + std::to_string(pid_) + "/cmdline", std::ios::binary);
             const std::string argv((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
             if (argv.find(dir) != std::string::npos)
                 return true;

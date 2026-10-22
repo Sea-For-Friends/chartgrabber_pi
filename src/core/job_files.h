@@ -32,13 +32,16 @@ struct JobSpec {
 std::string formatNumber(double value, int decimals); // std::to_chars, fixed, '.', locale-independent
 std::string jobIni(const JobSpec& job);               // exact text
 // `--format=tsv` always; `--progress=lines` for estimate, run and export.
-std::vector<std::string> sourcesArguments(const Settings& s);
-std::vector<std::string> estimateArguments(const JobSpec& job, const Settings& s);
+// The path values (--cache, --maps, --route, --job) are in the form of `os` (native separators on
+// Windows); the default is this system.
+std::vector<std::string> sourcesArguments(const Settings& s, Os os = kHostOs);
+std::vector<std::string> estimateArguments(const JobSpec& job, const Settings& s, Os os = kHostOs);
 enum class RunKind { Download, BuildFromSaved, Update };
 // Update: the Download argv plus "--replace" and "--replace-older-than=<replaceOlderThan>" ;
 // an empty date gives the Download argv.
 std::vector<std::string> runArguments(const std::string& jobIniPath, RunKind kind, bool overwrite,
-                                      const Settings& s, std::string_view replaceOlderThan = {});
+                                      const Settings& s, std::string_view replaceOlderThan = {},
+                                      Os os = kHostOs);
 // Local time minus monthsBack calendar months, "YYYY-MM-DDThh:mm:ss"; the day is clamped to the target month.
 std::string olderThanDate(int y, int mo, int d, int h, int mi, int s, int monthsBack);
 // "nice", "-n", "10", program, args...
@@ -55,9 +58,6 @@ std::string areaPlace(const BBox& box); // "Area 50.75N 1.30W" (centre, 2 decima
 // One rule on every system: '\'' removed; each of / \ : * ? " < > | and every byte < 0x20 or 0x7f
 // -> '_'; a Windows device name (CON, NUL, COM1...) gets a '_' in front; ".mbtiles".
 std::string chartFileName(const std::string& chartName);
-// The file name rule before ('\'' removed; '/', bytes < 0x20 and 0x7f -> '_'). Only so that the
-// replace question also sees a chart a release before saved. ponytail: delete after one release.
-std::string chartFileNameLegacy(const std::string& chartName);
 std::string seamarksName(const std::string& chartName); // "<name> - Seamarks"
 std::string weatherName(const std::string& chartName);  // "<name> - Weather"
 // A source name for a drop-down : at most 50 code points; longer: the first 47 + "..." (UTF-8, cut

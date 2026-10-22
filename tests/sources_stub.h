@@ -24,12 +24,16 @@
 namespace stub {
 
 // Right after `#!/bin/sh` in every stand-in that a test stops: the CLI's `--stop-on-stdin`, as a
-// shell does it. A reader (fd 3: a background list's own stdin is /dev/null) turns the line `stop` into a
-// SIGTERM of the script itself, so the script's own TERM trap acts as before.
+// shell does it. Only when the option is among the arguments (like the real CLI: `--version` reads
+// no stdin): a script gets it in "$@", an `sh -c` stand-in as $0 (the option is appended last). Then a
+// reader (fd 3: a background list's own stdin is /dev/null) turns the line `stop` or EOF into a SIGTERM of
+// the script itself, so the script's own TERM trap acts as before.
 inline const char* const kStopPrelude =
+    "case \" $0 $* \" in *\" --stop-on-stdin \"*)\n"
     "exec 3<&0\n"
     "{ while IFS= read -r l <&3; do [ \"$l\" = stop ] && break; done; kill -TERM $$; } >/dev/null 2>&1 &\n"
-    "w=$!; trap 'kill $w 2>/dev/null' EXIT\n";
+    "w=$!; trap 'kill $w 2>/dev/null' EXIT ;;\n"
+    "esac\n";
 
 struct Rec {
     std::string guid, kind, name;

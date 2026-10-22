@@ -295,7 +295,7 @@ TEST_F(SettingsPage, CancelAndEscapeStoreNothing) {
         open();
         const int rc = closeWith(wxID_CANCEL, [&] {
             for (const PathCase& c : kPathCases)
-                change(c.name, "/changed/" + std::string(c.name));
+                change(c.name, std::string("/changed/") + std::string(c.name));
             find<wxCheckBox>("slow")->SetValue(true);
             find<wxCheckBox>("register")->SetValue(true);
             find<wxCheckBox>("warnDetailLevels")->SetValue(false);
@@ -611,7 +611,7 @@ TEST_F(SavedTiles, TheQuestionHasDeleteAndCancelAndOnlyDeleteClearsTheCacheFolde
     Question* q = qprobe::shown()[0];
     EXPECT_FALSE(q->IsModal());
     EXPECT_EQ(qprobe::text(q),
-              "Delete 5.0 MB of saved tiles in " + cache.string() +
+              std::string("Delete 5.0 MB of saved tiles in ") + cache.string() +
                   "?  Your charts stay. Top up and Build from saved tiles will then download "
                   "everything again.");
     EXPECT_EQ(qprobe::button(q, wxID_YES)->GetLabel(), "Delete");
@@ -905,7 +905,7 @@ TEST_F(SettingsLayout, ALongPathDoesNotWidenTheDialog) {
     open();
     expand();
     const int width = dlg_->GetSize().x;
-    const std::string longPath = "/" + std::string(150, 'a') + "/" + std::string(148, 'b');
+    const std::string longPath = std::string("/") + std::string(150, 'a') + "/" + std::string(148, 'b');
     ASSERT_EQ(longPath.size(), 300u);
     for (const PathCase& c : kPathCases)
         change(c.name, longPath);
@@ -928,7 +928,7 @@ TEST_F(SettingsLayout, ALongStatusTextDoesNotChangeTheSize) {
     open();
     expand();
     const wxSize before = dlg_->GetSize();
-    const std::string text = "Chart Grabber CLI does not work: " + std::string(300, 'x');
+    const std::string text = std::string("Chart Grabber CLI does not work: ") + std::string(300, 'x');
     for (const char* name : {"sourcesStatus", "chartsStatus", "cliStatus"}) {
         const long style = find<wxStaticText>(name)->GetWindowStyle(); // one line, ellipsized
         EXPECT_TRUE(style & wxST_ELLIPSIZE_END) << name;
@@ -1080,8 +1080,9 @@ TEST_F(SettingsCheck, OnOpenTheLinesSayReadyAndWhatTheSourcesAre) {
               "create it.");
     EXPECT_FALSE(advancedOpen());
     ASSERT_EQ(stub_->argv().size(), 1u);
-    EXPECT_NE(stub_->argv()[0].find("sources --format=tsv --maps " + bundled_.string() + " --cache"),
-              std::string::npos)
+    EXPECT_NE(
+        stub_->argv()[0].find(std::string("sources --format=tsv --maps ") + bundled_.string() + " --cache"),
+        std::string::npos)
         << "an absent folder is not passed: " << stub_->argv()[0];
     fs::create_directories(home_ / "Charts" / "Chart sources");
     dlg_.reset();
@@ -1105,9 +1106,9 @@ TEST_F(SettingsCheck, AFolderWithASourceTwoLevelsDownIsPassedLastAndCounted) {
     ASSERT_TRUE(settle());
     EXPECT_EQ(label("sourcesStatus"), "1 chart source available, with those in your folder.");
     ASSERT_EQ(stub_->argv().size(), 1u);
-    EXPECT_NE(
-        stub_->argv()[0].find("--maps " + bundled_.string() + " --maps " + folder.string() + " --cache"),
-        std::string::npos)
+    EXPECT_NE(stub_->argv()[0].find(std::string("--maps ") + bundled_.string() + " --maps " +
+                                    folder.string() + " --cache"),
+              std::string::npos)
         << stub_->argv()[0];
 }
 
@@ -1235,7 +1236,7 @@ TEST_F(SettingsCheck, ATooOldProgramAndAFailingOne) {
                          Old{"", "Chart Grabber CLI is too old. "}}) {
         SCOPED_TRACE(o.line);
         dlg_.reset();
-        stub::Sources old(root_ / "stubs", "old " + std::to_string(++n));
+        stub::Sources old(root_ / "stubs", std::string("old ") + std::to_string(++n));
         old.version(o.line);
         save([&](cg::Settings& s) { s.cliPath = old.cli(); });
         open();
@@ -1286,7 +1287,8 @@ TEST_F(SettingsCheck, TwoChangesOneHundredMsApartStartOneCheck) {
         [&] { return stub_->argv().size() >= 2 && label("sourcesStatus").find("1 chart source") == 0; }));
     runFor(900); // a third check would have started by now
     ASSERT_EQ(stub_->argv().size(), 2u);
-    EXPECT_NE(stub_->argv()[1].find("--maps " + second.string()), std::string::npos) << stub_->argv()[1];
+    EXPECT_NE(stub_->argv()[1].find(std::string("--maps ") + second.string()), std::string::npos)
+        << stub_->argv()[1];
 }
 
 // Proof 5: a change while the sources run is slow terminates it; only the later run's answer is shown.

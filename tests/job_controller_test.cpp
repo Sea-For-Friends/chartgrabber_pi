@@ -320,7 +320,7 @@ protected:
     }
     std::vector<std::string> argsOf(const std::string& id, int run) const {
         std::vector<std::string> out;
-        std::istringstream in(slurp(jobDir(id) / ("args." + std::to_string(run))));
+        std::istringstream in(slurp(jobDir(id) / (std::string("args.") + std::to_string(run))));
         for (std::string line; std::getline(in, line);)
             out.push_back(line);
         return out;
@@ -345,7 +345,7 @@ protected:
         return n;
     }
     std::string lcAll(const std::string& id, int run) const {
-        std::string t = slurp(jobDir(id) / ("lcall." + std::to_string(run)));
+        std::string t = slurp(jobDir(id) / (std::string("lcall.") + std::to_string(run)));
         if (!t.empty() && t.back() == '\n')
             t.pop_back();
         return t;
@@ -498,7 +498,7 @@ TEST_F(JobTest, PhaseAndProgressNameTheSourceByGuid) {
     int i = 0;
     for (const auto& [guid, label] : rows) {
         SCOPED_TRACE(label);
-        auto r = makeRecord("20261015-11000" + std::to_string(i++));
+        auto r = makeRecord(std::string("20261015-11000") + std::to_string(i++));
         scenario(r.id, 1, "", tsv({"phase", "fill", guid}), 0, "wait");
         start(r);
         ASSERT_TRUE(waitText(label + ": checking the saved tiles...")) << stripText();
@@ -725,7 +725,7 @@ TEST_F(JobTest, RegistrationIsOneRescanOfListedFoldersPlusTheJobsFolders) {
         ocpn_fake::chartDirs.Clear();
         for (const auto& d : row.listed)
             ocpn_fake::chartDirs.Add(wxString::FromUTF8(d));
-        auto r = makeRecord("20261016-10000" + std::to_string(n++));
+        auto r = makeRecord(std::string("20261016-10000") + std::to_string(n++));
         std::string out;
         for (const auto& f : row.files)
             out += written(kBase, f, 4, 9);
@@ -737,8 +737,8 @@ TEST_F(JobTest, RegistrationIsOneRescanOfListedFoldersPlusTheJobsFolders) {
         EXPECT_EQ(dirs(0), row.expect);
         EXPECT_FALSE(ocpn_fake::updates[0].force);
         EXPECT_FALSE(ocpn_fake::updates[0].progress);
-        const std::string line =
-            "ChartGrabber: chart list updated (" + std::to_string(row.expect.size()) + " folders)";
+        const std::string line = std::string("ChartGrabber: chart list updated (") +
+                                 std::to_string(row.expect.size()) + " folders)";
         EXPECT_NE(std::find(log.messages.begin(), log.messages.end(), line), log.messages.end());
         EXPECT_EQ(stripText().find("did not accept"), std::string::npos);
     }
@@ -868,7 +868,7 @@ TEST_F(JobTest, OutcomeTable) {
     int i = 0;
     for (const OutcomeRow& row : rows) {
         SCOPED_TRACE(row.name);
-        auto r = makeRecord("20261015-12000" + std::to_string(i++));
+        auto r = makeRecord(std::string("20261015-12000") + std::to_string(i++));
         scenario(r.id, 1, "", row.err, row.code, row.mode);
         start(r);
         ASSERT_TRUE(waitIdle());
@@ -1159,7 +1159,7 @@ TEST_F(JobTest, BudgetStopsASlowJobWhenTheLimitIsCrossed) {
             s.slowConnection = row.slow;
             s.dataBudgetMb = 1;
         });
-        auto r = makeRecord("20261015-13000" + std::to_string(i++));
+        auto r = makeRecord(std::string("20261015-13000") + std::to_string(i++));
         r.overlayGuid = kOver;
         // The child always waits for a signal: a job that must NOT be stopped is seen to be still running.
         scenario(r.id, 1, "", row.progress, 0, "wait");
@@ -1716,11 +1716,11 @@ TEST_F(JobTest, ATooOldProgramStartsNoChildAndKeepsTheRecordState) {
     int i = 0;
     for (const char* line : {"old-tiles 0.1.0 (test)", "chart-grabber-cli 2026.10.3 (test)", "hello world"}) {
         SCOPED_TRACE(line);
-        const std::string folder = "old " + std::to_string(++i);
+        const std::string folder = std::string("old ") + std::to_string(++i);
         const std::string old = standIn(folder, line);
         setSettings([&](cg::Settings& s) { s.cliPath = old; });
         busyCalls_.clear();
-        auto fresh = makeRecord("20261015-12060" + std::to_string(i));
+        auto fresh = makeRecord(std::string("20261015-12060") + std::to_string(i));
         start(fresh);
         EXPECT_FALSE(jc().busy());
         EXPECT_EQ(stripText(),
@@ -1736,7 +1736,7 @@ TEST_F(JobTest, ATooOldProgramStartsNoChildAndKeepsTheRecordState) {
         ASSERT_TRUE(click("Preferences..."));
         EXPECT_EQ(prefs_, i);
 
-        auto kept = makeRecord("20261015-12061" + std::to_string(i));
+        auto kept = makeRecord(std::string("20261015-12061") + std::to_string(i));
         kept.state = cg::ChartState::Missing;
         store_->saveChart(kept);
         start(kept);
@@ -1788,7 +1788,7 @@ TEST_F(JobTest, LiveShowsCheckingAndBuilding) {
     const std::string marker = "warning: marker\n";
     int n = 0;
     const auto liveAfter = [&](const std::string& err) {
-        auto r = makeRecord("20261016-10010" + std::to_string(n++));
+        auto r = makeRecord(std::string("20261016-10010") + std::to_string(n++));
         scenario(r.id, 1, "", err + marker, 0, "wait");
         start(r);
         EXPECT_TRUE(runUntil([&] { return detailsText().find("warning: marker") != std::string::npos; }));
@@ -2060,9 +2060,9 @@ TEST_F(WeatherTest, AJobEndedByTheSailorOrByForceStartsNoFollowUp) {
             s.slowConnection = row.slow;
             s.dataBudgetMb = 1;
         });
-        auto first = makeRecord("20261016-20100" + std::to_string(i));
+        auto first = makeRecord(std::string("20261016-20100") + std::to_string(i));
         scenario(first.id, 1, row.out, row.err, row.code, row.mode);
-        const auto next = queuedWeather("20261016-20110" + std::to_string(i++));
+        const auto next = queuedWeather(std::string("20261016-20110") + std::to_string(i++));
         start(first);
         jc().queueAfter(next);
         if (std::string(row.name) == "stop") {
@@ -2112,7 +2112,8 @@ TEST_F(WeatherTest, ARefusedOrStalledFirstJobStillStartsTheFollowUp) {
     jc().queueAfter(next2);
     jc_->tick_.Stop();
     for (int attempt = 1; attempt <= 3; ++attempt) {
-        ASSERT_TRUE(waitText("No connection. Retry in 60 s (" + std::to_string(attempt) + " of 3)"))
+        ASSERT_TRUE(
+            waitText(std::string("No connection. Retry in 60 s (") + std::to_string(attempt) + " of 3)"))
             << stripText();
         EXPECT_EQ(runs(next2.id), 0);
         tick(60);

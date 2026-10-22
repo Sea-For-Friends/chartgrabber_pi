@@ -82,6 +82,11 @@ protected:
     }
 
     void scenario(bool stripOnChart); // stripOnChart selects the host of the progress strip
+    void uninstallWithNotice(bool stripOnChart);
+    // Resume the stored chart with the CLI held: `main` is the open main dialog, `strip` the visible strip.
+    using WaitFn = std::function<bool(const std::function<bool()>&)>;
+    void startHeldJob(stub::Sources& cli, bool stripOnChart, const WaitFn& runUntil, MainDialog*& main,
+                      ProgressStrip*& strip);
 
     std::filesystem::path root_;
     std::unique_ptr<wxFileConfig> config_;
@@ -140,6 +145,48 @@ long msSince(std::chrono::steady_clock::time_point t) {
 }
 } // namespace
 
+void CloseDuringJobTest::startHeldJob(stub::Sources& cli, bool stripOnChart, const WaitFn& runUntil,
+                                      MainDialog*& main, ProgressStrip*& strip) {
+    const char* const kMapnik = "{D643C5A1-4331-4387-9BE2-DDDF185C117E}";
+    cli.records({{kMapnik, "", "OSM OpenStreetMap.org - MAPNIK", 3857, "ok", ""}});
+    ConfigStore store(config_.get());
+    cg::Settings s = store.loadSettings();
+    s.cliPath = cli.cli();
+    s.stripOnChart = stripOnChart;
+    store.saveSettings(s);
+    cg::ChartRecord r;
+    r.id = "20261015-090000";
+    r.name = "Resumable";
+    r.sourceGuid = kMapnik;
+    r.bbox = {-1.5, 50.25, 2.125, 51.0};
+    r.zooms = {8, 9};
+    r.created = "2026-10-15T10:15:00";
+    r.state = cg::ChartState::Interrupted;
+    store.saveChart(r);
+    std::ofstream(store.jobsDir() + "/" + r.id + "/job.ini") << "[Job]\n";
+    cli.holdRun(true);
+    pi_->OnToolbarToolCallback(7);
+    main = mainDialog();
+    ASSERT_NE(main, nullptr);
+    wxChoice* choice = sourceChoiceOf(main);
+    ASSERT_TRUE(runUntil([&] { return choice->IsEnabled() && choice->GetCount() == 1; }));
+    wxWindow* resume = wxWindow::FindWindowByLabel("Resume", main);
+    ASSERT_NE(resume, nullptr);
+    wxCommandEvent press(wxEVT_BUTTON, resume->GetId());
+    press.SetEventObject(resume);
+    resume->GetEventHandler()->ProcessEvent(press);
+    ASSERT_TRUE(runUntil([&] { return !cli.runArgv().empty(); })) << "the job child started";
+    ASSERT_TRUE(lastStateBusy());
+    ASSERT_TRUE(runUntil([&] {
+        ProgressStrip* st = stripOf(ocpn_fake::canvasWindow);
+        return st && st->IsShown();
+    })) << "the progress strip did not appear";
+    strip = stripOf(ocpn_fake::canvasWindow);
+    ASSERT_NE(strip, nullptr) << "the progress strip exists";
+    EXPECT_TRUE(strip->IsShown()) << "the progress strip is shown";
+    EXPECT_EQ(strip->host(), stripOnChart ? ProgressStrip::Host::Canvas : ProgressStrip::Host::Window);
+}
+
 void CloseDuringJobTest::scenario(bool stripOnChart) {
     std::unique_ptr<wxEventLoopBase> loop(wxApp::GetInstance()->GetTraits()->CreateEventLoop());
     wxEventLoopActivator active(loop.get());
@@ -169,45 +216,11 @@ void CloseDuringJobTest::scenario(bool stripOnChart) {
         pump(100); // the 1 s My charts timer may tick here: a slow tick counts too
         EXPECT_LT(msSince(t2), 100 + kLimitMs) << name << " (pump)";
     };
-    const char* const kMapnik = "{D643C5A1-4331-4387-9BE2-DDDF185C117E}";
     stub::Sources cli(root_);
-    cli.records({{kMapnik, "", "OSM OpenStreetMap.org - MAPNIK", 3857, "ok", ""}});
-    ConfigStore store(config_.get());
-    cg::Settings s = store.loadSettings();
-    s.cliPath = cli.cli();
-    s.stripOnChart = stripOnChart;
-    store.saveSettings(s);
-    cg::ChartRecord r;
-    r.id = "20261015-090000";
-    r.name = "Resumable";
-    r.sourceGuid = kMapnik;
-    r.bbox = {-1.5, 50.25, 2.125, 51.0};
-    r.zooms = {8, 9};
-    r.created = "2026-10-15T10:15:00";
-    r.state = cg::ChartState::Interrupted;
-    store.saveChart(r);
-    std::ofstream(store.jobsDir() + "/" + r.id + "/job.ini") << "[Job]\n";
-    cli.holdRun(true);
-    pi_->OnToolbarToolCallback(7);
-    MainDialog* main = mainDialog();
-    ASSERT_NE(main, nullptr);
-    wxChoice* choice = sourceChoiceOf(main);
-    ASSERT_TRUE(runUntil([&] { return choice->IsEnabled() && choice->GetCount() == 1; }));
-    wxWindow* resume = wxWindow::FindWindowByLabel("Resume", main);
-    ASSERT_NE(resume, nullptr);
-    wxCommandEvent press(wxEVT_BUTTON, resume->GetId());
-    press.SetEventObject(resume);
-    resume->GetEventHandler()->ProcessEvent(press);
-    ASSERT_TRUE(runUntil([&] { return !cli.runArgv().empty(); })) << "the job child started";
-    ASSERT_TRUE(lastStateBusy());
-    ASSERT_TRUE(runUntil([&] {
-        ProgressStrip* st = stripOf(ocpn_fake::canvasWindow);
-        return st && st->IsShown();
-    })) << "the progress strip did not appear";
-    ProgressStrip* strip = stripOf(ocpn_fake::canvasWindow);
-    ASSERT_NE(strip, nullptr) << "the progress strip exists";
-    EXPECT_TRUE(strip->IsShown()) << "the progress strip is shown";
-    EXPECT_EQ(strip->host(), stripOnChart ? ProgressStrip::Host::Canvas : ProgressStrip::Host::Window);
+    MainDialog* main = nullptr;
+    ProgressStrip* strip = nullptr;
+    ASSERT_NO_FATAL_FAILURE(startHeldJob(
+        cli, stripOnChart, [&](const std::function<bool()>& done) { return runUntil(done); }, main, strip));
 
     const auto open = [&](const char* name) { step(name, true, [&] { pi_->OnToolbarToolCallback(7); }); };
     const auto closeBox = [&](const char* name) { step(name, false, [&] { main->Close(); }); };
@@ -265,4 +278,76 @@ TEST_F(CloseDuringJobTest, ClosingTheDialogWhileAJobRunsReturnsAtOnceWithTheStri
 }
 TEST_F(CloseDuringJobTest, ClosingTheDialogWhileAJobRunsReturnsAtOnceWithTheStripOnTheChart) {
     scenario(true);
+}
+
+// OpenCPN crashed on Windows when the plugin was uninstalled while the strip showed the
+// Stopped notice. DeInit runs from a pending event (as OpenCPN's util handler calls it) while the strip is
+// visible and another top-level window (OpenCPN's Options) has the focus; events are pumped afterwards.
+void CloseDuringJobTest::uninstallWithNotice(bool stripOnChart) {
+    std::unique_ptr<wxEventLoopBase> loop(wxApp::GetInstance()->GetTraits()->CreateEventLoop());
+    wxEventLoopActivator active(loop.get());
+    const auto runUntil = [&](const std::function<bool()>& done) {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(15);
+        while (!done() && std::chrono::steady_clock::now() < deadline)
+            loop->DispatchTimeout(20);
+        return done();
+    };
+    stub::Sources cli(root_);
+    MainDialog* main = nullptr;
+    ProgressStrip* strip = nullptr;
+    ASSERT_NO_FATAL_FAILURE(startHeldJob(cli, stripOnChart, runUntil, main, strip));
+    main->Close();
+    wxWindow* stop = wxWindow::FindWindowByLabel("Stop", strip);
+    ASSERT_NE(stop, nullptr);
+    wxCommandEvent press(wxEVT_BUTTON, stop->GetId());
+    press.SetEventObject(stop);
+    stop->GetEventHandler()->ProcessEvent(press);
+    ASSERT_TRUE(runUntil([&] { return wxWindow::FindWindowByLabel("Resume", strip) != nullptr; }))
+        << "the Stopped notice with its Resume button";
+    ASSERT_TRUE(strip->IsShown());
+
+    auto* options = new wxFrame(nullptr, wxID_ANY, "Options", wxPoint(300, 200), wxSize(400, 300));
+    options->Show();
+    options->SetFocus();
+    bool called = false;
+    wxTheApp->CallAfter([&] {
+        called = true;
+        pi_->DeInit();
+    });
+    ASSERT_TRUE(runUntil([&] { return called; }));
+    // Pending events and idle after DeInit returned, over more than the strip's 500 ms placement timer.
+    for (const auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(700);
+         std::chrono::steady_clock::now() < end;) {
+        wxTheApp->ProcessPendingEvents();
+        wxTheApp->ProcessIdle();
+        loop->DispatchTimeout(20);
+    }
+    EXPECT_EQ(stripOf(ocpn_fake::canvasWindow), nullptr) << "no strip window is left";
+    options->Destroy();
+    const auto log = root_ / "private" / "plugins" / "chartgrabber" / "chartgrabber.log";
+    std::ifstream in(log);
+    std::vector<std::string> lines;
+    for (std::string line; std::getline(in, line);)
+        lines.push_back(line.size() > 24 ? line.substr(24) : line); // without the stamp
+    ASSERT_FALSE(lines.empty());
+    EXPECT_EQ(lines.back(), "session end");
+    // The strip was hidden by its destructor, while its handlers were alive: a shown window that is destroyed
+    // gets wxEVT_SHOW(false) after the destructor body on MSW, which crashed OpenCPN. Order: shown, hidden,
+    // destroyed.
+    const auto last = [&](const char* text) {
+        const auto it = std::find(lines.rbegin(), lines.rend(), text);
+        return it == lines.rend() ? -1 : static_cast<int>(lines.rend() - it) - 1;
+    };
+    const int shown = last("strip job shown"), hidden = last("strip job hidden"),
+              destroyed = last("strip job destroyed");
+    EXPECT_GE(shown, 0);
+    EXPECT_GT(hidden, shown) << "hidden after the last show";
+    EXPECT_GT(destroyed, hidden) << "destroyed after it was hidden";
+}
+
+TEST_F(CloseDuringJobTest, UninstallWithTheStoppedNoticeShownLeavesNoStripInItsOwnWindow) {
+    uninstallWithNotice(false);
+}
+TEST_F(CloseDuringJobTest, UninstallWithTheStoppedNoticeShownLeavesNoStripOnTheChart) {
+    uninstallWithNotice(true);
 }

@@ -30,7 +30,7 @@ TEST(PluginVersion, CalendarShapeAndPartsMatchTheString) {
     EXPECT_LE(cg::kPluginVersionMinor, 12);
     EXPECT_GE(cg::kPluginVersionPatch, 0);
     EXPECT_EQ(v, std::to_string(cg::kPluginVersionMajor) + "." + std::to_string(cg::kPluginVersionMinor) +
-                     "." + std::to_string(cg::kPluginVersionPatch));
+                     std::string(".") + std::to_string(cg::kPluginVersionPatch));
 }
 
 TEST(PluginVersion, OpenCpnParserReadsTheFourDigitMajor) {

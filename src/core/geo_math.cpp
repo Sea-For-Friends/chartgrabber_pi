@@ -148,7 +148,7 @@ std::string formatScale(double denominator) {
     const auto text = [](double v, int decimals, const char* unit) {
         char buf[32];
         const auto end = std::to_chars(buf, buf + sizeof buf, v, std::chars_format::fixed, decimals).ptr;
-        return "1:" + std::string(buf, end) + unit;
+        return std::string("1:") + std::string(buf, end) + unit;
     };
     if (r >= 1e7)
         return text(r / 1e6, 0, "M");

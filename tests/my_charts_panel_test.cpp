@@ -151,7 +151,7 @@ protected:
         // The default maps folder is under HOME; not inside root_ (GTK's icon loader keeps HOME in the
         // command line of a sandbox process that outlives the test; expectNoProcessesUnder(root_) would
         // report it).
-        home_ = (root_.parent_path() / ("home-of-" + root_.filename().string())).string();
+        home_ = (root_.parent_path() / (std::string("home-of-") + root_.filename().string())).string();
         setenv("HOME", home_.c_str(), 1);
         ocpn_fake::touch = false;
         ocpn_fake::scale = 1.0;
@@ -198,6 +198,7 @@ protected:
         EXPECT_TRUE(ocpn_fake::removed.empty())
             << "RemoveChartFromDBInPlace hangs OpenCPN 5.14+: never called";
         ocpn_fake::onUpdate = nullptr;
+        ocpn_fake::globalColors.clear(); // also after a failed ASSERT
         if (!frame_)
             return;
         if (jobs_) {
@@ -274,7 +275,7 @@ protected:
     }
     std::vector<std::string> argsOf(const std::string& id, int run) const {
         std::vector<std::string> out;
-        std::istringstream in(slurp(jobDir(id) / ("args." + std::to_string(run))));
+        std::istringstream in(slurp(jobDir(id) / (std::string("args.") + std::to_string(run))));
         for (std::string line; std::getline(in, line);)
             out.push_back(line);
         return out;
@@ -1185,6 +1186,12 @@ struct BarsTest : ChartsTest {
         EXPECT_LE(g.size(), 1u);
         return g.empty() ? nullptr : g.front();
     }
+    // The gauge's background; an invalid colour when the row has no gauge (the job did not run): a failed
+    // wait, not a null dereference.
+    wxColour gaugeColour(wxPanel* row) {
+        wxGauge* g = gaugeOf(row);
+        return g ? g->GetBackgroundColour() : wxColour();
+    }
     FrozenBar* barOf(wxPanel* row) {
         std::vector<FrozenBar*> b;
         collect(row, b);
@@ -1473,21 +1480,27 @@ TEST_F(BarsTest, GaugesCarryTheControlColourAtDusk) {
     ASSERT_TRUE(runUntil(
         [&] {
             const auto rows = rowPanels();
-            return rows.size() == 1 && gaugeOf(rows[0])->GetBackgroundColour() == dilg1;
+            return rows.size() == 1 && gaugeColour(rows[0]) == dilg1;
         },
         15000))
         << "the gauge never took the Dusk control colour";
     std::vector<wxPanel*> p = rowPanels();
     ASSERT_EQ(p.size(), 1u);
-    EXPECT_EQ(gaugeOf(p[0])->GetBackgroundColour(), dilg1);
+    EXPECT_EQ(gaugeColour(p[0]), dilg1);
     panel()->refresh();
     p = rowPanels();
-    EXPECT_EQ(gaugeOf(p[0])->GetBackgroundColour(), dilg1);
+    ASSERT_EQ(p.size(), 1u);
+    EXPECT_EQ(gaugeColour(p[0]), dilg1);
     look_.setScheme(PI_GLOBAL_COLOR_SCHEME_DAY);
-    ASSERT_TRUE(runUntil([&] { return gaugeOf(rowPanels()[0])->GetBackgroundColour() != dilg1; }, 15000))
+    ASSERT_TRUE(runUntil(
+        [&] {
+            const auto rows = rowPanels();
+            return rows.size() == 1 && gaugeColour(rows[0]) != dilg1;
+        },
+        15000))
         << "the gauge kept the Dusk colour after the switch to Day";
-    EXPECT_NE(gaugeOf(rowPanels()[0])->GetBackgroundColour(), dilg1);
-    ocpn_fake::globalColors.clear();
+    ASSERT_EQ(rowPanels().size(), 1u);
+    EXPECT_NE(gaugeColour(rowPanels()[0]), dilg1);
     jobs_->stop();
     ASSERT_TRUE(waitIdle(10000));
 }
@@ -1545,7 +1558,6 @@ TEST_F(BarsTest, FrozenBarFillIsToldFromTrackAndBodyInEveryScheme) {
         EXPECT_GE(std::abs(fill.Red() - track.Red()), 40) << s.cs;
         EXPECT_GE(std::abs(fill.Red() - s.body.Red()), 40) << s.cs;
     }
-    ocpn_fake::globalColors.clear();
 }
 
 // Proof 9 (touch): every row button, Stop and Stopping... included, is at least minControlHeight high; the

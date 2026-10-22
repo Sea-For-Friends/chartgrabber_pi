@@ -1520,11 +1520,8 @@ void NewChartPanel::continueDownload(int step) {
         return;
     wxString outFile, overlayFile, weatherFile; // 3: files
     chartFiles(&outFile, &overlayFile, &weatherFile);
-    // A chart saved under the pre-file name counts too (cg::chartFileNameLegacy).
     const auto exists = [&](const std::string& chartName, bool wanted) {
-        return wanted &&
-               (wxFileExists(joinPath(outputFolder(), cg::fromUtf8(cg::chartFileName(chartName)))) ||
-                wxFileExists(joinPath(outputFolder(), cg::fromUtf8(cg::chartFileNameLegacy(chartName)))));
+        return wanted && wxFileExists(joinPath(outputFolder(), cg::fromUtf8(cg::chartFileName(chartName))));
     };
     const std::string chartTitle = cg::toUtf8(chartName());
     if (step <= 3 &&

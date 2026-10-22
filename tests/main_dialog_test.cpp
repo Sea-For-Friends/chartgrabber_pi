@@ -554,7 +554,7 @@ TEST_F(DialogTest, PreselectionOrderIsSelectedActiveLastFirstEachOnlyWhenListed)
     };
     int n = 0;
     for (const Row& row : rows) {
-        SCOPED_TRACE("row " + std::to_string(n++));
+        SCOPED_TRACE(std::string("row ") + std::to_string(n++));
         ocpn_fake::routes.clear();
         threeRoutes();
         ocpn_fake::selectedRoute = row.selected;

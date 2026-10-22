@@ -65,7 +65,7 @@ std::string libraryText() {
     std::error_code ec;
     const fs::path file = info.dli_fname;
     const std::uintmax_t size = fs::file_size(file, ec);
-    std::string text = "library " + file.string();
+    std::string text = std::string("library ") + file.string();
     if (ec)
         return text;
     const auto time = fs::last_write_time(file, ec);

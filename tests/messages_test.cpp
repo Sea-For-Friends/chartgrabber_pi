@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Texts and number formats of src/wx/messages.cpp against literals. Pure functions; no window, no OpenCPN call.
+#include "cli_records.h"
 #include "messages.h"
 #include "wx_env.h"
 
@@ -7,9 +8,11 @@
 
 #include <wx/string.h>
 
+#include <fstream>
 #include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace {
@@ -301,11 +304,16 @@ TEST(MessagesOutcome, TheCacheAndAreaSizeRefusals) {
     EXPECT_EQ(u(tooLargeText()), large);
     EXPECT_EQ(u(cacheRefusedText()), cache);
     // the captured BerkeleyDB line also holds ": cannot open the cache: ", so its check comes first.
-    EXPECT_EQ(
-        u(refusalText("\"BerkeleyDB copy\": cannot open the cache: $SCRATCH/Osm_Topo_Map/ (cache type 6): "
-                      "BerkeleyDB caches (cache types 6 and 61) are no longer supported")),
-        "This chart source asks for a BerkeleyDB tile cache, which Chart Grabber CLI no longer "
-        "supports.");
+    // the line is the captured fixture, made a lastError the way the runner does.
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.8/run-cache-berkeleydb.stderr",
+                     std::ios::binary);
+    std::string line;
+    ASSERT_TRUE(std::getline(in, line));
+    const auto parsed = cg::parseStderrLine(line);
+    ASSERT_TRUE(std::holds_alternative<cg::MessageLine>(parsed));
+    EXPECT_EQ(u(refusalText(std::get<cg::MessageLine>(parsed).text)),
+              "This chart source asks for a BerkeleyDB tile cache, which Chart Grabber CLI no longer "
+              "supports.");
 }
 
 TEST(MessagesOutcome, RefusalTextKeepsUtf8) {

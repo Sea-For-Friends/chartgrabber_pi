@@ -85,6 +85,26 @@ TEST(JoinPath, Table) {
     }
 }
 
+TEST(NativeSeparators, Table) {
+    struct Row {
+        std::string_view in;
+        Os os;
+        std::string want;
+    };
+    const std::vector<Row> rows = {
+        {"C:/Users/Ann/Charts/Карта моря.mbtiles", Os::Windows, "C:\\Users\\Ann\\Charts\\Карта моря.mbtiles"},
+        {"//srv/share/x.mbtiles", Os::Windows, "\\\\srv\\share\\x.mbtiles"},
+        {"C:\\Users\\Ann\\a.mbtiles", Os::Windows, "C:\\Users\\Ann\\a.mbtiles"},
+        {"C:\\a/b", Os::Windows, "C:\\a\\b"},
+        {"", Os::Windows, ""},
+        {"/home/a b/x'y.mbtiles", Os::Posix, "/home/a b/x'y.mbtiles"},
+        {"/home/a\\b.mbtiles", Os::Posix, "/home/a\\b.mbtiles"},
+    };
+    for (const Row& r : rows) {
+        EXPECT_EQ(nativeSeparators(r.in, r.os), r.want) << r.in;
+    }
+}
+
 TEST(ParentDir, Table) {
     struct Row {
         std::string_view path;
@@ -197,7 +217,8 @@ TEST(LocalTime, MatchesLocaltimeR) {
 class ProgramFileTest : public testing::Test {
 protected:
     void SetUp() override {
-        root = std::filesystem::temp_directory_path() / ("cg_portable_test_" + std::to_string(::getpid()));
+        root = std::filesystem::temp_directory_path() /
+               (std::string("cg_portable_test_") + std::to_string(::getpid()));
         std::filesystem::create_directories(root);
     }
     void TearDown() override { std::filesystem::remove_all(root); }

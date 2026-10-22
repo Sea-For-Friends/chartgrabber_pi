@@ -199,7 +199,7 @@ protected:
         oldHome_ = getenv("HOME") ? getenv("HOME") : "";
         // The default maps folder is under HOME. Not inside root_: GTK's icon loader (a bwrap sandbox) keeps
         // HOME in its command line and outlives the test, which expectNoProcessesUnder(root_) would report.
-        home_ = (root_.parent_path() / ("home-of-" + root_.filename().string())).string();
+        home_ = (root_.parent_path() / (std::string("home-of-") + root_.filename().string())).string();
         setenv("HOME", home_.c_str(), 1);
         ocpn_fake::touch = false;
         ocpn_fake::scale = 1.0;
@@ -607,11 +607,11 @@ TEST_F(PanelTest, EveryFailureOfTheRunShowsItsTextAndThePreferencesButton) {
         int exitCode;
         std::string stderrText, records, expected;
     };
-    const std::string oneSource = "source\t" + std::string(kEsri) + "\tmap\t" + kNameEsri +
+    const std::string oneSource = std::string("source\t") + std::string(kEsri) + "\tmap\t" + kNameEsri +
                                   "\timage/jpeg\t3857\t0\tok\tfile.zmp\t\n" + "source\t" + kSeamarkLayer +
                                   "\tlayer\t" + kNameSeamark + "\timage/png\t3857\t0\tok\tfile.zmp\t\n";
     const std::string estimate =
-        "estimate\t" + std::string(kEsri) + "\t8\t10\t10\t0.0000\t0.0000\t100\t0\t0\n";
+        std::string("estimate\t") + std::string(kEsri) + "\t8\t10\t10\t0.0000\t0.0000\t100\t0\t0\n";
     const std::vector<Row> rows = {
         // (usageError, exit 2) prints Qt's text through console.cpp:64 ("error:
         // ").
@@ -696,7 +696,7 @@ TEST_F(PanelTest, ATooOldOrUnknownProgramShowsTheTooOldTextWithPreferences) {
     for (const char* line :
          {"old-tiles 0.1.0 (test)", "chart-grabber-cli 2026.10.3 (test)", "hello world", ""}) {
         SCOPED_TRACE(line);
-        stub::Sources other(root_, "old stub " + std::to_string(++i));
+        stub::Sources other(root_, std::string("old stub ") + std::to_string(++i));
         other.version(line);
         other.records(allCurated());
         setSettings([&](cg::Settings& s) { s.cliPath = other.cli(); });
@@ -1374,21 +1374,26 @@ TEST_F(PanelTest, TouchMakesTheNewControlsAtLeast48PixelsHigh) {
 
 // Drives the More sources dialog from a timer inside its modal loop; `body` must end the dialog.
 struct MoreSourcesDriver {
-    explicit MoreSourcesDriver(std::function<void(SourcesDialog&, wxListCtrl&)> body) : timer(&handler) {
-        handler.Bind(wxEVT_TIMER, [this, body](wxTimerEvent&) {
-            for (auto* node = wxTopLevelWindows.GetFirst(); node; node = node->GetNext()) {
-                auto* dlg = dynamic_cast<SourcesDialog*>(node->GetData());
-                if (!dlg || !dlg->IsShown())
-                    continue;
-                timer.Stop();
-                found = true;
-                std::vector<wxListCtrl*> lists;
-                collect(dlg, lists);
-                body(*dlg, *lists.at(0));
-                return;
-            }
-        });
+    explicit MoreSourcesDriver(std::function<void(SourcesDialog&, wxListCtrl&)> body_)
+        : body(std::move(body_)), timer(&handler) {
+        handler.Bind(wxEVT_TIMER, [this](wxTimerEvent&) { poll(); });
         timer.Start(30);
+    }
+    // One look at the windows (the timer's tick): answers the first shown window that is still waiting.
+    void poll() {
+        for (auto* node = wxTopLevelWindows.GetFirst(); node; node = node->GetNext()) {
+            auto* dlg = dynamic_cast<SourcesDialog*>(node->GetData());
+            // An answered window (onDone is spent) is not the one awaited: wx shows a modeless dialog that
+            // was hidden within its deferred-show window again a few hundred ms later.
+            if (!dlg || !dlg->IsShown() || !dlg->onDone)
+                continue;
+            timer.Stop();
+            found = true;
+            std::vector<wxListCtrl*> lists;
+            collect(dlg, lists);
+            body(*dlg, *lists.at(0));
+            return;
+        }
     }
     static std::vector<std::string> rows(wxListCtrl& list) {
         std::vector<std::string> out;
@@ -1415,6 +1420,7 @@ struct MoreSourcesDriver {
         ASSERT_TRUE(dlg.FindWindow(wxID_OK)->IsEnabled()) << name;
         press(dlg, wxID_OK);
     }
+    std::function<void(SourcesDialog&, wxListCtrl&)> body;
     wxEvtHandler handler;
     wxTimer timer;
     bool found = false;
@@ -1595,6 +1601,7 @@ TEST_F(PanelTest, AMoreSourcesPickTakesTheLastSlotOfTheChoiceAndTheImageryLineFo
         waitEstimateRuns(runs + 1);
         waitEstimate();
         EXPECT_EQ(status(), "");
+        waitSourcesDialogGone(); // the next click must open a new window, not raise this one
     }
     // The pick is the source of the estimate that followed it (Delta, the last pick).
     EXPECT_NE(sources_->estimateArgv().back().find(std::string(" --source ") + kDelta + " "),
@@ -1683,6 +1690,30 @@ TEST_F(PanelTest, MoreSourcesIsAModelessWindowThePageIsDisabledAndThePickHappens
     EXPECT_EQ(selected(), "Delta");
     EXPECT_EQ(entries(), (std::vector<std::string>{kNameEsri, "Delta"}));
     wxTheApp->ProcessIdle();
+}
+
+// a More sources window hidden before wx finished showing it comes back shown (wx's deferred show);
+// it is an answered window: the driver ignores it, and the next click waits until it is destroyed.
+TEST_F(PanelTest, AnAnsweredMoreSourcesWindowThatComesBackShownIsNotAnsweredAgainByTheNextDriver) {
+    sources_->records({map(kEsri, kNameEsri), map(kDelta, "Delta")});
+    makeDialog();
+    click(moreSources());
+    ASSERT_EQ(shownWindows<SourcesDialog>().size(), 1u);
+    SourcesDialog* first = shownWindows<SourcesDialog>()[0];
+    first->Close(); // at once: before the deferred show
+    ASSERT_TRUE(runUntil([&] { return !shownWindows<SourcesDialog>().empty(); }, 3000))
+        << "this wx did not show the closed window again: the case cannot be built here";
+    EXPECT_FALSE(shownWindows<SourcesDialog>()[0]->onDone) << "the window was answered";
+    {
+        MoreSourcesDriver idle([&](SourcesDialog&, wxListCtrl&) {});
+        idle.poll(); // at once: the window is shown and pending deletion, before any idle pass
+        EXPECT_FALSE(idle.found);
+    }
+    waitSourcesDialogGone();
+    MoreSourcesDriver driver(
+        [&](SourcesDialog& dlg, wxListCtrl& list) { MoreSourcesDriver::pick(dlg, list, "Delta"); });
+    clickUntilFound(moreSources(), driver);
+    EXPECT_EQ(selected(), "Delta");
 }
 
 TEST_F(PanelTest, PreferencesFromThePageIsOneModelessWindowAtATimeEvenWithAnotherSettingsWindowOpen) {
@@ -2341,7 +2372,7 @@ TEST_F(DownloadTest, DownloadWritesTheJobFilesSavesTheChoiceStartsTheJobAndHides
                       "\nBBox=5.00000000,45.00000000,15.00000000,55.00000000\n"
                       "Zooms=8-14\nOut=" +
                       out + "\nOverlayOut=" + overlay +
-                      "\nName=\xD0\x90\xD0\xBB\xD1\x84\xD0\xB0 dx\n[Download]\nThreads=" +
+                      std::string("\nName=\xD0\x90\xD0\xBB\xD1\x84\xD0\xB0 dx\n[Download]\nThreads=") +
                       std::to_string(row.jobThreads) + "\n");
         EXPECT_FALSE(fs::exists(job / "route.gpx"));
         const IniFile chart = readIni(job / "chart.ini");
@@ -2537,11 +2568,10 @@ TEST_F(DownloadTest, AnExistingChartFileAsksReplaceAndNoStartsNothingYesRunsWith
         {"overlay file exists, Yes", over, true, true, true},
         {"overlay file exists but no seamarks", over, false, false, false},
         {"none exists", "other.mbtiles", true, false, false},
-        // a file saved under the pre-name ("T:x" kept its colon) counts; the new name is
-        // "T_x".
-        {"legacy base file exists", "T:x.mbtiles", true, false, true, "T:x"},
-        {"legacy overlay file exists", "T:x - Seamarks.mbtiles", true, false, true, "T:x"},
-        {"legacy overlay file but no seamarks", "T:x - Seamarks.mbtiles", false, false, false, "T:x"},
+        // A file under the old name ("T:x" kept its colon; the name is now "T_x") no longer asks.
+        {"old-name base file does not ask", "T:x.mbtiles", true, false, false, "T:x"},
+        {"old-name overlay file does not ask", "T:x - Seamarks.mbtiles", true, false, false, "T:x"},
+        {"new-name base file asks", "T_x.mbtiles", true, false, true, "T:x"},
     };
     for (const Row& row : rows) {
         SCOPED_TRACE(row.name);
@@ -2929,7 +2959,8 @@ TEST_F(DownloadTest, NoCostIsShownWhenTheNextLevelIsAboveTheSourceLimit) {
     for (const int limit : {13, 14}) {
         SCOPED_TRACE(limit);
         sources_->rawRecords(std::string("source\t") + kEsri + "\tmap\t" + kNameEsri +
-                             "\timage/jpeg\t3857\t0\tok\tfile.zmp\t\t\t\t\t" + std::to_string(limit) + "\n");
+                             std::string("\timage/jpeg\t3857\t0\tok\tfile.zmp\t\t\t\t\t") +
+                             std::to_string(limit) + "\n");
         sources_->estimateOut(capturedEstimates());
         ready();
         pickZooms(9, 13);
@@ -3077,7 +3108,7 @@ TEST_F(TouchFitTest, AVeryLongPathOnTheStatusLineIsBrokenAndTheDialogStaysEightH
     std::ofstream(root_ / "a file") << "x";
     std::string folder = (root_ / "a file").string();
     for (int i = 0; i < 12; ++i)
-        folder += "/very_long_directory_name_" + std::to_string(i);
+        folder += std::string("/very_long_directory_name_") + std::to_string(i);
     setSettings([&](cg::Settings& s) { s.chartDir = folder; });
     store_->setDisclaimerShown();
     ready();
@@ -3832,9 +3863,9 @@ TEST_F(PanelWeatherTest, AnExistingWeatherFileAloneAsksToReplace) {
     EXPECT_EQ(jobDirs().size(), 1u);
 }
 
-// a weather file saved under the pre-name ("T:x" kept its colon) counts too. The legacy
-// table above has no weather control (no field 11), so the weather row of it lives here.
-TEST_F(PanelWeatherTest, ALegacyNamedWeatherFileAsksToReplace) {
+// A weather file under the old name ("T:x" kept its colon) no longer asks. The table above has no
+// weather control (no field 11), so the weather row of it lives here.
+TEST_F(PanelWeatherTest, AnOldNamedWeatherFileDoesNotAskToReplace) {
     useFixture();
     store_->setDisclaimerShown();
     sources_->holdRun(true);
@@ -3847,11 +3878,10 @@ TEST_F(PanelWeatherTest, ALegacyNamedWeatherFileAsksToReplace) {
     makeDialog();
     typeInto(nameField(), "T:x");
     waitEstimate();
-    Answerer answers(std::vector<Answerer::Answer>{{false}});
+    Answerer answers({});
     download();
-    ASSERT_EQ(answers.shown.size(), 1u);
-    EXPECT_EQ(answers.shown[0], kReplace);
-    EXPECT_TRUE(jobDirs().empty());
+    EXPECT_TRUE(answers.shown.empty());
+    EXPECT_EQ(jobDirs().size(), 2u) << "the chart job and the weather job both start";
 }
 
 // Proof 8. Edited fixture line: the seamark layer's maxZoom (field 13, empty) set to 6; hand-made from the

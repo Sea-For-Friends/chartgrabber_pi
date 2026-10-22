@@ -135,32 +135,32 @@ std::string jobIni(const JobSpec& job) {
 
 namespace {
 // One `--maps D` pair per entry of cliMaps, in order (the CLI lets a later folder win a duplicate GUID).
-void addMaps(std::vector<std::string>& a, const Settings& s) {
+void addMaps(std::vector<std::string>& a, const Settings& s, Os os) {
     for (const std::string& d : s.cliMaps) {
         a.emplace_back("--maps");
-        a.push_back(d);
+        a.push_back(nativeSeparators(d, os));
     }
 }
 } // namespace
 
-std::vector<std::string> sourcesArguments(const Settings& s) {
+std::vector<std::string> sourcesArguments(const Settings& s, Os os) {
     std::vector<std::string> a{"sources"};
     a.emplace_back("--format=tsv");
-    addMaps(a, s);
-    addIf(a, "--cache", s.cacheDir);
+    addMaps(a, s, os);
+    addIf(a, "--cache", nativeSeparators(s.cacheDir, os));
     return a;
 }
 
-std::vector<std::string> estimateArguments(const JobSpec& job, const Settings& s) {
+std::vector<std::string> estimateArguments(const JobSpec& job, const Settings& s, Os os) {
     std::vector<std::string> a{"estimate"};
     a.emplace_back("--format=tsv");
     a.emplace_back("--progress=lines");
-    addMaps(a, s);
-    addIf(a, "--cache", s.cacheDir);
+    addMaps(a, s, os);
+    addIf(a, "--cache", nativeSeparators(s.cacheDir, os));
     addIf(a, "--source", job.sourceGuid);
     addIf(a, "--overlay", job.overlayGuid);
     if (job.areaKind == AreaKind::Route) {
-        addIf(a, "--route", job.routeGpxPath);
+        addIf(a, "--route", nativeSeparators(job.routeGpxPath, os));
         a.emplace_back("--corridor-nm");
         a.push_back(formatNumber(job.corridorNm, 1));
     } else {
@@ -173,12 +173,13 @@ std::vector<std::string> estimateArguments(const JobSpec& job, const Settings& s
 }
 
 std::vector<std::string> runArguments(const std::string& jobIniPath, RunKind kind, bool overwrite,
-                                      const Settings& s, std::string_view replaceOlderThan) {
-    std::vector<std::string> a{kind == RunKind::BuildFromSaved ? "export" : "run", "--job", jobIniPath};
+                                      const Settings& s, std::string_view replaceOlderThan, Os os) {
+    std::vector<std::string> a{kind == RunKind::BuildFromSaved ? "export" : "run", "--job",
+                               nativeSeparators(jobIniPath, os)};
     a.emplace_back("--format=tsv");
     a.emplace_back("--progress=lines");
-    addMaps(a, s);
-    addIf(a, "--cache", s.cacheDir);
+    addMaps(a, s, os);
+    addIf(a, "--cache", nativeSeparators(s.cacheDir, os));
     addIf(a, "--proxy", s.proxy);
     if (s.slowConnection) {
         a.emplace_back("--threads");
@@ -189,7 +190,7 @@ std::vector<std::string> runArguments(const std::string& jobIniPath, RunKind kin
     }
     if (kind == RunKind::Update && !replaceOlderThan.empty()) { // the caller always passes a date
         a.emplace_back("--replace");
-        a.push_back("--replace-older-than=" + std::string(replaceOlderThan));
+        a.push_back(std::string("--replace-older-than=") + std::string(replaceOlderThan));
     }
     return a;
 }
@@ -306,17 +307,6 @@ std::string chartFileName(const std::string& chartName) {
     return out + ".mbtiles";
 }
 
-std::string chartFileNameLegacy(const std::string& chartName) {
-    std::string out;
-    for (const char c : chartName) {
-        if (c == '\'') {
-            continue;
-        }
-        out += (c == '/' || static_cast<unsigned char>(c) < 0x20 || c == 0x7f) ? '_' : c;
-    }
-    return out + ".mbtiles";
-}
-
 std::string seamarksName(const std::string& chartName) {
     return chartName + " - Seamarks";
 }
@@ -385,7 +375,7 @@ std::string chartIni(const ChartRecord& r) {
     line("Zooms", formatZoomList(r.zooms));
     line("Created", r.created);
     for (std::size_t i = 0; i < r.files.size(); ++i) {
-        line("File" + std::to_string(i), r.files[i]);
+        line(std::string("File") + std::to_string(i), r.files[i]);
     }
     line("State", kStateNames[static_cast<int>(r.state)]);
     line("Tiles", std::to_string(r.tiles));

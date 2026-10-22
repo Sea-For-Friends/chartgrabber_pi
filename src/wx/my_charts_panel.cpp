@@ -75,9 +75,9 @@ void FrozenBar::draw(wxDC& dc) const {
         track = wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOX);
     int grey = 128, best = -1;
     for (int g : {80, 128, 176}) {
-        const int far = std::min(std::abs(g - luminance(track)), std::abs(g - luminance(body)));
-        if (far > best) {
-            best = far;
+        const int dist = std::min(std::abs(g - luminance(track)), std::abs(g - luminance(body)));
+        if (dist > best) {
+            best = dist;
             grey = g;
         }
     }

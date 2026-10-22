@@ -323,7 +323,8 @@ TEST_F(SourcesDialogTest, AModelessDialogEndsOnOkReloadCancelEscapeAndTheCloseBo
 TEST_F(SourcesDialogTest, ALongListFitsEightHundredByFourEightyAndTouchMakesTheButtonsHigh) {
     std::vector<cg::SourceRecord> many;
     for (int i = 0; i < 60; ++i)
-        many.push_back(rec("{X}", ("Source " + std::to_string(i)).c_str(), i % 7 == 0 ? 3395 : 3857));
+        many.push_back(
+            rec("{X}", (std::string("Source ") + std::to_string(i)).c_str(), i % 7 == 0 ? 3395 : 3857));
     {
         Fixture f(many, look_);
         EXPECT_LE(f.dlg_.GetSize().x, 800);

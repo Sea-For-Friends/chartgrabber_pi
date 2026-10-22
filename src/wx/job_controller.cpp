@@ -495,8 +495,9 @@ void JobController::finishJob(cg::Outcome outcome) {
     std::vector<std::string> files;
     std::int64_t bytes = 0;
     for (const cg::WrittenRecord& w : written_) {
-        names.push_back(wxFileName(cg::fromUtf8(w.path)).GetName());
-        files.push_back(w.path);
+        const std::string path = cg::nativeSeparators(w.path); // the CLI prints '/' on Windows
+        names.push_back(wxFileName(cg::fromUtf8(path)).GetName());
+        files.push_back(path);
         bytes += w.bytes;
         if (!w.snapshot.empty()) // the last non-empty one: a seamark overlay's empty field leaves the base's
             record_.snapshot = w.snapshot;

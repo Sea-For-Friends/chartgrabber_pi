@@ -8,6 +8,7 @@
 #include "question.h"
 #include "settings.h"
 
+#include <wx/collpane.h> // not forward-declared: wxCollapsiblePane is a macro for wxGenericCollapsiblePane on MSW
 #include <wx/dialog.h>
 #include <wx/string.h>
 #include <wx/timer.h>
@@ -24,8 +25,6 @@ class ConfigStore;
 class Look;
 class wxButton;
 class wxCheckBox;
-class wxCollapsiblePane;
-class wxCollapsiblePaneEvent;
 class wxScrolledWindow;
 class wxSizer;
 class wxBoxSizer;

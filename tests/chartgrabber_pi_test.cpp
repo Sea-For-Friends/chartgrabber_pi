@@ -7,6 +7,7 @@
 #include "main_dialog.h"
 #include "ocpn_fakes.h"
 #include "plugin_log.h"
+#include "plugin_version.h"
 #include "progress_strip.h"
 #include "settings_dialog.h"
 #include "sources_stub.h"
@@ -328,7 +329,48 @@ TEST_F(PluginToolTest, TheStripsSettingsOkMakesTheOpenPageReadItsSourcesAgain) {
     }
 }
 
-// : the plugin's own log file over Init / DeInit.
+// the CLI gets exactly one bundled --maps folder, the per-version one; stale folders beside it
+// (an older Import leaves them) are never named. The stub prints the records it is given, so which GUID wins
+// is shown by this argument list, not by the stub's output.
+TEST_F(PluginToolTest, TheCliGetsOnlyTheVersionedBundledSourcesFolder) {
+    std::unique_ptr<wxEventLoopBase> loop(wxApp::GetInstance()->GetTraits()->CreateEventLoop());
+    wxEventLoopActivator active(loop.get());
+    pi_->DeInit();
+    const std::filesystem::path plug = root_ / "plugin";
+    const std::string cur = std::string("sources-") + cg::kPluginVersionString;
+    for (const char* d : {"sources", "sources-0.0.1", cur.c_str()}) {
+        std::filesystem::create_directories(plug / "data" / d / "Sea" / "a.zmp");
+        std::ofstream(plug / "data" / d / "Sea" / "a.zmp" / "params.txt")
+            << "GUID={11111111-2222-3333-4444-555555555555}\nParentSubMenu=" << d << "\n";
+    }
+    ocpn_fake::dataDir = wxString::FromUTF8(plug.string());
+    ASSERT_NE(pi_->Init(), 0);
+    stub::Sources cli(root_);
+    cli.records({{"{11111111-2222-3333-4444-555555555555}", "", "x", 3857, "ok", ""}});
+    ConfigStore store(config_.get());
+    cg::Settings s = store.loadSettings();
+    s.cliPath = cli.cli();
+    store.saveSettings(s);
+    pi_->OnToolbarToolCallback(7);
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(15);
+    while (cli.argv().empty() && std::chrono::steady_clock::now() < deadline)
+        loop->DispatchTimeout(20);
+    ASSERT_FALSE(cli.argv().empty()) << "the CLI was not asked for sources";
+    const std::string want = (plug / "data" / cur).string();
+    for (const std::string& a : cli.argv()) {
+        SCOPED_TRACE(a);
+        EXPECT_NE(a.find(want), std::string::npos);
+        EXPECT_EQ(a.find((plug / "data" / "sources").string() + " "), std::string::npos);
+        EXPECT_EQ(a.find("sources-0.0.1"), std::string::npos);
+        EXPECT_EQ(a.find("data/sources/"), std::string::npos);
+        size_t n = 0;
+        for (size_t at = a.find(plug.string()); at != std::string::npos; at = a.find(plug.string(), at + 1))
+            ++n;
+        EXPECT_EQ(n, 1u) << "exactly one bundled folder";
+    }
+}
+
+// the plugin's own log file over Init / DeInit.
 namespace {
 
 std::string slurpFile(const std::filesystem::path& p) {
@@ -402,12 +444,12 @@ TEST_F(PluginToolTest, InitStartsTheLogFileWithTheSupportHeaderAndDeInitEndsIt) 
         << lines[3];
     EXPECT_EQ(lines[4], "OpenGL on");
     const wxSize client = frame_->GetClientSize();
-    EXPECT_EQ(lines[5], "canvases 1, primary canvas " + std::to_string(client.x) + "x" +
+    EXPECT_EQ(lines[5], std::string("canvases 1, primary canvas ") + std::to_string(client.x) + "x" +
                             std::to_string(client.y) + " px, chart bar 37 px");
     EXPECT_EQ(lines[6], "setting StripOnChart=7 is invalid; using 0");
     ASSERT_GE(lines.size(), 8u);
     EXPECT_EQ(lines[7], "settings: CLI " + cli + ", chart sources " + std::string(getenv("HOME")) +
-                            "/Charts/Chart sources, charts " + std::string(getenv("HOME")) +
+                            std::string("/Charts/Chart sources, charts ") + std::string(getenv("HOME")) +
                             "/Charts/ChartGrabber, saved tiles " + (root_ / "private").string() +
                             "/plugins/chartgrabber/cache, progress on the chart off, debug off");
     EXPECT_EQ(lines[2].rfind("old", 0), std::string::npos);

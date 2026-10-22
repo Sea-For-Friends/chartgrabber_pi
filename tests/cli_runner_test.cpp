@@ -215,7 +215,7 @@ TEST_F(CliRunnerTest, TwoMegabytesOnStderrAndOneOnStdoutNoDeadlockNoLossInOrder)
     ASSERT_EQ(run.lines.size(), 20000u);
     for (size_t i = 0; i < run.lines.size(); ++i) {
         const std::string& text = std::get<MessageLine>(run.lines[i]).text;
-        ASSERT_EQ(text.substr(0, text.find(' ')), "e" + std::to_string(i + 1)) << "line " << i;
+        ASSERT_EQ(text.substr(0, text.find(' ')), std::string("e") + std::to_string(i + 1)) << "line " << i;
         ASSERT_EQ(text.size(), text.find(' ') + 1 + 100) << "line " << i;
     }
     EXPECT_EQ(run.events.back(), "exit");
@@ -537,7 +537,7 @@ TEST_F(CliRunnerTest, StartFailsWithAnErrorAndNoExit) {
         {"/nonexistent/prog", "Cannot start /nonexistent/prog."},
         {"no-such-prog-zz", "Cannot start no-such-prog-zz."},
         {notExecutable, "Cannot start " + notExecutable + "."},
-        {tmp.dir().string(), "Cannot start " + tmp.dir().string() + "."},
+        {tmp.dir().string(), std::string("Cannot start ") + tmp.dir().string() + "."},
     };
     for (const auto& [program, message] : cases) {
         Capture run;
@@ -761,6 +761,45 @@ TEST(ProbeCli, SupportedOrTooOldAndItsLogLine) {
     }
 }
 
+// a stand-in run without --stop-on-stdin and with stdin at EOF is not stopped (the `--version` race
+// in dash); with the option, EOF still ends it. Both forms: script file and `sh -c` ($0 = the option).
+TEST(ProbeCli, StopPreludeReactsOnlyToTheOption) {
+    TempDir tmp;
+    const std::string body = "sleep 0.3; echo done; exit 7";
+    const std::string script =
+        tmp.write("prelude-cli", std::string("#!/bin/sh\n") + stub::kStopPrelude + body + "\n", true);
+    const std::string shScript = tmp.write("prelude.sh", std::string(stub::kStopPrelude) + body, false);
+    const fs::path out = tmp.dir() / "out";
+    const auto run = [&](const std::string& cmd) {
+        const int rc = std::system((cmd + " </dev/null >\"$CG_T_OUT\" 2>&1").c_str());
+        std::ifstream in(out);
+        std::string text((std::istreambuf_iterator<char>(in)), {});
+        return std::make_pair(WEXITSTATUS(rc) + (WIFSIGNALED(rc) ? 1000 : 0), text);
+    };
+    setenv("CG_T_OUT", out.c_str(), 1); // the folder name has a quote: paths go by variable
+    setenv("CG_T_SCRIPT", script.c_str(), 1);
+    setenv("CG_T_SH", shScript.c_str(), 1);
+    const std::string sc = "\"$CG_T_SCRIPT\"";
+    const std::string shc = "/bin/sh -c \"$(cat \"$CG_T_SH\")\"";
+    EXPECT_EQ(run(sc), std::make_pair(7, std::string("done\n"))) << "script, no option";
+    EXPECT_EQ(run(shc), std::make_pair(7, std::string("done\n"))) << "sh -c, no option";
+    EXPECT_EQ(run(sc + " --stop-on-stdin").second.find("done"),
+              std::string::npos) // the shell may print "Terminated"
+        << "script, option: EOF stops it";
+    EXPECT_EQ(run(shc + " --stop-on-stdin").second.find("done"), std::string::npos)
+        << "sh -c, option: EOF stops it";
+}
+
+// 200 real probes of the Sources stand-in (a new file each: the probe cache is keyed on the file)
+// all see the version line, none "no version".
+TEST(ProbeCli, SourcesStandInAnswersEveryProbe) {
+    TempDir tmp;
+    for (int i = 0; i < 200; ++i) {
+        stub::Sources src(tmp.dir(), std::string("p") + std::to_string(i));
+        ASSERT_TRUE(probeCli(src.cli())) << "probe " << i;
+    }
+}
+
 // probedCliVersion reads the probe cache; it never runs the program.
 TEST(ProbeCli, ProbedVersionComesFromTheCache) {
     TempDir tmp;
@@ -784,8 +823,8 @@ TEST(ProbeCli, ProbedVersionComesFromTheCache) {
 // character is dropped whole. When the character ends exactly at byte 200 it stays.
 TEST(ProbeCli, LogLineIsCutOnACharacterBoundary) {
     const std::string yo = "\xD0\x81";
-    const std::string head199 = "hello " + std::string(193, 'a');
-    const std::string head198 = "hello " + std::string(192, 'a');
+    const std::string head199 = std::string("hello ") + std::string(193, 'a');
+    const std::string head198 = std::string("hello ") + std::string(192, 'a');
     struct Row {
         const char* name;
         std::string line, logged;

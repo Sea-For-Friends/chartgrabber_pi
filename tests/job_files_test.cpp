@@ -187,6 +187,56 @@ TEST(Arguments, RunUpdateAddsReplaceAndTheDate) {
     // the date is ignored by the other kinds
 }
 
+// on Windows every path value the CLI gets is in native form; the other values keep their
+// text.
+Settings nativeSettings() {
+    Settings s;
+    s.cliMaps = {"C:/Maps/\xC3\xA9t\xC3\xA9 charts/a'b", "D:/Chart Nav/m"};
+    s.cacheDir = "C:\\ProgramData\\opencpn/plugins/chartgrabber/cache";
+    s.proxy = "http://h:3128/";
+    return s;
+}
+
+TEST(ArgumentsNativePath, WindowsSourcesAndEstimateRoute) {
+    const Settings s = nativeSettings();
+    EXPECT_EQ(
+        sourcesArguments(s, Os::Windows),
+        (Args{"sources", "--format=tsv", "--maps", "C:\\Maps\\\xC3\xA9t\xC3\xA9 charts\\a'b", "--maps",
+              "D:\\Chart Nav\\m", "--cache", "C:\\ProgramData\\opencpn\\plugins\\chartgrabber\\cache"}));
+    JobSpec j = routeOverlayOnly();
+    j.corridorNm = 2.5;
+    j.routeGpxPath = "C:/Users/me/My Routes/route.gpx";
+    EXPECT_EQ(
+        estimateArguments(j, s, Os::Windows),
+        (Args{"estimate", "--format=tsv", "--progress=lines", "--maps",
+              "C:\\Maps\\\xC3\xA9t\xC3\xA9 charts\\a'b", "--maps", "D:\\Chart Nav\\m", "--cache",
+              "C:\\ProgramData\\opencpn\\plugins\\chartgrabber\\cache", "--overlay", "BBBB-2", "--route",
+              "C:\\Users\\me\\My Routes\\route.gpx", "--corridor-nm", "2.5", "--zooms", "15-16"}));
+}
+
+TEST(ArgumentsNativePath, WindowsRunJobAndProxyKeepsItsSlash) {
+    EXPECT_EQ(runArguments("C:/ProgramData/opencpn/plugins/chartgrabber/jobs/20261022-140040/job.ini",
+                           RunKind::Update, false, nativeSettings(), "2026-09-16T10:00:00", Os::Windows),
+              (Args{"run", "--job",
+                    "C:\\ProgramData\\opencpn\\plugins\\chartgrabber\\jobs\\20261022-140040\\job.ini",
+                    "--format=tsv", "--progress=lines", "--maps", "C:\\Maps\\\xC3\xA9t\xC3\xA9 charts\\a'b",
+                    "--maps", "D:\\Chart Nav\\m", "--cache",
+                    "C:\\ProgramData\\opencpn\\plugins\\chartgrabber\\cache", "--proxy", "http://h:3128/",
+                    "--replace", "--replace-older-than=2026-09-16T10:00:00"}));
+}
+
+TEST(ArgumentsNativePath, PosixKeepsEveryByte) {
+    Settings s;
+    s.cliMaps = {"/m\\y"};
+    s.cacheDir = "/c\\d";
+    s.proxy = "http://h:3128/";
+    EXPECT_EQ(sourcesArguments(s, Os::Posix),
+              (Args{"sources", "--format=tsv", "--maps", "/m\\y", "--cache", "/c\\d"}));
+    EXPECT_EQ(runArguments("/j\\job.ini", RunKind::Download, false, s, "", Os::Posix),
+              (Args{"run", "--job", "/j\\job.ini", "--format=tsv", "--progress=lines", "--maps", "/m\\y",
+                    "--cache", "/c\\d", "--proxy", "http://h:3128/"}));
+}
+
 TEST(OlderThanDate, MonthsBackClampTheDayAndCrossTheYear) {
     EXPECT_EQ(olderThanDate(2026, 2, 5, 7, 8, 9, 0), "2026-02-05T07:08:09");
     EXPECT_EQ(olderThanDate(2026, 3, 31, 23, 59, 58, 1), "2026-02-28T23:59:58");
@@ -250,15 +300,6 @@ TEST(Names, DefaultSeamarksAndFile) {
     EXPECT_EQ(chartFileName("Skipper's"), "Skippers.mbtiles");
     EXPECT_EQ(chartFileName("Plain"), "Plain.mbtiles");
     EXPECT_EQ(chartFileName("Карты моря"), "Карты моря.mbtiles");
-}
-
-// the file name rule before , kept so that the replace question sees older charts.
-TEST(Names, LegacyFileNameKeepsWhatWindowsForbids) {
-    EXPECT_EQ(chartFileNameLegacy("A/B"), "A_B.mbtiles");
-    EXPECT_EQ(chartFileNameLegacy(std::string("a\tb\x7f") + "c"), "a_b_c.mbtiles");
-    EXPECT_EQ(chartFileNameLegacy("Skipper's"), "Skippers.mbtiles");
-    EXPECT_EQ(chartFileNameLegacy("a:b*c\\d"), "a:b*c\\d.mbtiles");
-    EXPECT_EQ(chartFileNameLegacy("CON"), "CON.mbtiles");
 }
 
 // one rule on every system; a chart named on Linux is named the same on Windows.
@@ -404,7 +445,8 @@ TEST(RouteGpx, EscapesAndEightDecimals) {
 class PathTest : public testing::Test {
 protected:
     void SetUp() override {
-        root = std::filesystem::temp_directory_path() / ("cg_path_test_" + std::to_string(::getpid()));
+        root = std::filesystem::temp_directory_path() /
+               (std::string("cg_path_test_") + std::to_string(::getpid()));
         std::filesystem::create_directories(root / "a");
         std::filesystem::create_directories(root / "b");
     }
@@ -657,7 +699,7 @@ TEST(ChartIni, TenFilesStayInNumericOrder) {
     ChartRecord r = fullRecord();
     r.files.clear();
     for (int i = 0; i < 11; ++i) {
-        r.files.push_back("/c/f" + std::to_string(i));
+        r.files.push_back(std::string("/c/f") + std::to_string(i));
     }
     EXPECT_EQ(parseChartIni(chartIni(r), "x")->files, r.files);
 }

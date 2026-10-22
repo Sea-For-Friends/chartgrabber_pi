@@ -65,18 +65,18 @@ void glPopAttrib() {
     g_fake.gl.push_back("pop");
 }
 void glDisable(GLenum c) {
-    g_fake.gl.push_back("disable " + std::to_string(c));
+    g_fake.gl.push_back(std::string("disable ") + std::to_string(c));
 }
 void glEnable(GLenum c) {
-    g_fake.gl.push_back("enable " + std::to_string(c));
+    g_fake.gl.push_back(std::string("enable ") + std::to_string(c));
 }
 void glBlendFunc(GLenum, GLenum) {}
 void glColor4ub(GLubyte r, GLubyte g, GLubyte b, GLubyte a) {
-    g_fake.gl.push_back("color " + std::to_string(r) + "," + std::to_string(g) + "," + std::to_string(b) +
-                        "," + std::to_string(a));
+    g_fake.gl.push_back(std::string("color ") + std::to_string(r) + "," + std::to_string(g) + "," +
+                        std::to_string(b) + std::string(",") + std::to_string(a));
 }
 void glLineWidth(GLfloat w) {
-    g_fake.gl.push_back("width " + std::to_string(int(w)));
+    g_fake.gl.push_back(std::string("width ") + std::to_string(int(w)));
 }
 void glBegin(GLenum m) {
     g_fake.gl.push_back(m == GL_LINE_LOOP ? "loop" : m == GL_LINES ? "lines" : "other");
@@ -85,7 +85,7 @@ void glEnd() {
     g_fake.gl.push_back("end");
 }
 void glVertex2i(GLint x, GLint y) {
-    g_fake.gl.push_back("v " + std::to_string(x) + "," + std::to_string(y));
+    g_fake.gl.push_back(std::string("v ") + std::to_string(x) + "," + std::to_string(y));
 }
 
 namespace {
@@ -105,7 +105,7 @@ public:
     void SetPen(const wxPen& pen) override {
         m_pen = pen;
         const wxColour c = pen.GetColour();
-        *out_ += "pen " + std::to_string(c.Red()) + "," + std::to_string(c.Green()) + "," +
+        *out_ += std::string("pen ") + std::to_string(c.Red()) + "," + std::to_string(c.Green()) + "," +
                  std::to_string(c.Blue()) + "," + std::to_string(pen.GetWidth()) + "\n";
     }
     void SetBrush(const wxBrush& brush) override {
@@ -600,7 +600,8 @@ TEST_F(AreaToolTest, GlDrawsTheBoxAsALineLoopInTheCurrentColour) {
     EXPECT_EQ(calls.back(), "pop");
     EXPECT_EQ(std::count(calls.begin(), calls.end(), "push"), 1);
     EXPECT_EQ(std::count(calls.begin(), calls.end(), "pop"), 1);
-    EXPECT_NE(std::find(calls.begin(), calls.end(), "disable " + std::to_string(GL_TEXTURE_2D)), calls.end());
+    EXPECT_NE(std::find(calls.begin(), calls.end(), std::string("disable ") + std::to_string(GL_TEXTURE_2D)),
+              calls.end());
     colour = wxColour(9, 8, 7);
     const auto again = gl(makeVp(50, 10));
     EXPECT_NE(std::find(again.begin(), again.end(), "color 9,8,7,255"), again.end());

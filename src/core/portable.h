@@ -32,6 +32,8 @@ bool isAbsolutePath(std::string_view path, Os os = kHostOs);
 // dir + one separator + name: no separator added when dir is empty or already ends in one ('/' Posix; '/' or
 // '\' Windows); the added separator is '/' (Posix) or '\' (Windows).
 std::string joinPath(std::string_view dir, std::string_view name, Os os = kHostOs);
+// Windows: every '/' becomes '\' (the CLI prints its paths the Qt way); Posix: unchanged, a '\' stays.
+std::string nativeSeparators(std::string_view path, Os os = kHostOs);
 // The part before the last separator ('/' Posix; '/' or '\' Windows). The separator is KEPT when it
 // is the root: "/x" -> "/", "C:\x" -> "C:\"; no separator -> "".
 std::string parentDir(std::string_view path, Os os = kHostOs);

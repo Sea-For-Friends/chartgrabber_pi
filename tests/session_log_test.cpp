@@ -152,7 +152,7 @@ TEST_F(SessionLogRollTest, RollKeepsTheHeaderAndAddsAMarker) {
 
 TEST_F(SessionLogRollTest, SecondRollReplacesTheRolledFileAndNeverMoreThanTwoFiles) {
     for (int i = 0; i < 40; ++i)
-        log_.write("S", "", "line " + std::to_string(i % 10));
+        log_.write("S", "", std::string("line ") + std::to_string(i % 10));
     int files = 0;
     for (const auto& e : fs::directory_iterator(root_))
         files += e.is_regular_file();
@@ -178,7 +178,7 @@ TEST_F(SessionLogRollTest, ALineLargerThanTheRestIsNotSplitAndDoesNotLoop) {
 TEST_F(SessionLogRollTest, FailedRenameStopsWritingWithoutThrowing) {
     fs::create_directories(root_ / "c.log.1" / "inner"); // a non-empty folder: rename cannot replace it
     for (int i = 0; i < 20; ++i)
-        EXPECT_NO_THROW(log_.write("S", "", "line " + std::to_string(i)));
+        EXPECT_NO_THROW(log_.write("S", "", std::string("line ") + std::to_string(i)));
     EXPECT_FALSE(log_.isOpen());
     EXPECT_EQ(log_.path(), "");
     EXPECT_LE(slurp(file_).size(), 60u);

@@ -222,7 +222,7 @@ TEST_F(StripWrapTest, TextBeyondThreeLinesEndsInAnEllipsisOnTheThirdLine) {
     setCanvasWidth(300);
     std::string text;
     for (int i = 0; i < 12; ++i)
-        text += "Grabber: writing chart overview " + std::to_string(i) + " ";
+        text += std::string("Grabber: writing chart overview ") + std::to_string(i) + " ";
     const wxString headline(text);
     strip_->showResult(headline, "", {});
     const auto got = lines();
@@ -745,7 +745,7 @@ TEST_F(StripPlaceTest, AHeadlineCutToThreeLinesIsTheFirstParagraphOfDetails) {
     setClient(300, 600);
     std::string text;
     for (int i = 0; i < 12; ++i)
-        text += "Grabber: writing chart overview " + std::to_string(i) + " ";
+        text += std::string("Grabber: writing chart overview ") + std::to_string(i) + " ";
     strip_->showResult(text, "the details", {});
     EXPECT_EQ(details()->GetValue(), wxString(text) + "\n\nthe details");
     strip_->showResult("short", "the details", {});
@@ -1214,14 +1214,15 @@ TEST_F(StripLogTest, TheChartHostWritesCreatedShownOnePlacedHiddenAndDestroyed) 
     strip_->Hide();
     delete strip_;
     strip_ = nullptr;
-    EXPECT_EQ(stripLines(), (std::vector<std::string>{
-                                "strip job created on chart: parent wxFrame " + std::to_string(canvasSize.x) +
-                                    "x" + std::to_string(canvasSize.y),
-                                "strip job shown",
-                                placedLine("job", shownAt, 600),
-                                "strip job hidden",
-                                "strip job destroyed",
-                            }));
+    EXPECT_EQ(stripLines(),
+              (std::vector<std::string>{
+                  std::string("strip job created on chart: parent wxFrame ") + std::to_string(canvasSize.x) +
+                      std::string("x") + std::to_string(canvasSize.y),
+                  "strip job shown",
+                  placedLine("job", shownAt, 600),
+                  "strip job hidden",
+                  "strip job destroyed",
+              }));
     EXPECT_EQ(shownAt.x, 8);
     EXPECT_EQ(shownAt.y + shownAt.height, 600 - 40 - 32);
 }
@@ -1235,7 +1236,7 @@ TEST_F(StripLogTest, TheWindowHostWritesTheFramesParentAndScreenPixels) {
     strip_->Destroy();
     strip_ = nullptr;
     EXPECT_EQ(stripLines(), (std::vector<std::string>{
-                                "strip hint created on window: parent wxFrame " +
+                                std::string("strip hint created on window: parent wxFrame ") +
                                     std::to_string(canvasSize.x) + "x" + std::to_string(canvasSize.y),
                                 "strip hint shown",
                                 placedLine("hint", at, 600),

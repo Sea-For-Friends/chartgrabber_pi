@@ -168,6 +168,11 @@ ProgressStrip::ProgressStrip(wxWindow* canvas, const Look& look, Role role, Conf
 }
 
 ProgressStrip::~ProgressStrip() {
+    // Destroying a shown window delivers wxEVT_SHOW(false) to it AFTER this body (MSW: DestroyWindow, in
+    // ~wxWindow), when the [this] handlers below touch a dead object (timer_) and OpenCPN crashes:
+    // hide it here.
+    if (IsShown())
+        wxPanel::Show(false); // not Show(): the window host's frame is already being deleted
     cg::logFile("strip " + logName() + " destroyed");
     timer_.Stop();
     look_.unsubscribe(lookToken_);

@@ -6,11 +6,15 @@ tiles and exports them to MBTiles; the plugin adds the result to OpenCPN's chart
 internet afterwards.
 
 Display name "Chart Grabber"; OpenCPN common name `ChartGrabber`; library `libchartgrabber_pi.so`.
-Version 2026.10.2. Source for release binaries: tag `v2026.10.2`.
+Version 2026.10.3. Source for release binaries: tag `v2026.10.3`.
 
 ## Requirements
 
-- OpenCPN 5.10.2 or newer (plugin API 1.18), Linux, wxWidgets 3.2 / GTK 3 (the build OpenCPN itself uses).
+- OpenCPN 5.10.2 or newer (plugin API 1.18), Linux, wxWidgets 3.2 / GTK 3 (the build OpenCPN itself uses). On Windows the
+  plugin is a 32-bit build for OpenCPN 5.10.2 and newer; the Chart Grabber CLI comes there as its own zip.
+- OpenCPN from your distribution must be 5.10.2 or newer. Ubuntu 24.04 ships 5.8.4, which is too old: install OpenCPN from
+  the OpenCPN PPA (`ppa:opencpn/opencpn`; the version it offers for 24.04 was not checked). Debian 12 gets 5.10.2 from
+  bookworm-backports (`apt install -t bookworm-backports opencpn`). Debian 13 and Ubuntu 26.04 ship a sufficient one.
 - **Chart Grabber CLI 2026.10.8 or newer** (the tile program, executable `chart-grabber-cli`). The plugin does not
   contain it. The CLI comes as one `.deb` per system (same package name): Debian 12 amd64, Debian 13 amd64 / arm64,
   Ubuntu 24.04 and 26.04 amd64 / arm64. The plugin looks for it at `/usr/bin/chart-grabber-cli`, else on `PATH`; the path is also a setting
@@ -110,7 +114,7 @@ definitions in `data/sources` are CC0-1.0; see `data/sources/LICENSE`, `NOTICE` 
 
 - One GitHub Release per version (tag `v<version>`), all platform tarballs as assets, each with a `.sha256` next to it.
 - Name: `chartgrabber_pi-<version>-<target>-<target-version-for-humans>-<arch>.tar.gz`, for example
-  `chartgrabber_pi-2026.10.2-debian-x86_64-13-x86_64.tar.gz`. The top directory inside has the same name without `.tar.gz`.
+  `chartgrabber_pi-2026.10.3-debian-x86_64-13-x86_64.tar.gz`. The top directory inside has the same name without `.tar.gz`.
   The file name never matters to OpenCPN's import; it is for you to pick the right file.
 - `metadata.xml` carries the OpenCPN host tuple exactly (`<target>`, `<target-version>`): `lsb_release -is` / `-rs`
   lowercased plus the architecture; Ubuntu needs the exact version, other systems the major. Debian 13 (trixie) builds

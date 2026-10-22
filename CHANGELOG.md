@@ -2,6 +2,17 @@
 
 Versions are calendar-based: `YYYY.MM.N` (year and month of the release, N = release count within that month, from 0).
 
+## 2026.10.3
+
+- Needs Chart Grabber CLI 2026.10.8 or newer.
+- Bundled chart sources install in a folder per plugin version; sources left by an older Import are no longer read.
+- Windows: the plugin for OpenCPN 5.10.2 and newer (32-bit), with the Chart Grabber CLI from its own zip.
+- Windows: folders and files are passed to the CLI in Windows form, and chart paths from the CLI are read in Windows form.
+- Windows: OpenCPN no longer crashes when the plugin is removed or disabled while a job notice is shown.
+- A chart file saved by a release before 2026.10.2 under its old name (before characters Windows forbids were replaced) no longer brings the "Replace it?" question.
+- The plugin builds with GCC 12 (Debian 12) without warnings.
+- Ubuntu 24.04 ships OpenCPN 5.8.4, which is too old: use the OpenCPN PPA. Debian 12 gets 5.10.2 from bookworm-backports.
+
 ## 2026.10.2
 
 - Needs Chart Grabber CLI 2026.10.8 or newer.

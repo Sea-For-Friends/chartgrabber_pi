@@ -125,6 +125,18 @@ std::string joinPath(std::string_view dir, std::string_view name, Os os) {
     return out;
 }
 
+std::string nativeSeparators(std::string_view path, Os os) {
+    std::string out(path);
+    if (os == Os::Windows) {
+        for (char& c : out) {
+            if (c == '/') {
+                c = '\\';
+            }
+        }
+    }
+    return out;
+}
+
 std::string parentDir(std::string_view path, Os os) {
     const auto at = path.find_last_of(os == Os::Windows ? "/\\" : "/");
     if (at == std::string_view::npos) {

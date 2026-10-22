@@ -88,7 +88,8 @@ int ChartGrabberPi::Init() {
         if (wxFileConfig* cfg = GetOCPNConfigObject())
             config_ = std::make_unique<ConfigStore>(cfg);
         if (config_)
-            config_->setBundledSourcesDir(cg::toUtf8(dataFile("sources")));
+            config_->setBundledSourcesDir(
+                cg::toUtf8(dataFile((std::string("sources-") + cg::kPluginVersionString).c_str())));
         cg::Settings settings;
         if (config_) {
             settings = config_->loadSettings(); // logs the invalid values before the settings line
