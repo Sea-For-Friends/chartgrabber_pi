@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// countZmpEntries: the CLI's own walk of a chart-sources folder. Names only, no wx.
+// countSourceEntries: the CLI's own walk of a chart-sources folder. Names only, no
+// wx.
 #include "sources_folder.h"
 
 #include <gtest/gtest.h>
@@ -30,7 +31,7 @@ protected:
         std::ofstream(root_ / rel) << "x";
     }
     void dir(const fs::path& rel) { fs::create_directories(root_ / rel); }
-    int count(int limit = 100) const { return cg::countZmpEntries(root_.string(), limit); }
+    int count(int limit = 100) const { return cg::countSourceEntries(root_.string(), limit); }
     fs::path root_;
 };
 
@@ -71,6 +72,35 @@ TEST_F(SourcesFolder, AZmpFolderCountsOnceAndIsNotEntered) {
     EXPECT_EQ(count(), 1);
 }
 
+TEST_F(SourcesFolder, SourceJsonFilesCountWhateverTheCase) {
+    file("a.source.json");
+    file("B.SOURCE.JSON");
+    file("c.json");
+    file("d.source.json.txt");
+    EXPECT_EQ(count(), 2);
+}
+
+TEST_F(SourcesFolder, ASymlinkToASourceJsonFileCounts) {
+    file("real.txt");
+    fs::create_symlink(root_ / "real.txt", root_ / "l.source.json");
+    EXPECT_EQ(count(), 1);
+}
+
+TEST_F(SourcesFolder, ASourceJsonFolderIsNotCountedButEntered) {
+    file("x.source.json/inner/a.zmp");
+    file("x.source.json/b.source.json");
+    EXPECT_EQ(count(), 2);
+    file("y.source.json/z.txt");
+    EXPECT_EQ(count(), 2);
+}
+
+TEST_F(SourcesFolder, ASourceJsonAtDepthSixCountsDepthSevenDoesNot) {
+    file("1/2/3/4/5/6/7/b.source.json");
+    EXPECT_EQ(count(), 0);
+    file("1/2/3/4/5/6/a.source.json");
+    EXPECT_EQ(count(), 1);
+}
+
 TEST_F(SourcesFolder, LimitStopsTheCount) {
     file("a.zmp");
     file("b.zmp");
@@ -81,9 +111,9 @@ TEST_F(SourcesFolder, LimitStopsTheCount) {
 }
 
 TEST_F(SourcesFolder, MissingRootAndFileRootGiveZero) {
-    EXPECT_EQ(cg::countZmpEntries((root_ / "nope").string(), 1), 0);
+    EXPECT_EQ(cg::countSourceEntries((root_ / "nope").string(), 1), 0);
     file("a.zmp");
-    EXPECT_EQ(cg::countZmpEntries((root_ / "a.zmp").string(), 1), 0);
+    EXPECT_EQ(cg::countSourceEntries((root_ / "a.zmp").string(), 1), 0);
 }
 
 TEST_F(SourcesFolder, UnreadableSubfolderIsSkippedTheRestCounts) {

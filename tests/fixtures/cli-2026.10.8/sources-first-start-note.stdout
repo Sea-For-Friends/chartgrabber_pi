@@ -1,3 +1,0 @@
-source	{AB8A8685-AEC6-4E16-80DA-DC4AC37E4777}	layer	OpenSeaMap Seamarks	image/png	3857	0	ok	OpenSeaMap-Seamarks.zmp	Seamarks and traffic	user	static	Seamarks (c) OpenSeaMap contributors, CC-BY-SA		0
-source	{51C1079B-B55D-4DF7-A410-ADC118F53AB1}	map	OpenTopoMap	image/png	3857	0	ok	OpenTopoMap.zmp	Coast and land	user	static	Map data (c) OpenStreetMap contributors, SRTM; map style (c) OpenTopoMap (CC-BY-SA)		0
-source	{1A696D82-F258-41A4-BCD6-7648D9E08DE2}	layer	RainViewer radar (worldwide, current)	image/png	3857	71	ok	RainViewer-Radar.zmp	Weather now	user	snapshot	Weather data by RainViewer (https://www.rainviewer.com)	7	0

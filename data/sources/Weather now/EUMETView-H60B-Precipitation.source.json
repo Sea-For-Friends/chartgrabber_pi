@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "guid": "{BC2EA862-0F3D-4933-8F71-00AFA0BAD114}",
+  "name": "EUMETSAT H SAF precipitation rate H60B (Europe, Africa, Atlantic)",
+  "group": "Weather now",
+  "layer": true,
+  "url": "https://view.eumetsat.int/geoserver/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=msg_fes:h60b&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE&TIME={ver}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Weather_EUMETView_HSAF_H60B",
+  "cacheType": 71,
+  "license": "Contains modified EUMETSAT H SAF product {year}",
+  "maxConnections": 2,
+  "maxZoom": 7,
+  "snapshot": {
+    "index": "https://view.eumetsat.int/geoserver/msg_fes/h60b/ows?service=WMS&version=1.3.0&request=GetCapabilities",
+    "type": "wms-default",
+    "item": "msg_fes:h60b"
+  }
+}

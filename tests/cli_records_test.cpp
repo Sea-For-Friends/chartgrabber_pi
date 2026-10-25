@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <cstdlib>
 #include <fstream>
 #include <map>
 #include <set>
@@ -19,7 +20,7 @@ using namespace cg;
 namespace {
 
 std::vector<std::string> fixtureLines(const std::string& name) {
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.8/" + name, std::ios::binary);
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.10/" + name, std::ios::binary);
     EXPECT_TRUE(in.good()) << name;
     std::vector<std::string> out;
     for (std::string line; std::getline(in, line);) {
@@ -28,10 +29,10 @@ std::vector<std::string> fixtureLines(const std::string& name) {
     return out;
 }
 
-// proofs 3 and 8: the captured lines of the pinned 2026.10.8 (15 columns: field 10 `origin` is `user`,
-// the last is `navigationWarning`); the record is read by position and `origin` changes nothing.
+// proofs 3 and 8: the captured lines of the pinned 2026.10.10 (15 columns: field 10 `origin` is
+// `user`, the last is `navigationWarning`); the record is read by position and `origin` changes nothing.
 TEST(Records, SourcesOfThePinnedRelease) {
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.8/sources-two-folders.stdout",
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.10/sources-two-folders.stdout",
                      std::ios::binary);
     ASSERT_TRUE(in.good());
     std::vector<SourceRecord> recs;
@@ -48,11 +49,11 @@ TEST(Records, SourcesOfThePinnedRelease) {
     EXPECT_EQ(recs[0].kind, "map");
     EXPECT_EQ(recs[0].name, "Esri World Imagery");
     EXPECT_EQ(recs[0].group, "Satellite");
-    EXPECT_EQ(recs[0].zmpFile, "Esri-World-Imagery.zmp");
+    EXPECT_EQ(recs[0].zmpFile, "Esri-World-Imagery.source.json");
     EXPECT_EQ(recs[0].refresh, "static");
     EXPECT_EQ(recs[0].license, "Esri, Maxar, Earthstar Geographics, and the GIS User Community");
     EXPECT_FALSE(recs[0].maxZoom);
-    EXPECT_EQ(recs[2].zmpFile, "Copy-Topo.zmp"); // the later folder's row of the duplicate GUID
+    EXPECT_EQ(recs[2].zmpFile, "Copy-Topo.source.json"); // the later folder's row of the duplicate GUID
     EXPECT_EQ(recs[3].refresh, "snapshot");
     EXPECT_EQ(recs[3].license, "Weather data by RainViewer (https://www.rainviewer.com)");
     EXPECT_EQ(recs[3].maxZoom, 7);
@@ -126,13 +127,13 @@ TEST(CliRecordsStdout, SourceEmptyGroupAndExtraFields) {
 }
 
 // proofs 3 and 7, the captured `sources` answers of the pinned CLI. Bundled
-// data/sources after the regroup: 24 rows, the flag is 1 for exactly the seven sources of the groups
-// `Nautical charts` (Norway, Finland, NOAA chart) and `Depth` (EMODnet Europe and World, GEBCO, BlueTopo) and
-// 0 for the other 17. A sailor-folder definition with NavigationWarning=1 gets the flag too; the plain
-// bundled one does not.
+// data/sources after the regroup: 28 rows, the flag is 1 for
+// exactly the seven sources of the groups `Nautical charts` (Norway, Finland, NOAA chart) and `Depth`
+// (EMODnet Europe and World, GEBCO, BlueTopo) and 0 for the other 21. A sailor-folder definition with
+// NavigationWarning=1 gets the flag too; the plain bundled one does not.
 TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
     const auto flags = [](const char* file) {
-        std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.8/" + file, std::ios::binary);
+        std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.10/" + file, std::ios::binary);
         EXPECT_TRUE(in.good()) << file;
         std::map<std::string, bool> out;
         for (std::string line; std::getline(in, line);) {
@@ -144,7 +145,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
         return out;
     };
     const auto all = flags("sources-bundled-all.stdout");
-    ASSERT_EQ(all.size(), 24u);
+    ASSERT_EQ(all.size(), 28u);
     const std::set<std::string> flagged = {
         "{25DBA489-D484-4A13-B65D-ABA8967FF3DA}", // Norway sea chart
         "{8A9C3A53-0512-4401-A6D3-050E08934949}", // Finland sea chart
@@ -163,10 +164,10 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
 }
 
 // proofs 1 and 4: the regrouped bundled set as the pinned CLI lists it. Seven groups with these counts
-// (Nautical charts 3, Seamarks and traffic 3, Depth 4, Satellite 3, Coast and land 1, Weather now 8, Ocean
-// 2), and the ten sources of Weather now and Ocean (and only they) refresh as snapshots.
+// (Nautical charts 3, Seamarks and traffic 3, Depth 4, Satellite 3, Coast and land 1, Weather now 10, Ocean
+// 4 after ), and the fourteen sources of Weather now and Ocean (and only they) refresh as snapshots.
 TEST(Records, BundledSetGroupsAndSnapshots) {
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.8/sources-bundled-all.stdout",
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.10/sources-bundled-all.stdout",
                      std::ios::binary);
     ASSERT_TRUE(in.good());
     std::map<std::string, int> groups;
@@ -182,9 +183,136 @@ TEST(Records, BundledSetGroupsAndSnapshots) {
     }
     const std::map<std::string, int> expected = {
         {"Nautical charts", 3}, {"Seamarks and traffic", 3}, {"Depth", 4}, {"Satellite", 3},
-        {"Coast and land", 1},  {"Weather now", 8},          {"Ocean", 2}};
+        {"Coast and land", 1},  {"Weather now", 10},         {"Ocean", 4}};
     EXPECT_EQ(groups, expected);
-    EXPECT_EQ(snapshots, 10);
+    EXPECT_EQ(snapshots, 14);
+}
+
+// the four new sources as the pinned CLI lists them.
+TEST(Records, NewWeatherSourcesOfThePinnedRelease) {
+    const std::map<std::string, int> maxZoom = {{"{91F4EDA9-11F5-44AE-84AB-BBD7FEF492AF}", 7},
+                                                {"{901E0ED9-78CD-41C4-BA6A-0E93CF08C4F0}", 8},
+                                                {"{F022DF76-6F80-4294-9403-F1A6123EDD80}", 8},
+                                                {"{D228EF7F-C01B-4A00-AD22-2C7B527A2CA5}", 8}};
+    std::set<std::string> guids, seen;
+    for (const auto& line : fixtureLines("sources-bundled-all.stdout")) {
+        const SourceRecord s = std::get<SourceRecord>(*parseStdoutLine(line));
+        EXPECT_TRUE(guids.insert(s.guid).second) << "duplicate " << s.guid;
+        const auto it = maxZoom.find(s.guid);
+        if (it == maxZoom.end())
+            continue;
+        seen.insert(s.guid);
+        EXPECT_EQ(s.verdict, "ok") << s.name;
+        EXPECT_TRUE(s.isLayer()) << s.name;
+        EXPECT_EQ(s.refresh, "snapshot") << s.name;
+        EXPECT_EQ(s.epsg, 3857) << s.name;
+        EXPECT_EQ(s.cacheType, 71) << s.name;
+        EXPECT_EQ(s.maxZoom, it->second) << s.name;
+        EXPECT_FALSE(s.license.empty()) << s.name;
+        EXPECT_FALSE(s.navigationWarning) << s.name;
+    }
+    EXPECT_EQ(seen.size(), 4u);
+}
+
+namespace {
+// The instants of the capabilities line saved by capture.sh, as "yyyy-MM-ddTHH:mm:ssZ" ("default" first).
+std::vector<std::string> capabilitiesInstants(const std::string& text, std::string& def) {
+    std::vector<std::string> out;
+    const auto d = text.find("default=\"");
+    EXPECT_NE(d, std::string::npos) << "capabilities fixture has no default=\"...\" instant";
+    if (d == std::string::npos)
+        return out;
+    def = text.substr(d + 9, 20);
+    for (auto pos = text.find('>'); (pos = text.find("20", pos)) != std::string::npos; pos += 24)
+        if (pos + 24 <= text.size() && text[pos + 4] == '-' && text[pos + 10] == 'T')
+            out.push_back(text.substr(pos, 19) + "Z");
+    return out;
+}
+void weatherStdout(const std::string& name, SnapshotRecord& snap, WrittenRecord& written) {
+    int snaps = 0, writs = 0;
+    for (const auto& line : fixtureLines(name)) {
+        const auto r = parseStdoutLine(line);
+        EXPECT_TRUE(r) << line;
+        if (!r)
+            continue;
+        if (const auto* s = std::get_if<SnapshotRecord>(&*r)) {
+            snap = *s;
+            ++snaps;
+        } else if (const auto* w = std::get_if<WrittenRecord>(&*r)) {
+            written = *w;
+            ++writs;
+        }
+    }
+    EXPECT_EQ(snaps, 1) << name;
+    EXPECT_EQ(writs, 1) << name;
+}
+std::string fixtureText(const std::string& name) {
+    const auto l = fixtureLines(name);
+    return l.empty() ? std::string() : l[0];
+}
+} // namespace
+
+// proofs 2 and 4: a none-refetch source (NWS warnings) run twice into one cache. The second run's
+// snapshot is its own instant (later than the first run's, a few seconds on), it downloads the area again
+// (nothing present in its estimate, one tile downloaded in its progress), and the plugin reads the records.
+TEST(Records, WeatherRefetchRunsTakeTheirOwnInstant) {
+    SnapshotRecord snap, first;
+    WrittenRecord written;
+    weatherStdout("run-weather-refetch.stdout", snap, written);
+    const auto f = parseStdoutLine(fixtureText("run-weather-refetch.first-snapshot"));
+    ASSERT_TRUE(f && std::holds_alternative<SnapshotRecord>(*f));
+    first = std::get<SnapshotRecord>(*f);
+    EXPECT_EQ(fixtureText("run-weather-refetch.exit"), "0");
+    EXPECT_EQ(snap.guid, "{901E0ED9-78CD-41C4-BA6A-0E93CF08C4F0}");
+    EXPECT_EQ(snap.time, snap.version) << "refetch: the version is the run's own instant";
+    const auto t1 = snapshotEpoch(first.time), t2 = snapshotEpoch(snap.time);
+    ASSERT_TRUE(t1 && t2) << snap.time;
+    EXPECT_GT(*t2, *t1);
+    EXPECT_LT(*t2 - *t1, 60);
+    EXPECT_EQ(written.snapshot, snap.time);
+    EXPECT_EQ(snapshotTimeText(written.snapshot).size(), 20u) << "YYYY-MM-DD HH:MM UTC";
+    EXPECT_EQ(snapshotTimeText(written.snapshot),
+              snap.time.substr(0, 10) + " " + snap.time.substr(11, 5) + " UTC");
+    EXPECT_GE(written.tiles, 1);
+    bool estimated = false, downloaded = false;
+    for (const auto& line : fixtureLines("run-weather-refetch.stdout")) {
+        const auto r = parseStdoutLine(line);
+        if (const auto* e = r ? std::get_if<EstimateRecord>(&*r) : nullptr) {
+            estimated = true;
+            EXPECT_EQ(e->sharePresent, 0.0) << "a refetch counts no tile as present";
+        }
+    }
+    for (const auto& line : fixtureLines("run-weather-refetch.stderr")) {
+        const auto p = parseStderrLine(line);
+        if (const auto* d = std::get_if<DownloadProgress>(&p))
+            downloaded = downloaded || (d->downloaded > 0 && d->downloadedBytes > 0);
+    }
+    EXPECT_TRUE(estimated);
+    EXPECT_TRUE(downloaded);
+}
+
+// proofs 3 and 4: a nearest-now source (RTOFS currents) takes the listed instant nearest the run
+// time, not the capabilities default (the last forecast hour, days ahead). The server's text has milliseconds
+// in field 4 only; written field 5 is the 20-character form, so the plugin's date text is right.
+TEST(Records, WeatherNearestNowPicksTheInstantNearTheRun) {
+    SnapshotRecord snap;
+    WrittenRecord written;
+    weatherStdout("run-weather-nearest-now.stdout", snap, written);
+    EXPECT_EQ(fixtureText("run-weather-nearest-now.exit"), "0");
+    std::string def;
+    const auto listed = capabilitiesInstants(fixtureText("run-weather-nearest-now.capabilities"), def);
+    ASSERT_GE(listed.size(), 4u);
+    const auto now = snapshotEpoch(fixtureText("run-weather-nearest-now.time"));
+    const auto picked = snapshotEpoch(snap.time);
+    ASSERT_TRUE(now && picked) << snap.time;
+    EXPECT_NE(std::find(listed.begin(), listed.end(), snap.time), listed.end()) << "a listed instant";
+    EXPECT_NE(snap.time, def);
+    EXPECT_GT(*snapshotEpoch(def), *now + 24 * 3600) << "the default is far ahead";
+    EXPECT_LE(std::abs(*picked - *now), 6 * 3600);
+    EXPECT_EQ(snap.version, snap.time.substr(0, 19) + ".000Z") << "the server's text";
+    EXPECT_EQ(written.snapshot, snap.time);
+    EXPECT_EQ(snapshotTimeText(written.snapshot),
+              snap.time.substr(0, 10) + " " + snap.time.substr(11, 5) + " UTC");
 }
 
 // Hand-made from core weather-sources.md 5.4 (the CLI cannot produce weather records yet; protocol rule 9).
@@ -424,7 +552,7 @@ TEST(CliRecordsStderr, ProgressAndPhase) {
     EXPECT_EQ(std::get<PhaseRecord>(p).guid, "{G}");
 }
 
-// the `note:` line of the first start (captured, 2026.10.8) is a message of kind Other with
+// the `note:` line of the first start (captured, 2026.10.10) is a message of kind Other with
 // its whole text; the line next to it is a Warning and no line of the capture is an Error (lastError stays
 // empty).
 TEST(CliRecordsStderr, TheFirstStartNoteIsOtherAndNeverAnError) {
@@ -444,6 +572,55 @@ TEST(CliRecordsStderr, TheFirstStartNoteIsOtherAndNeverAnError) {
     EXPECT_EQ(stdoutRecords, 3);
 }
 
+// the Windows move notes (core app_paths.cpp:44-95, printed as `note: <text>`) and the .conf
+// rename note (snapshot_store.cpp) are HAND-MADE: a path with a space and a Cyrillic folder. Each is
+// Kind::Other with its whole text, never an Error or a Warning.
+TEST(CliRecordsStderr, TheWindowsAndRenameNotesAreOtherAndNeverAnError) {
+    const std::string from = "C:/Users/Anna Ivanova/AppData/Roaming/chart-grabber";
+    const std::string to = "C:/Users/\xD0\x90\xD0\xBD\xD0\xBD\xD0\xB0/AppData/Local/chart-grabber";
+    const std::vector<std::string> notes = {
+        "note: moved " + from + " to " + to,
+        "note: not moving " + from + " to " + to + ": the target is in use; " + to + " is used, " + from +
+            " is left as it is",
+        "note: cannot move " + from + " to " + to + " (access denied); the cache starts empty",
+        "note: cannot move " + from + " to " + to + " (access denied); using the old directory",
+        "note: renamed " + to + "/Snapshots/{1A696D82}.ini to " + to + "/Snapshots/{1A696D82}.conf"};
+    for (const std::string& n : notes) {
+        const StderrLine parsed = parseStderrLine(n);
+        const auto* m = std::get_if<MessageLine>(&parsed);
+        ASSERT_NE(m, nullptr) << n;
+        EXPECT_EQ(m->kind, MessageLine::Kind::Other) << n;
+        EXPECT_EQ(m->text, n);
+    }
+}
+
+// the step-back fixture (HAND-MADE) holds TWO snapshot records of one GUID; the last carries the time
+// of the `written` record (the frame used), and the stderr has the step-back warning.
+TEST(CliRecordsStderr, TheStepBackFixtureHoldsTwoSnapshotRecordsAndTheLastIsUsed) {
+    std::vector<SnapshotRecord> snaps;
+    WrittenRecord written;
+    for (const auto& line : fixtureLines("run-weather-stepback.stdout")) {
+        const auto r = parseStdoutLine(line);
+        ASSERT_TRUE(r) << line;
+        if (const auto* s = std::get_if<SnapshotRecord>(&*r))
+            snaps.push_back(*s);
+        else if (const auto* w = std::get_if<WrittenRecord>(&*r))
+            written = *w;
+    }
+    ASSERT_EQ(snaps.size(), 2u);
+    EXPECT_EQ(snaps[0].guid, snaps[1].guid);
+    EXPECT_NE(snaps[0].time, snaps[1].time);
+    EXPECT_EQ(snaps[1].time, written.snapshot);
+    int warnings = 0;
+    for (const auto& l : fixtureLines("run-weather-stepback.stderr")) {
+        const StderrLine parsed = parseStderrLine(l);
+        if (const auto* m = std::get_if<MessageLine>(&parsed))
+            warnings += m->kind == MessageLine::Kind::Warning &&
+                        m->text.find("is not served yet; using the previous frame") != std::string::npos;
+    }
+    EXPECT_EQ(warnings, 1);
+}
+
 // the CLI's last line after a stop on stdin (captured, run-stopped.stderr) is no warning and no
 // error.
 TEST(CliRecordsStderr, TheStopRequestedLineIsOtherAndNeverAnError) {
@@ -457,7 +634,7 @@ TEST(CliRecordsStderr, TheStopRequestedLineIsOtherAndNeverAnError) {
     EXPECT_EQ(m->text, "chart-grabber-cli: stop requested on stdin; exit 143");
 }
 
-// the three other new stop cases of 2026.10.8 are the real output, read as the plugin reads
+// the three other new stop cases of 2026.10.10 are the real output, read as the plugin reads
 // it: the exit code and the one Error message line (the connection-lost run: its Error line is followed by
 // more lines).
 TEST(CliRecordsStderr, TheNewStopCasesOfThePinnedRelease) {
@@ -497,7 +674,7 @@ TEST(CliRecordsStderr, TheNewStopCasesOfThePinnedRelease) {
     }
 }
 
-// (CR 11.2, 2026.10.8): the stop on stdin. Both captured runs (a `stop` line after 20 s; EOF at once)
+// (CR 11.2, 2026.10.9): the stop on stdin. Both captured runs (a `stop` line after 20 s; EOF at once)
 // exit 143, end with the CLI's stop line after the two `warning:` lines of the saved session, and 143 reads
 // as Interrupted. The EOF run stops before the first tile.
 TEST(CliRecordsStderr, TheStopOnStdinEndsWithExit143AndItsStopLine) {
@@ -556,7 +733,7 @@ TEST(CliRecordsStderr, MessagesAndBadProtocolLinesAreOther) {
     }
 }
 
-// every stderr line of the captured CLI 2026.10.8 runs is a record or a message; a line
+// every stderr line of the captured CLI 2026.10.10 runs is a record or a message; a line
 // starting "phase<TAB>" / "progress<TAB>" is never "other", the `warning:` lines are warnings, and the
 // numbers of a record are the fields of the line (the first progress record of the stopped run, literal from
 // the capture).
@@ -606,10 +783,10 @@ TEST(CliRecordsStderr, EveryLineOfTheCaptured2026Dot10RunsIsARecordOrAMessage) {
               243); // 2026.10.4 printed 0 here (no total yet); 2026.10.6 and later print it at once
     EXPECT_EQ(first.downloadedBytes, 0);
     const auto second = std::get<DownloadProgress>(parseStderrLine(fixtureLines("run-stopped.stderr")[5]));
-    EXPECT_EQ(second.zoom, 11);
-    EXPECT_EQ(second.processed, 28);
-    EXPECT_EQ(second.downloaded, 28);
-    EXPECT_EQ(second.downloadedBytes, 369338);
+    EXPECT_EQ(second.zoom, 10);
+    EXPECT_EQ(second.processed, 8);
+    EXPECT_EQ(second.downloaded, 8);
+    EXPECT_EQ(second.downloadedBytes, 115635);
     EXPECT_EQ(second.elapsedSec, 1);
     const auto ex = std::get<ExportProgress>(parseStderrLine("progress\texport\t{G}\t1000"));
     EXPECT_EQ(ex.permille, 1000);
@@ -833,13 +1010,13 @@ TEST(LevelCostTest, FromTheCapturedEstimateRecords) {
     ASSERT_EQ(records.size(), 10u);
     const auto c13 = levelCost(records, 13);
     ASSERT_TRUE(c13);
-    EXPECT_EQ(c13->finestBytes, 441283);
-    EXPECT_EQ(c13->totalBytes, 494286);
-    EXPECT_EQ(c13->nextBytes, 8948628);
+    EXPECT_EQ(c13->finestBytes, 174162);
+    EXPECT_EQ(c13->totalBytes, 287197);
+    EXPECT_EQ(c13->nextBytes, 7880144);
     const auto c12 = levelCost(records, 12);
     ASSERT_TRUE(c12);
-    EXPECT_EQ(c12->finestBytes, 53003);
-    EXPECT_EQ(c12->nextBytes, 2853904);
+    EXPECT_EQ(c12->finestBytes, 113035);
+    EXPECT_EQ(c12->nextBytes, 2548420);
     EXPECT_FALSE(levelCost(records, 14)); // no record at 14
     EXPECT_FALSE(levelCost(records, 8));
     std::vector<EstimateRecord> deep(1);
@@ -850,15 +1027,15 @@ TEST(LevelCostTest, FromTheCapturedEstimateRecords) {
 }
 
 // mean bytes per tile = sum bytesOnDisk / sum tiles over the captured records
-// (run-continued.stdout, 10 estimate records): bytesOnDisk 2673211 + 670799 = 3344010, tiles 243 + 243 = 486,
-// 3344010 / 486 = 6880 (integer division; 6880.8). No usable record: kAssumedTileBytes = 20 x 1024.
+// (run-continued.stdout, 10 estimate records): bytesOnDisk 2673211 + 327307 = 3000518, tiles 243 + 243 = 486,
+// 3000518 / 486 = 6173 (integer division; 6173.9). No usable record: kAssumedTileBytes = 20 x 1024.
 TEST(MeanTileBytesTest, FromTheCapturedRecordsAndTheAssumedDefault) {
     std::vector<EstimateRecord> records;
     for (const std::string& line : fixtureLines("run-continued.stdout"))
         if (line.rfind("estimate\t", 0) == 0)
             records.push_back(std::get<EstimateRecord>(*parseStdoutLine(line)));
     ASSERT_EQ(records.size(), 10u);
-    EXPECT_EQ(meanTileBytes(records), 6880);
+    EXPECT_EQ(meanTileBytes(records), 6173);
     EXPECT_EQ(meanTileBytes({}), 20480);
     std::vector<EstimateRecord> empty(2); // tiles 0: their bytes count for nothing
     empty[0].bytesOnDisk = 999;

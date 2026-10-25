@@ -1074,7 +1074,7 @@ TEST_F(SettingsCheck, OnOpenTheLinesSayReadyAndWhatTheSourcesAre) {
     openStub();
     EXPECT_EQ(label("cliStatus"), "") << "nothing before the event loop runs";
     ASSERT_TRUE(settle());
-    EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.8 is ready.");
+    EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.9 is ready.");
     EXPECT_EQ(label("sourcesStatus"),
               "3 chart sources available. Your own chart sources folder was not found: press Open folder to "
               "create it.");
@@ -1088,9 +1088,8 @@ TEST_F(SettingsCheck, OnOpenTheLinesSayReadyAndWhatTheSourcesAre) {
     dlg_.reset();
     open();
     ASSERT_TRUE(settle());
-    EXPECT_EQ(
-        label("sourcesStatus"),
-        "3 chart sources available. Put your own chart source (.zmp) files in your folder to add more.");
+    EXPECT_EQ(label("sourcesStatus"), "3 chart sources available. Put your own chart source (.zmp or "
+                                      ".source.json) files in your folder to add more.");
     ASSERT_EQ(stub_->argv().size(), 2u);
     EXPECT_EQ(stub_->argv()[1].find("--maps", stub_->argv()[1].find("--maps") + 1), std::string::npos)
         << "an empty folder is not passed: " << stub_->argv()[1];
@@ -1112,6 +1111,27 @@ TEST_F(SettingsCheck, AFolderWithASourceTwoLevelsDownIsPassedLastAndCounted) {
         << stub_->argv()[0];
 }
 
+// the JSON kind alone is a source, in the bundled folder and in the sailor's.
+TEST_F(SettingsCheck, ASourceJsonFileAloneCountsInTheBundledAndTheSailorFolder) {
+    fs::remove(bundled_ / "a.zmp");
+    std::ofstream(bundled_ / "b.source.json") << "{}";
+    const fs::path folder = root_ / "json sources";
+    fs::create_directories(folder / "one" / "two");
+    std::ofstream(folder / "one" / "two" / "Local.source.json") << "{}";
+    stub_->records(recs(1));
+    save([&](cg::Settings& s) { s.mapsDir = folder.string(); });
+    openStub();
+    ASSERT_TRUE(settle());
+    EXPECT_NE(
+        label("sourcesStatus"),
+        "The chart sources that come with Chart Grabber are missing. Reinstall the Chart Grabber plugin.");
+    ASSERT_EQ(stub_->argv().size(), 1u);
+    EXPECT_NE(stub_->argv()[0].find(std::string("--maps ") + bundled_.string() + " --maps " +
+                                    folder.string() + " --cache"),
+              std::string::npos)
+        << stub_->argv()[0];
+}
+
 // rows 3 and 5: no bundled source means no CLI run; a run without a record says so.
 TEST_F(SettingsCheck, WithoutBundledSourcesTheCliIsNotRun) {
     fs::create_directories(root_ / "empty bundled");
@@ -1123,7 +1143,7 @@ TEST_F(SettingsCheck, WithoutBundledSourcesTheCliIsNotRun) {
         stub_->records(recs(3));
         openStub();
         ASSERT_TRUE(settle());
-        EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.8 is ready.");
+        EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.9 is ready.");
         EXPECT_EQ(label("sourcesStatus"), bundledMissing);
         EXPECT_FALSE(advancedOpen()) << "the plugin's own files are missing, not the CLI";
         EXPECT_TRUE(stub_->argv().empty()) << "sources was not run";
@@ -1137,7 +1157,7 @@ TEST_F(SettingsCheck, WithoutBundledSourcesTheCliIsNotRun) {
     openStub();
     ASSERT_TRUE(settle());
     EXPECT_EQ(label("sourcesStatus"), bundledMissing);
-    EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.8 is ready.");
+    EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.9 is ready.");
     EXPECT_FALSE(advancedOpen()) << "the race keeps Advanced folded too";
     stub_->exitWith(0);
     stub_->stderrText("");
@@ -1155,7 +1175,7 @@ TEST_F(SettingsCheck, ANotRunnableProgramIsReportedAfterTheDelayAndOpensAdvanced
     openStub();
     ASSERT_TRUE(settle());
     change("cli", plainFile());
-    EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.8 is ready.") << "not before the delay";
+    EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.9 is ready.") << "not before the delay";
     const auto t0 = Clock::now();
     ASSERT_TRUE(runUntil([&] { return label("cliStatus").find("cannot be run") != std::string::npos; }));
     EXPECT_GE(Clock::now() - t0, std::chrono::milliseconds(400));
@@ -1183,7 +1203,7 @@ TEST_F(SettingsCheck, ANotRunnableProgramIsReportedAfterTheDelayAndOpensAdvanced
 // Proof 3b: "Use default" (an empty CliPath) through the dialog's default path and PATH.
 TEST_F(SettingsCheck, TheAutomaticProgramIsTheDefaultPathThenPathThenNone) {
     stub::Sources second(root_ / "stubs", "b d'x");
-    stub_->version("chart-grabber-cli 2026.10.8 (a)");
+    stub_->version("chart-grabber-cli 2026.10.9 (a)");
     second.version("chart-grabber-cli 2026.11.2 (b)");
     fs::create_directories(root_ / "pathbin");
     const std::string onPath = (root_ / "pathbin" / "chart-grabber-cli").string();
@@ -1198,7 +1218,7 @@ TEST_F(SettingsCheck, TheAutomaticProgramIsTheDefaultPathThenPathThenNone) {
     };
     const std::vector<Row> rows = {
         {"default path wins", stub_->cli(), (root_ / "pathbin").string(),
-         "Chart Grabber CLI 2026.10.8 is ready.", "", false, 1, 0},
+         "Chart Grabber CLI 2026.10.9 is ready.", "", false, 1, 0},
         {"PATH when the default is absent", absent, (root_ / "pathbin").string(),
          "Chart Grabber CLI 2026.11.2 is ready.", "", false, 1, 1},
         {"neither", absent, (root_ / "emptybin").string(),
@@ -1307,9 +1327,9 @@ TEST_F(SettingsCheck, AChangeWhileTheRunIsSlowTerminatesItAndOnlyTheLaterAnswerI
     ASSERT_TRUE(runUntil([&] { return stub_->argv().size() == 2; }));
     stub_->hold(false);
     ASSERT_TRUE(runUntil([&] { return label("sourcesStatus").find("available") != std::string::npos; }));
-    EXPECT_EQ(label("sourcesStatus"),
-              "1 chart source available. Put your own chart source (.zmp) files in your folder to add more.");
-    EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.8 is ready.");
+    EXPECT_EQ(label("sourcesStatus"), "1 chart source available. Put your own chart source (.zmp or "
+                                      ".source.json) files in your folder to add more.");
+    EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.9 is ready.");
     runFor(100);
     for (const std::string& m : log->messages)
         EXPECT_EQ(m.find("3 chart sources"), std::string::npos) << m;

@@ -18,12 +18,15 @@ namespace fs = std::filesystem;
 constexpr int kMaxFolderDepth = 6;        // the CLI's walk
 constexpr int kMaxVisitedEntries = 20000; // a guard against a root such as the home folder
 
-bool isZmpName(const std::string& name) {
-    constexpr std::string_view ext = ".zmp";
+bool endsWithNoCase(const std::string& name, std::string_view ext) {
     if (name.size() < ext.size())
         return false;
     return std::equal(ext.begin(), ext.end(), name.end() - ext.size(),
                       [](char a, char b) { return a == std::tolower(static_cast<unsigned char>(b)); });
+}
+
+bool isZmpName(const std::string& name) {
+    return endsWithNoCase(name, ".zmp");
 }
 
 struct Pending {
@@ -33,7 +36,7 @@ struct Pending {
 
 } // namespace
 
-int countZmpEntries(const std::string& root, int limit) {
+int countSourceEntries(const std::string& root, int limit) {
     std::error_code ec;
     if (limit <= 0 || !fs::is_directory(fsPath(root), ec))
         return 0;
@@ -62,7 +65,10 @@ int countZmpEntries(const std::string& root, int limit) {
             const bool isDir = fs::is_directory(e.path(), dir_ec); // follows links, as QDir does
             if (folder.depth < kMaxFolderDepth && isDir && !isZmpName(name) && name.front() != '.')
                 folders.push_back({e.path(), folder.depth + 1});
-            if (isZmpName(name) && ++count >= limit)
+            std::error_code file_ec;
+            const bool isSource = isZmpName(name) || (endsWithNoCase(name, ".source.json") &&
+                                                      fs::is_regular_file(e.path(), file_ec));
+            if (isSource && ++count >= limit)
                 return count;
         }
     }

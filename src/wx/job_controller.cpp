@@ -196,6 +196,7 @@ void JobController::start(cg::ChartRecord record, cg::RunKind kind, bool overwri
         runBytes_.clear();
         fills_.clear();
         written_.clear();
+        pictureLines_.clear();
         lastError_.clear();
         finishedBytes_ = 0;
         // a Resume starts the bar where the job stopped; Top up, Update, an export and a weather chart (it
@@ -311,7 +312,28 @@ void JobController::onRecord(const cg::StdoutRecord& r) {
     else if (const auto* w = std::get_if<cg::WrittenRecord>(&r))
         written_.push_back(*w);
     else if (const auto* s = std::get_if<cg::SnapshotRecord>(&r))
-        addMessage(weatherPictureLine(cg::fromUtf8(cg::snapshotTimeText(s->time))).utf8_string());
+        addPictureLine(s->guid,
+                       weatherPictureLine(cg::fromUtf8(cg::snapshotTimeText(s->time))).utf8_string());
+}
+
+// After a step back the CLI prints two snapshot records of one source; the LAST is the frame used (CLI
+// 2026.10.10), so a later line of the same GUID replaces the earlier one in Details.
+void JobController::addPictureLine(const std::string& guid, std::string line) {
+    const auto old = pictureLines_.find(guid);
+    if (old == pictureLines_.end()) {
+        pictureLines_[guid] = line;
+        addMessage(std::move(line));
+        return;
+    }
+    const auto it = std::find(messages_.rbegin(), messages_.rend(), old->second);
+    old->second = line;
+    if (it == messages_.rend()) { // dropped by the 200-line cap
+        addMessage(std::move(line));
+        return;
+    }
+    *it = std::move(line);
+    if (phase_ != Phase::Idle && strip_)
+        strip_->setDetails(detailsText());
 }
 
 void JobController::onStderr(const cg::StderrLine& l) {

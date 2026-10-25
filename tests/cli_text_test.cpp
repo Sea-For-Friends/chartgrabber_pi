@@ -31,7 +31,7 @@ TEST(CliVersion, GrammarAndSupport) {
         {"old-tiles 0.1.7 (c1)", true, "old-tiles", 0, 1, 7, "c1", false},
         {"old-tiles 0.0.9 (c1)\n", true, "old-tiles", 0, 0, 9, "c1", false},
         {"x 2027.1.0 (c)\n", true, "x", 2027, 1, 0, "c", true},
-        {"chart-grabber-cli 2026.10.8-rc1 (abc)\n", true, "chart-grabber-cli", 2026, 10, 8, "abc", true},
+        {"chart-grabber-cli 2026.10.9-rc1 (abc)\n", true, "chart-grabber-cli", 2026, 10, 9, "abc", true},
         {"", false, "", 0, 0, 0, "", false},
         {"error: Unknown option 'version'.\n", false, "", 0, 0, 0, "", false},
         {"old-tiles 0.2 (abc)\n", false, "", 0, 0, 0, "", false},
@@ -57,24 +57,20 @@ TEST(CliVersion, GrammarAndSupport) {
     EXPECT_TRUE(atLeast({2, 0, 0}, {2, 0, 0}));
 }
 
-// / calendar versions compare numerically field by field (2026.9.30 is OLDER than 2026.10.8,
-// which a string compare gets wrong); 2026.10.8 is the minimum, 2026.10.7 is too old (no
-// --stop-on-stdin).
+// / calendar versions compare numerically field by field (2026.9.30 is OLDER than 2026.10.9,
+// which a string compare gets wrong); 2026.10.9 is the minimum, 2026.10.8 is too old (no
+// JSON chart sources).
 TEST(CliVersion, SupportedFromTheMinimumOn) {
     struct Row {
         const char* line;
         bool supported;
     };
     const Row rows[] = {
-        {"chart-grabber-cli 2026.10.5 (a)\n", false},
-        {"chart-grabber-cli 2026.9.9 (a)\n", false},
-        {"chart-grabber-cli 2026.10.8 (a)\n", true},
-        {"chart-grabber-cli 2026.10.7 (a)\n", false},
-        {"chart-grabber-cli 2026.10.6 (a)\n", false},
-        {"chart-grabber-cli 2026.10.4 (a)\n", false},
-        {"chart-grabber-cli 2026.11.0 (a)\n", true},
-        {"chart-grabber-cli 2027.1.0 (a)\n", true},
-        {"old-tiles 0.1.0 (a)\n", false},
+        {"chart-grabber-cli 2026.10.5 (a)\n", false}, {"chart-grabber-cli 2026.9.9 (a)\n", false},
+        {"chart-grabber-cli 2026.10.9 (a)\n", true},  {"chart-grabber-cli 2026.10.8 (a)\n", false},
+        {"chart-grabber-cli 2026.10.7 (a)\n", false}, {"chart-grabber-cli 2026.10.6 (a)\n", false},
+        {"chart-grabber-cli 2026.10.4 (a)\n", false}, {"chart-grabber-cli 2026.11.0 (a)\n", true},
+        {"chart-grabber-cli 2027.1.0 (a)\n", true},   {"old-tiles 0.1.0 (a)\n", false},
     };
     for (const Row& r : rows) {
         SCOPED_TRACE(r.line);
@@ -89,12 +85,12 @@ TEST(CliVersion, SupportedFromTheMinimumOn) {
 
 // / the pinned release (a real capture) is supported.
 TEST(CliVersion, PinnedReleaseCapturedVersionLine) {
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.8/version.stdout", std::ios::binary);
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.10/version.stdout", std::ios::binary);
     ASSERT_TRUE(in.good());
     std::ostringstream ss;
     ss << in.rdbuf();
     const auto v = parseVersionLine(ss.str());
     ASSERT_TRUE(v);
-    EXPECT_EQ(v->commit, "e0a207dadb59");
+    EXPECT_EQ(v->commit, "6f3cf463bfaf");
     EXPECT_TRUE(supportedCli(v));
 }

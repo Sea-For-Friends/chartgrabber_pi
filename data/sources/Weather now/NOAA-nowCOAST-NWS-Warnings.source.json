@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "guid": "{901E0ED9-78CD-41C4-BA6A-0E93CF08C4F0}",
+  "name": "NOAA nowCOAST NWS watches and warnings (US)",
+  "group": "Weather now",
+  "layer": true,
+  "url": "https://nowcoast.noaa.gov/geoserver/alerts/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=watches_warnings_advisories&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Weather_NOAA_nowCOAST_NWS_Warnings",
+  "cacheType": 71,
+  "license": "NOAA National Weather Service watches, warnings and advisories via nowCOAST (US government, public domain)",
+  "maxConnections": 1,
+  "maxZoom": 8,
+  "snapshot": {
+    "index": "https://nowcoast.noaa.gov/geoserver/alerts/wms",
+    "type": "none-refetch"
+  }
+}

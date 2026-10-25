@@ -252,8 +252,8 @@ protected:
 };
 
 // the CLI reads exactly the --maps folders; the union of a bundled and a sailor's folder, the
-// later folder wins a duplicate GUID with one `map source` warning; no --maps at all is exit 3. CG_MAPS is
-// not needed: the folders are built from the repository's data/sources.
+// later folder wins a duplicate GUID, across the two source kinds with one `map source` warning; no --maps at
+// all is exit 3. CG_MAPS is not needed: the folders are built from the repository's data/sources.
 class MapsContractTest : public ContractTest {
 protected:
     bool needsMaps() const override { return false; }
@@ -264,12 +264,12 @@ TEST_F(MapsContractTest, TheUnionOfTwoFoldersAndTheLaterOneWinsADuplicate) {
     const fs::path bundled = tmp_ / "bundled", sailor = tmp_ / "sailor d'x";
     fs::create_directories(bundled);
     fs::create_directories(sailor);
-    fs::copy(src / "Coast and land" / "OpenTopoMap.zmp", bundled / "OpenTopoMap.zmp",
-             fs::copy_options::recursive);
-    fs::copy(src / "Satellite" / "Esri-World-Imagery.zmp", bundled / "Esri-World-Imagery.zmp",
-             fs::copy_options::recursive);
-    fs::copy(src / "Coast and land" / "OpenTopoMap.zmp", sailor / "Copy-Topo.zmp",
-             fs::copy_options::recursive);
+    fs::copy_file(src / "Coast and land" / "OpenTopoMap.source.json", bundled / "OpenTopoMap.source.json");
+    fs::copy_file(src / "Satellite" / "Esri-World-Imagery.source.json",
+                  bundled / "Esri-World-Imagery.source.json");
+    // the sailor's folder holds the other kind: a frozen .zmp folder of the same GUID
+    fs::copy(fs::path(CG_SOURCE_DIR) / "tests" / "fixtures" / "sources-zmp" / "OpenTopoMap.zmp",
+             sailor / "Copy-Topo.zmp", fs::copy_options::recursive);
     settings_.cliMaps = {bundled.string(), sailor.string()};
     Result r;
     ASSERT_TRUE(exec(r, sourcesArguments(settings_), false, 60000));
@@ -279,7 +279,7 @@ TEST_F(MapsContractTest, TheUnionOfTwoFoldersAndTheLaterOneWinsADuplicate) {
     for (const SourceRecord& s : r.all<SourceRecord>())
         files.push_back(s.guid == topo ? "topo:" + s.zmpFile : s.zmpFile);
     std::sort(files.begin(), files.end());
-    EXPECT_EQ(files, (std::vector<std::string>{"Esri-World-Imagery.zmp", "topo:Copy-Topo.zmp"}));
+    EXPECT_EQ(files, (std::vector<std::string>{"Esri-World-Imagery.source.json", "topo:Copy-Topo.zmp"}));
     int replaced = 0;
     for (const StderrLine& l : r.lines)
         if (const auto* m = std::get_if<MessageLine>(&l);

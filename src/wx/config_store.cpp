@@ -399,7 +399,7 @@ cg::Settings ConfigStore::cliSettings(const cg::Settings& s) const {
     if (!bundledSourcesDir_.empty())
         out.cliMaps.push_back(bundledSourcesDir_);
     const std::string folder = sourcesDir(s);
-    if (cg::countZmpEntries(folder, 1) > 0)
+    if (cg::countSourceEntries(folder, 1) > 0)
         out.cliMaps.push_back(folder);
     out.cacheDir = cliCacheRoot(s);
     return out;

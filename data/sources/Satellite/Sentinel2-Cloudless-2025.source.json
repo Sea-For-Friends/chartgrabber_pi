@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "guid": "{92122135-6B15-4800-AA9E-3E48C556DA17}",
+  "name": "Sentinel-2 Cloudless 2025 (EOX)",
+  "group": "Satellite",
+  "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2025_3857/default/g/{z}/{y}/{x}.jpg",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Sentinel2_Cloudless_2025",
+  "license": "EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2025)",
+  "maxConnections": 1
+}

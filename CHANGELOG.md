@@ -2,6 +2,16 @@
 
 Versions are calendar-based: `YYYY.MM.N` (year and month of the release, N = release count within that month, from 0).
 
+## 2026.10.4
+
+- Needs Chart Grabber CLI 2026.10.9 or newer (2026.10.10 recommended).
+- The bundled chart sources are now `.source.json` files.
+- Four more bundled chart sources: NOAA tropical cyclones, NOAA weather warnings (US), and NOAA surface currents (western Atlantic, eastern Pacific); 28 in all.
+- When the newest weather picture is not served yet, Details shows only the picture the chart holds.
+- Windows: the plugin file is named `chartgrabber_pi-<version>-windows-x86.tar.gz`.
+- A user guide in English and Russian (`docs/user-guide.md`).
+- Ubuntu 24.04 ships OpenCPN 5.8.4, which is too old: use the OpenCPN PPA. Debian 12 gets 5.10.2 from bookworm-backports.
+
 ## 2026.10.3
 
 - Needs Chart Grabber CLI 2026.10.8 or newer.

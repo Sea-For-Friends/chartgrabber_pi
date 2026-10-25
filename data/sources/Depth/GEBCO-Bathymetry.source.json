@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "guid": "{87D82F0F-4841-434F-ADB5-1D63B1BFE5DA}",
+  "name": "GEBCO bathymetry (world)",
+  "group": "Depth",
+  "url": "https://wms.gebco.net/mapserv?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=GEBCO_LATEST&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "GEBCO_Bathymetry_World",
+  "license": "GEBCO Compilation Group, GEBCO_LATEST grid (public domain, attribution required)",
+  "maxConnections": 1,
+  "maxZoom": 12,
+  "navigationWarning": true
+}

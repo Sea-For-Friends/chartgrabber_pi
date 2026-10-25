@@ -98,7 +98,7 @@ const std::string kScript =
     R"SH(if [ "$1" = --version ]; then # probeCli: counted, the answer is in the file `version` next to the script
   d0=$(dirname "$0")
   echo probe >> "$d0/probes"
-  cat "$d0/version" 2>/dev/null || echo 'chart-grabber-cli 2026.10.8 (test)'
+  cat "$d0/version" 2>/dev/null || echo 'chart-grabber-cli 2026.10.9 (test)'
   exit 0
 fi
 prev=
@@ -1267,7 +1267,7 @@ TEST_F(JobTest, NoProgramOnPathGivesTheSameTextInTheHeadlineAndTheDetails) {
 
 // with CliPath empty the automatic program is cliDefaultPaths, and it is probed and run.
 TEST_F(JobTest, EmptyCliPathUsesTheDefaultPathSeam) {
-    const std::string other = standIn("default seam", "chart-grabber-cli 2026.10.8 (test)");
+    const std::string other = standIn("default seam", "chart-grabber-cli 2026.10.9 (test)");
     fs::create_directories(root_ / "empty path");
     jc().cliDefaultPaths = {other};
     jc().cliPathEnv = (root_ / "empty path").string();
@@ -1498,15 +1498,15 @@ TEST_F(JobTest, GivenFoldersPassThroughUnchanged) {
     EXPECT_EQ(store_->loadSettings().cacheDir, cache);
 }
 
-// ---- the records of --progress=lines (CLI 2026.10.8), captured in tests/fixtures/cli-2026.10.8/
+// ---- the records of --progress=lines (CLI 2026.10.10), captured in tests/fixtures/cli-2026.10.10/
 
 namespace {
 const std::string kEsri = "{7B743985-BC5F-4AB6-8915-AC5DBBB8F552}";
 const std::string kMarks = "{AB8A8685-AEC6-4E16-80DA-DC4AC37E4777}";
 
-// A capture of the pinned CLI 2026.10.8 with the scratch directory of its capture replaced by /scr.
+// A capture of the pinned CLI 2026.10.10 with the scratch directory of its capture replaced by /scr.
 std::string fixtureNew(const std::string& name) {
-    std::string t = slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.8" / name);
+    std::string t = slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.10" / name);
     EXPECT_FALSE(t.empty()) << name;
     for (std::size_t at; (at = t.find("$SCRATCH")) != std::string::npos;)
         t.replace(at, 8, "/scr");
@@ -1542,7 +1542,7 @@ TEST_F(JobTest, TheDetailsStartWithTheProgressLines) {
             "for "
             "offline use. Read https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9 "
             "before downloading; you are responsible for complying.\n"
-            "warning: continuing the session of 2026-10-21 21:39:37\n");
+            "warning: continuing the session of 2026-10-23 12:28:26\n");
     jc().stop();
     ASSERT_TRUE(waitIdle(10000));
 }
@@ -1675,14 +1675,14 @@ TEST_F(JobTest, AProgressRecordWithAnEmptyGuidKeepsTheJobRunningAndTheNextRecord
     ASSERT_TRUE(waitIdle(10000));
 }
 
-// the real stderr of the pinned 2026.10.8 CLI. A run (the plugin's command) puts the CLI's
+// the real stderr of the pinned 2026.10.10 CLI. A run (the plugin's command) puts the CLI's
 // navigation notice into Details exactly once, after the phase lines and before the first tile; an export
 // capture of the same job holds none. Nothing in the plugin matches the wording: the line is shown as it
 // came.
 TEST_F(JobTest, TheCliNavigationNoticeReachesDetailsOnceForARunAndNotForAnExport) {
     store_->setFirstSuccessShown();
     const auto capture = [](const char* name) {
-        return slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.8" / name);
+        return slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.10" / name);
     };
     const std::string notice =
         "warning: \"EMODnet Bathymetry (world)\": not for navigation. This source is not an "
@@ -1953,15 +1953,16 @@ TEST_F(JobTest, TheSixtiethTickSavesDoneQuietly) {
 }
 
 // ---- the weather follow-up, the picture's time, the snapshot failure text.
-// The weather records are the captured lines of the pinned CLI 2026.10.8 (tests/fixtures/cli-2026.10.8/, read
-// from the files, `$SCRATCH` replaced by /scr); only the first job's lines are made by hand (a normal chart).
+// The weather records are the captured lines of the pinned CLI 2026.10.10 (tests/fixtures/cli-2026.10.10/,
+// read from the files, `$SCRATCH` replaced by /scr); only the first job's lines are made by hand (a normal
+// chart).
 
 namespace {
 const std::string kRain = "{1A696D82-F258-41A4-BCD6-7648D9E08DE2}";
 const std::string kRainName = "RainViewer radar (worldwide, current)";
 
 std::string fixtureWeather(const std::string& name) {
-    std::string t = slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.8" / name);
+    std::string t = slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.10" / name);
     EXPECT_FALSE(t.empty()) << name;
     for (std::size_t at; (at = t.find("$SCRATCH")) != std::string::npos;)
         t.replace(at, 8, "/scr");
@@ -2022,13 +2023,13 @@ TEST_F(WeatherTest, AChartDoneStartsTheFollowUpAndTheResultsJoin) {
     EXPECT_EQ(buttons(), (std::vector<std::string>{"Show", "Close"}));
     const std::string d = detailsText();
     const std::size_t warn = d.find("warning: the tiles are slow\n");
-    const std::size_t pic = d.find("Weather picture: 2026-10-21 17:40 UTC\n");
+    const std::size_t pic = d.find("Weather picture: 2026-10-23 08:20 UTC\n");
     ASSERT_NE(warn, std::string::npos) << d;
     ASSERT_NE(pic, std::string::npos) << d;
     EXPECT_LT(warn, pic);
     EXPECT_EQ(chart(first.id).state, cg::ChartState::Complete);
     EXPECT_EQ(chart(next.id).state, cg::ChartState::Complete);
-    EXPECT_EQ(chart(next.id).snapshot, "2026-10-21T17:40:00Z");
+    EXPECT_EQ(chart(next.id).snapshot, "2026-10-23T08:20:00Z");
     EXPECT_EQ(ocpn_fake::updates.size(), 2u);
     EXPECT_EQ(busyCalls_, (std::vector<bool>{true, false, true, false}));
 }
@@ -2196,7 +2197,7 @@ TEST_F(WeatherTest, TheFirstSuccessHintOfTheFirstJobOpensTheJoinedDetailsOnce) {
     const std::string d = detailsText();
     EXPECT_EQ(d.rfind("If the chart is not visible", 0), 0u) << d;
     EXPECT_EQ(d.find("If the chart is not visible", 1), std::string::npos);
-    EXPECT_NE(d.find("Weather picture: 2026-10-21 17:40 UTC"), std::string::npos);
+    EXPECT_NE(d.find("Weather picture: 2026-10-23 08:20 UTC"), std::string::npos);
     EXPECT_TRUE(store_->firstSuccessShown());
 }
 
@@ -2231,9 +2232,9 @@ TEST_F(WeatherTest, TheSnapshotOfTheWrittenRecordIsKeptAndShownInDetails) {
              fixtureWeather("run-weather-layer.stderr"), 0);
     start(layer);
     ASSERT_TRUE(waitIdle());
-    EXPECT_NE(detailsText().find("Weather picture: 2026-10-21 17:40 UTC\n"), std::string::npos)
+    EXPECT_NE(detailsText().find("Weather picture: 2026-10-23 08:20 UTC\n"), std::string::npos)
         << detailsText();
-    EXPECT_NE(chartIniText(layer.id).find("\nSnapshot=2026-10-21T17:40:00Z\n"), std::string::npos);
+    EXPECT_NE(chartIniText(layer.id).find("\nSnapshot=2026-10-23T08:20:00Z\n"), std::string::npos);
 
     auto base = makeRecord("20261016-206100"); // a weather base with seamarks: the overlay's field 5 is empty
     base.sourceGuid = "{FE84A175-2C0F-420F-86DF-5900DE16A33C}";
@@ -2243,9 +2244,9 @@ TEST_F(WeatherTest, TheSnapshotOfTheWrittenRecordIsKeptAndShownInDetails) {
              fixtureWeather("run-weather-base-seamarks.stderr"), 0);
     start(base);
     ASSERT_TRUE(waitIdle());
-    EXPECT_NE(chartIniText(base.id).find("\nSnapshot=2026-10-21T17:10:00Z\n"), std::string::npos)
+    EXPECT_NE(chartIniText(base.id).find("\nSnapshot=2026-10-23T08:10:00Z\n"), std::string::npos)
         << chartIniText(base.id);
-    EXPECT_NE(detailsText().find("Weather picture: 2026-10-21 17:10 UTC\n"), std::string::npos);
+    EXPECT_NE(detailsText().find("Weather picture: 2026-10-23 08:10 UTC\n"), std::string::npos);
 
     auto none = weatherRecord("20261016-206200"); // a run with no `written` record keeps the previous time
     none.snapshot = "2026-10-01T00:00:00Z";
@@ -2253,6 +2254,98 @@ TEST_F(WeatherTest, TheSnapshotOfTheWrittenRecordIsKeptAndShownInDetails) {
     start(none);
     ASSERT_TRUE(waitIdle());
     EXPECT_EQ(chart(none.id).snapshot, "2026-10-01T00:00:00Z");
+}
+
+// after a step back the CLI prints two snapshot records of one source and the LAST is the
+// frame used (HAND-MADE fixture run-weather-stepback): ONE picture line, with the second time; the step-back
+// warning is a "warning: " line; the job is Done and the saved picture time is the second one.
+TEST_F(WeatherTest, AStepBackShowsOnlyThePictureTheChartHolds) {
+    store_->setFirstSuccessShown();
+    auto layer = weatherRecord("20261016-206300");
+    scenario(layer.id, 1, fixtureWeather("run-weather-stepback.stdout"),
+             fixtureWeather("run-weather-stepback.stderr"), 0);
+    start(layer);
+    ASSERT_TRUE(waitIdle());
+    const std::string d = detailsText();
+    EXPECT_NE(d.find("Weather picture: 2026-10-23 08:10 UTC\n"), std::string::npos) << d;
+    EXPECT_EQ(d.find("08:20 UTC\n"), std::string::npos) << d;
+    std::size_t pictures = 0;
+    for (std::size_t at = 0; (at = d.find("Weather picture:", at)) != std::string::npos; ++at)
+        ++pictures;
+    EXPECT_EQ(pictures, 1u) << d;
+    EXPECT_NE(d.find("warning: the newest frame 2026-10-23 08:20 UTC of \"" + kRainName +
+                     "\" is not served yet; using the previous frame 2026-10-23 08:10 UTC\n"),
+              std::string::npos)
+        << d;
+    EXPECT_EQ(chart(layer.id).state, cg::ChartState::Complete);
+    EXPECT_EQ(chart(layer.id).lastError, "");
+    EXPECT_EQ(chart(layer.id).snapshot, "2026-10-23T08:10:00Z");
+}
+
+// the replace is per GUID: a weather base and a weather overlay (one record each) keep two
+// lines.
+TEST_F(WeatherTest, TwoSourcesWithOneSnapshotRecordEachKeepTwoPictureLines) {
+    auto r = makeRecord("20261016-206400");
+    r.sourceGuid = "{FE84A175-2C0F-420F-86DF-5900DE16A33C}";
+    r.overlayGuid = kRain;
+    r.weather = true;
+    scenario(r.id, 1,
+             tsv({"snapshot", r.sourceGuid, "2026-10-23T08:10:00Z", "/a"}) +
+                 tsv({"snapshot", kRain, "2026-10-23T08:20:00Z", "/b"}),
+             "", 0);
+    start(r);
+    ASSERT_TRUE(waitIdle());
+    const std::string d = detailsText();
+    const std::size_t a = d.find("Weather picture: 2026-10-23 08:10 UTC\n");
+    const std::size_t b = d.find("Weather picture: 2026-10-23 08:20 UTC\n");
+    ASSERT_NE(a, std::string::npos) << d;
+    ASSERT_NE(b, std::string::npos) << d;
+    EXPECT_LT(a, b);
+}
+
+// when the earlier picture line is already out of the 200 kept lines, the new one is appended.
+TEST_F(WeatherTest, ARepeatedPictureLineAfterTheLineCapIsAppended) {
+    auto r = makeRecord("20261016-206600");
+    r.weather = true;
+    std::string out = tsv({"snapshot", kRain, "2026-10-23T08:10:00Z", "/a"});
+    for (int i = 0; i < 210; ++i)
+        out += tsv({"snapshot", "{OTHER-" + std::to_string(i) + "}", "2026-10-23T08:20:00Z", "/b"});
+    out += tsv({"snapshot", kRain, "2026-10-23T08:30:00Z", "/c"});
+    scenario(r.id, 1, out, "", 0);
+    start(r);
+    ASSERT_TRUE(waitIdle());
+    const std::string d = detailsText();
+    EXPECT_EQ(d.find("08:10 UTC\n"), std::string::npos);
+    EXPECT_NE(d.find("Weather picture: 2026-10-23 08:30 UTC\n"), std::string::npos);
+}
+
+// the Windows move notes and the .conf rename note (hand-made from core app_paths.cpp and
+// snapshot_store.cpp, a path with a space and a Cyrillic folder) are plain Details lines: no prefix, no
+// error.
+TEST_F(WeatherTest, TheCliNotesAreInformationInDetails) {
+    store_->setFirstSuccessShown();
+    const std::string from = "C:/Users/Anna Ivanova/AppData/Roaming/chart-grabber";
+    const std::string to = "C:/Users/\xD0\x90\xD0\xBD\xD0\xBD\xD0\xB0/AppData/Local/chart-grabber";
+    const std::vector<std::string> notes = {
+        "note: moved " + from + " to " + to,
+        "note: not moving " + from + " to " + to + ": the target is in use; " + to + " is used, " + from +
+            " is left as it is",
+        "note: cannot move " + from + " to " + to + " (access denied); the cache starts empty",
+        "note: renamed " + to + "/Snapshots/{1A696D82}.ini to " + to + "/Snapshots/{1A696D82}.conf"};
+    std::string err;
+    for (const auto& n : notes)
+        err += n + "\n";
+    auto r = makeRecord("20261016-206500");
+    scenario(r.id, 1, written(kBase, "/charts/" + kName + ".mbtiles", 4, 900) + fill(kBase, 8, 4, 0), err, 0);
+    start(r);
+    ASSERT_TRUE(waitIdle());
+    const std::string d = detailsText();
+    for (const auto& n : notes)
+        EXPECT_NE(d.find("\n" + n + "\n"), std::string::npos) << n << "\n" << d;
+    EXPECT_EQ(d.find("warning: note"), std::string::npos);
+    EXPECT_EQ(d.find("error: note"), std::string::npos);
+    EXPECT_EQ(chart(r.id).state, cg::ChartState::Complete);
+    EXPECT_EQ(chart(r.id).lastError, "");
 }
 
 // Proof 8: exit 4 with the real snapshot line.

@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "guid": "{FE84A175-2C0F-420F-86DF-5900DE16A33C}",
+  "name": "EUMETSAT MTG GeoColour (Europe, Africa, Atlantic; clouds day and night)",
+  "group": "Weather now",
+  "url": "https://view.eumetsat.int/geoserver/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=mtg_fd:rgb_geocolour&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg&TIME={ver}",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Weather_EUMETView_MTG_GeoColour",
+  "cacheType": 71,
+  "license": "Contains modified EUMETSAT Meteosat data {year}",
+  "maxConnections": 2,
+  "maxZoom": 8,
+  "snapshot": {
+    "index": "https://view.eumetsat.int/geoserver/mtg_fd/rgb_geocolour/ows?service=WMS&version=1.3.0&request=GetCapabilities",
+    "type": "wms-default",
+    "item": "mtg_fd:rgb_geocolour"
+  }
+}

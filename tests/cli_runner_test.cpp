@@ -717,7 +717,7 @@ int runsOf(const TempDir& tmp) {
 } // namespace
 
 // Proof 2/3: version line -> the supported version or "too old" (nullopt) and the one log line. Supported
-// from 2026.10.8; 2026.10.7, 2026.10.5, 2026.9.9 and old-tiles 0.1.0 are too old.
+// from 2026.10.9; 2026.10.8, 2026.10.5, 2026.9.9 and old-tiles 0.1.0 are too old.
 TEST(ProbeCli, SupportedOrTooOldAndItsLogLine) {
     struct Row {
         const char* name;
@@ -726,14 +726,14 @@ TEST(ProbeCli, SupportedOrTooOldAndItsLogLine) {
         std::string logged;
     };
     const std::vector<Row> rows = {
-        {"minimum", "echo 'chart-grabber-cli 2026.10.8 (x)'; echo 'second line'", true,
-         "ChartGrabber: tile program chart-grabber-cli 2026.10.8 (x) - supported"},
-        {"dirty release", "echo 'chart-grabber-cli 2026.10.8 (e0a207dadb59-dirty)'", true,
-         "ChartGrabber: tile program chart-grabber-cli 2026.10.8 (e0a207dadb59-dirty) - supported"},
+        {"minimum", "echo 'chart-grabber-cli 2026.10.9 (x)'; echo 'second line'", true,
+         "ChartGrabber: tile program chart-grabber-cli 2026.10.9 (x) - supported"},
+        {"dirty release", "echo 'chart-grabber-cli 2026.10.9 (2a7aee506e26-dirty)'", true,
+         "ChartGrabber: tile program chart-grabber-cli 2026.10.9 (2a7aee506e26-dirty) - supported"},
         {"2027.1.0", "echo 'chart-grabber-cli 2027.1.0 (x)'", true,
          "ChartGrabber: tile program chart-grabber-cli 2027.1.0 (x) - supported"},
-        {"2026.10.7", "echo 'chart-grabber-cli 2026.10.7 (x)'", false,
-         "ChartGrabber: tile program chart-grabber-cli 2026.10.7 (x) - too old"},
+        {"2026.10.8", "echo 'chart-grabber-cli 2026.10.8 (x)'", false,
+         "ChartGrabber: tile program chart-grabber-cli 2026.10.8 (x) - too old"},
         {"2026.10.5", "echo 'chart-grabber-cli 2026.10.5 (x)'", false,
          "ChartGrabber: tile program chart-grabber-cli 2026.10.5 (x) - too old"},
         {"2026.9.9", "echo 'chart-grabber-cli 2026.9.9 (x)'", false,
@@ -742,7 +742,7 @@ TEST(ProbeCli, SupportedOrTooOldAndItsLogLine) {
          "ChartGrabber: tile program old-tiles 0.1.0 (\xD0\x81-build) - too old"},
         {"exit 2", "exit 2", false, "ChartGrabber: tile program no version (exit 2) - too old"},
         {"garbage", "echo 'hello world'", false, "ChartGrabber: tile program hello world - too old"},
-        {"version line but exit 3", "echo 'chart-grabber-cli 2026.10.8 (x)'; exit 3", false,
+        {"version line but exit 3", "echo 'chart-grabber-cli 2026.10.9 (x)'; exit 3", false,
          "ChartGrabber: tile program no version (exit 3) - too old"},
         {"exit 0, no output", "exit 0", false, "ChartGrabber: tile program no version (exit 0) - too old"},
     };
@@ -804,12 +804,12 @@ TEST(ProbeCli, SourcesStandInAnswersEveryProbe) {
 TEST(ProbeCli, ProbedVersionComesFromTheCache) {
     TempDir tmp;
     const std::string cli =
-        tmp.write("probe-cli", countingScript("echo 'chart-grabber-cli 2026.10.8 (abc)'"), true);
+        tmp.write("probe-cli", countingScript("echo 'chart-grabber-cli 2026.10.9 (abc)'"), true);
     const std::string old = tmp.write("old-cli", countingScript("echo 'old-tiles 0.0.9 (x)'"), true);
     const std::string none = tmp.write("none-cli", countingScript("echo 'hello'"), true);
     EXPECT_EQ(probedCliVersion(cli), "") << "never probed";
     ASSERT_TRUE(probeCli(cli));
-    EXPECT_EQ(probedCliVersion(cli), "2026.10.8");
+    EXPECT_EQ(probedCliVersion(cli), "2026.10.9");
     EXPECT_EQ(runsOf(tmp), 1) << "probedCliVersion started no process";
     EXPECT_FALSE(probeCli(old));
     EXPECT_EQ(probedCliVersion(old), "0.0.9") << "a too old program still has its version";
@@ -861,7 +861,7 @@ TEST(ProbeCli, CachedPerPathSizeAndModificationTime) {
     EXPECT_EQ(log->messages.size(), 1u);
 
     // Only the size changes (same modification time): the program runs again.
-    tmp.write("probe-cli", countingScript("echo 'chart-grabber-cli 2026.10.8 (aa)'"), true);
+    tmp.write("probe-cli", countingScript("echo 'chart-grabber-cli 2026.10.9 (aa)'"), true);
     fs::last_write_time(cli, t0);
     EXPECT_TRUE(probeCli(cli));
     EXPECT_EQ(runsOf(tmp), 2);

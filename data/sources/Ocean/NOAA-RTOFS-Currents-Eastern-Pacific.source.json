@@ -1,0 +1,21 @@
+{
+  "format": 1,
+  "guid": "{D228EF7F-C01B-4A00-AD22-2C7B527A2CA5}",
+  "name": "NOAA RTOFS surface currents (eastern Pacific)",
+  "group": "Ocean",
+  "layer": true,
+  "url": "https://nowcoast.noaa.gov/geoserver/grtofs/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=rtofs_west_sfc_currents&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE&TIME={ver}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Ocean_NOAA_RTOFS_Currents_West",
+  "cacheType": 71,
+  "license": "NOAA RTOFS ocean model surface currents via nowCOAST (NOS and NWS/NCEP; US government, public domain)",
+  "maxConnections": 1,
+  "maxZoom": 8,
+  "snapshot": {
+    "index": "https://nowcoast.noaa.gov/geoserver/grtofs/rtofs_west_sfc_currents/ows?service=WMS&version=1.3.0&request=GetCapabilities",
+    "type": "wms-default",
+    "item": "rtofs_west_sfc_currents",
+    "pick": "nearest-now"
+  }
+}

@@ -81,8 +81,8 @@ SettingsDialog::SettingsDialog(wxWindow* parent, ConfigStore& config, const Look
         int rc = wxID_CANCEL;
         switch (kind) {
         case PathKind::Sources:
-            rc = PlatformDirSelectorDialog(this, &path, _("Choose the folder with your chart sources (.zmp)"),
-                                           current);
+            rc = PlatformDirSelectorDialog(
+                this, &path, _("Choose the folder with your chart sources (.zmp or .source.json)"), current);
             break;
         case PathKind::Charts:
             rc = PlatformDirSelectorDialog(this, &path, _("Choose the folder for new charts"), current);
@@ -528,7 +528,7 @@ void SettingsDialog::startCheck() {
         return;
     }
     const std::string version = probedCliVersion(*cli);
-    if (cg::countZmpEntries(config_.bundledSourcesDir(), 1) == 0) { // no CLI run
+    if (cg::countSourceEntries(config_.bundledSourcesDir(), 1) == 0) { // no CLI run
         notReady(cliStatusText(CliStatus::Ready, version, {}),
                  sourcesStatusText(SourcesStatus::BundledMissing),
                  false); // the plugin's own files are missing, not the CLI: Advanced stays folded

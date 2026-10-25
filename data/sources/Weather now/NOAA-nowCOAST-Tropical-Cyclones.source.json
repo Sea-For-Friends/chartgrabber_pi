@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "guid": "{91F4EDA9-11F5-44AE-84AB-BBD7FEF492AF}",
+  "name": "NOAA nowCOAST tropical cyclones (active storms)",
+  "group": "Weather now",
+  "layer": true,
+  "url": "https://nowcoast.noaa.gov/geoserver/tropical_cyclones/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=active_tropical_cyclones&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Weather_NOAA_nowCOAST_Tropical_Cyclones",
+  "cacheType": 71,
+  "license": "NOAA nowCOAST, active tropical cyclones (US government, public domain)",
+  "maxConnections": 1,
+  "maxZoom": 7,
+  "snapshot": {
+    "index": "https://nowcoast.noaa.gov/geoserver/tropical_cyclones/wms",
+    "type": "none-refetch"
+  }
+}

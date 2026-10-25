@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "guid": "{925EFE79-929A-40E4-BDF0-E38E95FAB64E}",
+  "name": "NOAA nowCOAST clouds, infrared (worldwide)",
+  "group": "Weather now",
+  "layer": true,
+  "url": "https://nowcoast.noaa.gov/geoserver/satellite/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=global_longwave_imagery_mosaic&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE&TIME={ver}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Weather_NOAA_nowCOAST_Clouds_Infrared",
+  "cacheType": 71,
+  "license": "NOAA NESDIS GMGSI global longwave infrared mosaic via nowCOAST (US government, public domain)",
+  "maxConnections": 1,
+  "maxZoom": 7,
+  "snapshot": {
+    "index": "https://nowcoast.noaa.gov/geoserver/satellite/global_longwave_imagery_mosaic/ows?service=WMS&version=1.3.0&request=GetCapabilities",
+    "type": "wms-default",
+    "item": "global_longwave_imagery_mosaic"
+  }
+}

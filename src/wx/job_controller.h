@@ -71,7 +71,9 @@ private:
     void startFailed(const std::string& why, const wxString& headline = wxString());
     void saveRecord();
     void addMessage(std::string line); // one Details line (the last 200 are kept)
-    void stampDone();                  // record_.done before a save
+    void addPictureLine(const std::string& guid,
+                        std::string line); // addMessage, or replace this GUID's earlier picture line
+    void stampDone();                      // record_.done before a save
     void setPhase(Phase p);
     void showResult(const wxString& headline, Buttons buttons);
     Buttons buttonsFor(cg::Outcome o);
@@ -104,7 +106,8 @@ private:
     std::vector<std::pair<std::string, cg::DownloadProgress>> progress_; // latest per GUID, first seen first
     std::vector<cg::FillRecord> fills_;
     std::vector<cg::WrittenRecord> written_;
-    std::deque<std::string> messages_; // last 200 message lines, prefixed
+    std::deque<std::string> messages_;                // last 200 message lines, prefixed
+    std::map<std::string, std::string> pictureLines_; // GUID -> its "Weather picture:" line in messages_
     std::string lastError_;
     // The bar of the job : never down within a job.
     int done_ = 0;

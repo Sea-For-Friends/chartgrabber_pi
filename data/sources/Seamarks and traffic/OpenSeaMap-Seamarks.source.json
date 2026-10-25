@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{AB8A8685-AEC6-4E16-80DA-DC4AC37E4777}",
+  "name": "OpenSeaMap Seamarks",
+  "group": "Seamarks and traffic",
+  "layer": true,
+  "url": "https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Osm_OpenSeaMap_Layer_Seamark",
+  "license": "Seamarks (c) OpenSeaMap contributors, CC-BY-SA",
+  "maxConnections": 2
+}

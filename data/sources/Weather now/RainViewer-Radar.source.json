@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "guid": "{1A696D82-F258-41A4-BCD6-7648D9E08DE2}",
+  "name": "RainViewer radar (worldwide, current)",
+  "group": "Weather now",
+  "layer": true,
+  "url": "https://tilecache.rainviewer.com{ver}/256/{z}/{x}/{y}/2/1_1.png",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Weather_RainViewer_Radar",
+  "cacheType": 71,
+  "license": "Weather data by RainViewer (https://www.rainviewer.com)",
+  "maxConnections": 1,
+  "sleepMs": 700,
+  "maxZoom": 7,
+  "snapshot": {
+    "index": "https://api.rainviewer.com/public/weather-maps.json",
+    "type": "json-last",
+    "item": "radar.past",
+    "versionField": "path"
+  }
+}

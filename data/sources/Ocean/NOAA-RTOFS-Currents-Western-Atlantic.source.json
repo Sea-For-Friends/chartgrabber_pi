@@ -1,0 +1,21 @@
+{
+  "format": 1,
+  "guid": "{F022DF76-6F80-4294-9403-F1A6123EDD80}",
+  "name": "NOAA RTOFS surface currents (western Atlantic)",
+  "group": "Ocean",
+  "layer": true,
+  "url": "https://nowcoast.noaa.gov/geoserver/grtofs/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=rtofs_east_sfc_currents&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE&TIME={ver}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Ocean_NOAA_RTOFS_Currents_East",
+  "cacheType": 71,
+  "license": "NOAA RTOFS ocean model surface currents via nowCOAST (NOS and NWS/NCEP; US government, public domain)",
+  "maxConnections": 1,
+  "maxZoom": 8,
+  "snapshot": {
+    "index": "https://nowcoast.noaa.gov/geoserver/grtofs/rtofs_east_sfc_currents/ows?service=WMS&version=1.3.0&request=GetCapabilities",
+    "type": "wms-default",
+    "item": "rtofs_east_sfc_currents",
+    "pick": "nearest-now"
+  }
+}

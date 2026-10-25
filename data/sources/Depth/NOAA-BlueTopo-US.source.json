@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "guid": "{D73ACBDA-4E01-4C81-A36A-A069F38CF90C}",
+  "name": "NOAA BlueTopo bathymetry (US coast)",
+  "group": "Depth",
+  "url": "https://nowcoast.noaa.gov/geoserver/bluetopo/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=bathymetry&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Depth_NOAA_BlueTopo_US",
+  "license": "NOAA National Bathymetric Source, BlueTopo via nowCOAST (US government, public domain)",
+  "maxConnections": 1,
+  "maxZoom": 16,
+  "navigationWarning": true
+}

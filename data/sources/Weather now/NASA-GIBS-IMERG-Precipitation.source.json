@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "guid": "{92E40853-04A2-46B7-8A5B-3665FCDDFDBE}",
+  "name": "NASA IMERG precipitation rate (30 min, worldwide)",
+  "group": "Weather now",
+  "layer": true,
+  "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/IMERG_Precipitation_Rate_30min/default/{ver}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Weather_GIBS_IMERG_Precipitation_30min",
+  "cacheType": 71,
+  "license": "Precipitation: NASA GPM IMERG via NASA Global Imagery Browse Services (GIBS), part of the NASA Earth Science Data and Information System (ESDIS)",
+  "maxConnections": 2,
+  "maxZoom": 6,
+  "snapshot": {
+    "index": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/IMERG_Precipitation_Rate_30min/default/GoogleMapsCompatible_Level6/all/2026-01-01--2100-01-01.xml",
+    "type": "wmts-domain"
+  }
+}

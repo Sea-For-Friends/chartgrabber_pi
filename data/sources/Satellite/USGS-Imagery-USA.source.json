@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "guid": "{E05EDD5E-C6C3-483C-8BA7-8DE1D9892ED8}",
+  "name": "USGS Imagery (USA)",
+  "group": "Satellite",
+  "url": "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "USGS_Imagery_USA",
+  "license": "U.S. Geological Survey, public domain",
+  "maxConnections": 2
+}

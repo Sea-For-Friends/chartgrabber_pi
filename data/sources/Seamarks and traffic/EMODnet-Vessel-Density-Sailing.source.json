@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "guid": "{478CBB2F-70D1-4573-8C50-B5361CE2AA46}",
+  "name": "EMODnet vessel density 2023, sailing and pleasure craft (AIS, European seas)",
+  "group": "Seamarks and traffic",
+  "layer": true,
+  "url": "https://ows.emodnet-humanactivities.eu/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=vesseldensity_04avg,vesseldensity_05avg&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE&TIME=2023-01-01",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Marine_EMODnet_Vessel_Density_Sailing",
+  "license": "EMODnet Human Activities, Vessel Density Map 2023 (Cogea for EMODnet), CC BY 4.0",
+  "maxConnections": 2,
+  "maxZoom": 9
+}

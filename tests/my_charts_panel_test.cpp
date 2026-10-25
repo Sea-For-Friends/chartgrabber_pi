@@ -62,7 +62,7 @@ const std::string kCyr = "\xD0\x9A\xD0\xB0\xD1\x80\xD1\x82\xD0\xB0 d'x"; // "–ö–
 
 const std::string kScript =
     std::string("#!/bin/sh\n") + stub::kStopPrelude +
-    R"SH([ "$1" = --version ] && { echo 'chart-grabber-cli 2026.10.8 (test)'; exit 0; } # probeCli: supported
+    R"SH([ "$1" = --version ] && { echo 'chart-grabber-cli 2026.10.9 (test)'; exit 0; } # probeCli: supported
 prev=
 for a in "$@"; do
   if [ "$prev" = --job ]; then ini=$a; fi

@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "guid": "{8B9C244E-E978-4267-8FE4-D703534C0789}",
+  "name": "NASA VIIRS NOAA-20 true colour (daily, clouds)",
+  "group": "Weather now",
+  "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/{ver}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Weather_GIBS_VIIRS_NOAA20_TrueColor",
+  "cacheType": 71,
+  "license": "Imagery: NASA Global Imagery Browse Services (GIBS), part of the NASA Earth Science Data and Information System (ESDIS); VIIRS NOAA-20",
+  "maxConnections": 2,
+  "maxZoom": 9,
+  "snapshot": {
+    "index": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/GoogleMapsCompatible_Level9/all/2026-01-01--2100-01-01.xml",
+    "type": "wmts-domain"
+  }
+}

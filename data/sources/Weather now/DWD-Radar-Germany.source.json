@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "guid": "{25E4232E-08A5-47C5-8D97-E38B5F418A2D}",
+  "name": "DWD weather radar (Germany, North Sea and western Baltic coasts)",
+  "group": "Weather now",
+  "layer": true,
+  "url": "https://maps.dwd.de/geoserver/dwd/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=dwd:Radar_wn-analysis_1x1km_ger&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE&TIME={ver}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Weather_DWD_Radar_wn_analysis",
+  "cacheType": 71,
+  "license": "Source: Deutscher Wetterdienst (DWD), CC BY 4.0",
+  "maxConnections": 2,
+  "maxZoom": 9,
+  "snapshot": {
+    "index": "https://maps.dwd.de/geoserver/dwd/Radar_wn-analysis_1x1km_ger/ows?service=WMS&version=1.3.0&request=GetCapabilities",
+    "type": "wms-default",
+    "item": "Radar_wn-analysis_1x1km_ger"
+  }
+}

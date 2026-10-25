@@ -233,7 +233,7 @@ TEST(MessagesOutcome, FixedHeadlinesOfSection93) {
         EXPECT_EQ(u(outcomeHeadline(o, none, {}, "ignored")), text) << static_cast<int>(o);
 }
 
-// exit 4 whose last error is the CLI's snapshot line (a real line, tests/fixtures/cli-2026.10.8/
+// exit 4 whose last error is the CLI's snapshot line (a real line, tests/fixtures/cli-2026.10.10/
 // run-weather-snapshot-failed.stderr) gives the weather text; any other last error keeps the landed one.
 TEST(MessagesOutcome, ASnapshotFailureHasItsOwnHeadline) {
     EXPECT_EQ(u(outcomeHeadline(cg::Outcome::DownloadIncomplete, {}, {},
@@ -284,7 +284,7 @@ TEST(MessagesOutcome, RefusalTextBranches) {
 }
 
 // the S-15 and S-16 refusals. The first and third lines are the captured ones (tests/fixtures/
-// cli-2026.10.8/run-cache-refused.stderr, estimate-area-too-large.stderr); the "cannot open the cache"
+// cli-2026.10.10/run-cache-refused.stderr, estimate-area-too-large.stderr); the "cannot open the cache"
 // forms are HAND-MADE from core v2026.10.6 src/cg/app/job_checks.cpp (the capture produced the other form).
 TEST(MessagesOutcome, TheCacheAndAreaSizeRefusals) {
     const std::string cache =
@@ -305,7 +305,7 @@ TEST(MessagesOutcome, TheCacheAndAreaSizeRefusals) {
     EXPECT_EQ(u(cacheRefusedText()), cache);
     // the captured BerkeleyDB line also holds ": cannot open the cache: ", so its check comes first.
     // the line is the captured fixture, made a lastError the way the runner does.
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.8/run-cache-berkeleydb.stderr",
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.10/run-cache-berkeleydb.stderr",
                      std::ios::binary);
     std::string line;
     ASSERT_TRUE(std::getline(in, line));
@@ -391,7 +391,8 @@ TEST(MessagesSettingsStatus, SourcesStatusTextsOfSection112) {
         EXPECT_EQ(u(sourcesStatusText(SourcesStatus::Found, 0, f)), none);
     const std::string missing =
         ". Your own chart sources folder was not found: press Open folder to create it.";
-    const std::string empty = ". Put your own chart source (.zmp) files in your folder to add more.";
+    const std::string empty =
+        ". Put your own chart source (.zmp or .source.json) files in your folder to add more.";
     const std::string holds = ", with those in your folder.";
     EXPECT_EQ(u(sourcesStatusText(SourcesStatus::Found, 1, FolderState::Missing)),
               "1 chart source available" + missing);

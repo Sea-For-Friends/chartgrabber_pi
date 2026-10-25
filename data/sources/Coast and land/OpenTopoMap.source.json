@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{51C1079B-B55D-4DF7-A410-ADC118F53AB1}",
+  "name": "OpenTopoMap",
+  "group": "Coast and land",
+  "url": "https://a.tile.opentopomap.org/{z}/{x}/{y}.png",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Osm_Topo_Map",
+  "license": "Map data (c) OpenStreetMap contributors, SRTM; map style (c) OpenTopoMap (CC-BY-SA)",
+  "maxConnections": 1,
+  "termsOfUseWarning": "https://opentopomap.org/about"
+}

@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{91D4F1B4-A7CD-4FC8-95F1-637609068FB2}",
+  "name": "EMODnet Bathymetry (European seas, depth shading)",
+  "group": "Depth",
+  "url": "https://tiles.emodnet-bathymetry.eu/latest/mean_atlas_land/web_mercator/{z}/{x}/{y}.png",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "EMODnet_Bathymetry_Europe",
+  "license": "EMODnet Bathymetry Consortium",
+  "maxConnections": 2,
+  "navigationWarning": true
+}

@@ -1,21 +1,21 @@
 # Shipped chart-source definitions
 
-Twenty-four ZMP folders (`<group>/<name>.zmp/params.txt`), written by us from each service's public documentation. Nothing is
+Twenty-eight JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
 copied from the SAS.Planet map catalogue; the GUID and `NameInCache` are reused only for the three services the
 catalogue also has (OpenSeaMap seamarks, Esri World Imagery, OpenTopoMap), so an existing tile cache stays valid.
-The folder name is the menu group (the `ParentSubMenu` value of the definitions); seven groups, below. The definition
+The folder name is the menu group (the `group` value of the definitions); seven groups, below. The definition
 files are CC0-1.0 (see `LICENSE`). Terms of the first sixteen were checked on 2026-10-15, those of the eight added on
-2026-10-22. Every source of the 24 was downloaded once with the CLI 2026.10.8 on 2026-10-22 (one connection, a few tiles,
-one or two zoom levels). The folder `data/sources` is passed to the CLI first; a sailor's own
+2026-10-22, those of the four weather sources added on 2026-10-23. Every source of the first 24 was downloaded once with the CLI 2026.10.8 on 2026-10-22 (one connection, a few tiles,
+one or two zoom levels); the four added later were downloaded with the CLI 2026.10.9 on 2026-10-23. The folder `data/sources` is passed to the CLI first; a sailor's own
 folder (Preferences) is passed after it.
 
-The two groups `Nautical charts` and `Depth` carry `NavigationWarning=1`: they are tile pictures, not charts to navigate
+The two groups `Nautical charts` and `Depth` carry `"navigationWarning": true`: they are tile pictures, not charts to navigate
 by. Kartverket and Traficom say "not for navigation" themselves.
 
 ## Nautical charts
 
 ### Norway sea chart (Kartverket)
-- GUID `{25DBA489-D484-4A13-B65D-ABA8967FF3DA}` (base chart), `NavigationWarning=1`
+- GUID `{25DBA489-D484-4A13-B65D-ABA8967FF3DA}` (base chart), `"navigationWarning": true`
 - Service: `https://cache.kartverket.no/v1/wmts/1.0.0/sjokartraster/default/webmercator/{z}/{y}/{x}.png` (WMTS, matrix set `webmercator`, levels 0-18)
 - Terms: capabilities (https://cache.kartverket.no/v1/wmts/1.0.0/WMTSCapabilities.xml) `<ows:Fees>Ingen`, `<ows:AccessConstraints>Ingen`;
   CC BY 4.0 (https://data.norge.no/en/data-services/e3454491-066a-3276-a482-f63069728021, https://proxy.kartverket.no/en/api-and-data/terms-of-use);
@@ -24,7 +24,7 @@ by. Kartverket and Traficom say "not for navigation" themselves.
 - Coverage: the Norwegian coast. Kartverket ends the raster Kystkart download on 2026-08-28; tiles remain.
 
 ### Finland sea chart (Traficom)
-- GUID `{8A9C3A53-0512-4401-A6D3-050E08934949}` (base chart), `NavigationWarning=1`
+- GUID `{8A9C3A53-0512-4401-A6D3-050E08934949}` (base chart), `"navigationWarning": true`
 - Service: WMTS `https://julkinen.traficom.fi/rasteripalvelu/wmts`, layer `Traficom:Merikarttasarjat public`, matrix set `WGS84_Pseudo-Mercator`, matrix id `WGS84_Pseudo-Mercator:{z}` (key-value request, `TILEROW={y}&TILECOL={x}`, levels 5-15 for this layer)
 - Terms: capabilities of the WMS (https://julkinen.traficom.fi/rasteripalvelu/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities, 2026-10-22):
   `<Fees>NONE`; `AccessConstraints`: "This dataset produced by the Finnish Transport Agency is licensed under a Creative Commons
@@ -39,7 +39,7 @@ by. Kartverket and Traficom say "not for navigation" themselves.
   The coarser general-chart layers are not drawn, so offshore Finnish waters at low zoom may show less than the WMS fallback would.
 
 ### NOAA chart (US coast)
-- GUID `{5DBBE570-0FA6-403E-B490-7A27AF8A3814}` (base chart), `NavigationWarning=1`
+- GUID `{5DBBE570-0FA6-403E-B490-7A27AF8A3814}` (base chart), `"navigationWarning": true`
 - Service: WMS `https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/NOAAChartDisplay/MapServer/exts/MaritimeChartService/WMSServer`,
   layers `1,2,3,4,5,6,7,11` of its capabilities (1 natural and man-made features, 2 depths and currents, 3 seabed and obstructions,
   4 traffic routes, 5 special areas, 6 buoys, beacons and lights, 7 services and small-craft facilities, 11 shallow-water pattern),
@@ -67,7 +67,7 @@ by. Kartverket and Traficom say "not for navigation" themselves.
 - Index: `https://ows.emodnet-humanactivities.eu/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities` (GeoServer, workspace `emodnet`)
 - Data: AIS shipping density, hours per square kilometre per month, 1 x 1 km grid, annual averages 2017-2024. `TIME` is a
   fixed year: 2023, the newest complete one (the provider lost satellite data from June 2024, so the 2024 average is thin).
-  Tiles in a cache never mix years. For another year change `TIME` in `DefURLBase`.
+  Tiles in a cache never mix years. For another year change `TIME` in `url`.
 - Terms: the capabilities state `Fees` "NONE" and `AccessConstraints` "NONE"; the catalogue record
   (https://ows.emodnet-humanactivities.eu/geonetwork, id 0f2f3ff1-30ef-49e1-96e7-8ca78d58a07c) says
   "Creative Commons CC-BY 4.0 https://creativecommons.org/licenses/by/4.0/".
@@ -101,7 +101,7 @@ by. Kartverket and Traficom say "not for navigation" themselves.
 - Terms: as above. Attribution: EMODnet Bathymetry Consortium
 
 ### GEBCO bathymetry (world)
-- GUID `{87D82F0F-4841-434F-ADB5-1D63B1BFE5DA}` (base chart), `NavigationWarning=1`
+- GUID `{87D82F0F-4841-434F-ADB5-1D63B1BFE5DA}` (base chart), `"navigationWarning": true`
 - Service: WMS `https://wms.gebco.net/mapserv`, layer `GEBCO_LATEST`, WMS 1.3.0, EPSG:3857, PNG
 - Terms: grid is public domain, attribution required;
   WMS `AccessConstraints` (2026-10-22): "Imagery from this WMS is not to be used for navigation or any purpose relating to safety at sea."
@@ -109,7 +109,7 @@ by. Kartverket and Traficom say "not for navigation" themselves.
 - Notes: overlaps EMODnet Bathymetry (world); GEBCO also covers the polar and Pacific waters.
 
 ### NOAA BlueTopo bathymetry (US coast)
-- GUID `{D73ACBDA-4E01-4C81-A36A-A069F38CF90C}` (base chart), `NavigationWarning=1`
+- GUID `{D73ACBDA-4E01-4C81-A36A-A069F38CF90C}` (base chart), `"navigationWarning": true`
 - Service: WMS `https://nowcoast.noaa.gov/geoserver/bluetopo/wms`, layer `bathymetry` (the workspace also has `hillshade`, not used), WMS 1.3.0, EPSG:3857, PNG
 - Terms: the capabilities state `Fees` "NONE" and `AccessConstraints` "NONE"; NOAA data, public domain (https://www.weather.gov/disclaimer).
 - Attribution: NOAA National Bathymetric Source, BlueTopo via nowCOAST (US government, public domain). Max zoom 16.
@@ -139,7 +139,7 @@ Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not singl
 
 ### Grey source: Esri World Imagery
 
-This source carries a `TermsOfUseWarning` key: the program prints a terms-of-use warning before downloading from it. The
+This source carries a `termsOfUseWarning` key: the program prints a terms-of-use warning before downloading from it. The
 provider's terms may not allow downloading tiles for offline use; reading the terms and complying is the user's responsibility.
 Kept grey by default.
 
@@ -155,7 +155,7 @@ Kept grey by default.
 
 ### Grey source: OpenTopoMap
 
-This source carries a `TermsOfUseWarning` key too (see above).
+This source carries a `termsOfUseWarning` key too (see above).
 
 - GUID `{51C1079B-B55D-4DF7-A410-ADC118F53AB1}`
 - Service: `https://a.tile.opentopomap.org/{z}/{x}/{y}.png` (one host, no subdomain rotation)
@@ -166,7 +166,7 @@ This source carries a `TermsOfUseWarning` key too (see above).
 
 ## Weather now
 
-Snapshot sources: the program takes one frame ("now") and caches it as its own chart. Eight sources, current weather only.
+Snapshot sources: the program takes one frame ("now") and caches it as its own chart. Ten sources, current weather only.
 
 ### RainViewer radar
 - GUID `{1A696D82-F258-41A4-BCD6-7648D9E08DE2}` (overlay layer), kind: snapshot (`json-last`, `radar.past`, field `path`)
@@ -247,10 +247,27 @@ Snapshot sources: the program takes one frame ("now") and caches it as its own c
 - Attribution: NOAA NESDIS GMGSI global longwave infrared mosaic via nowCOAST (US government, public domain). Max zoom 7 (about 3 km).
 - Coverage: worldwide, geostationary mosaic (about 60 N to 60 S plus the polar gaps of the mosaic). The frame is two to three hours old.
 
+### NOAA nowCOAST active tropical cyclones
+- GUID `{91F4EDA9-11F5-44AE-84AB-BBD7FEF492AF}` (overlay layer), kind: snapshot (`none-refetch`)
+- Service: `https://nowcoast.noaa.gov/geoserver/tropical_cyclones/wms`, layer `active_tropical_cyclones`, WMS 1.3.0, EPSG:3857, PNG, no `TIME` (the capabilities have no time dimension)
+- Index: `https://nowcoast.noaa.gov/geoserver/tropical_cyclones/wms` (the service itself; every run fetches the area again)
+- Terms: the capabilities state `Fees` "NONE" and `AccessConstraints` "NONE"; NOAA data, public domain (https://www.weather.gov/disclaimer).
+- Attribution: NOAA nowCOAST, active tropical cyclones (US government, public domain). Max zoom 7.
+- Coverage: the layer group draws cone, wind extent and radii, track, centre and watches/warnings of the storms active now.
+- Notes: transparent when no storm is active.
+
+### NOAA nowCOAST NWS watches and warnings (US)
+- GUID `{901E0ED9-78CD-41C4-BA6A-0E93CF08C4F0}` (overlay layer), kind: snapshot (`none-refetch`)
+- Service: `https://nowcoast.noaa.gov/geoserver/alerts/wms`, layer `watches_warnings_advisories`, WMS 1.3.0, EPSG:3857, PNG, no `TIME`
+- Index: `https://nowcoast.noaa.gov/geoserver/alerts/wms` (the service itself; every run fetches the area again)
+- Terms: the capabilities state `Fees` "NONE" and `AccessConstraints` "NONE"; NWS data, public domain (https://www.weather.gov/disclaimer).
+- Attribution: NOAA National Weather Service watches, warnings and advisories via nowCOAST (US government, public domain). Max zoom 8.
+- Coverage: US land and coastal marine zones.
+
 
 ## Ocean
 
-Both are daily NASA GIBS products; snapshot sources (`wmts-domain`).
+Four snapshot sources: two daily NASA GIBS products (`wmts-domain`) and two NOAA RTOFS model pictures (`wms-default`, `nearest-now`).
 
 ### NASA sea surface temperature (GIBS, GHRSST MUR)
 - GUID `{AF87E1F3-ECD7-431F-81ED-E0C7E95458D0}` (overlay layer), kind: snapshot (`wmts-domain`, daily)
@@ -270,6 +287,26 @@ Both are daily NASA GIBS products; snapshot sources (`wmts-domain`).
 - Notes: the first plan named `AMSRU2_Sea_Ice_Concentration_12km`; its time dimension ends on 2025-09-01 (GIBS capabilities, 2026-10-22), so a "now"
   snapshot would be a year old. The MUR product (default 2026-10-20) replaces it.
 
+### NOAA RTOFS surface currents (western Atlantic)
+- GUID `{F022DF76-6F80-4294-9403-F1A6123EDD80}` (overlay layer), kind: snapshot (`wms-default`, `nearest-now`, 6-hourly)
+- Service: `https://nowcoast.noaa.gov/geoserver/grtofs/wms`, layer `rtofs_east_sfc_currents`, WMS 1.3.0, EPSG:3857, PNG, `TIME={ver}`
+- Index: `https://nowcoast.noaa.gov/geoserver/grtofs/rtofs_east_sfc_currents/ows?service=WMS&version=1.3.0&request=GetCapabilities`
+- Terms: the capabilities state `Fees` "NONE" and `AccessConstraints` "NONE"; NOAA data, public domain (https://www.weather.gov/disclaimer).
+- Attribution: NOAA RTOFS ocean model surface currents via nowCOAST (NOS and NWS/NCEP; US government, public domain). Max zoom 8.
+- Coverage: US East coast waters and the western Atlantic, 99.8 W to 40.6 W, 0.1 N to 44.9 N (capabilities box).
+- Notes: a forecast model's frame nearest to the run, not an observation. The `time` default is the last forecast hour (days ahead,
+  2026-10-27 on 2026-10-23), so the source picks the listed instant nearest now instead.
+
+### NOAA RTOFS surface currents (eastern Pacific)
+- GUID `{D228EF7F-C01B-4A00-AD22-2C7B527A2CA5}` (overlay layer), kind: snapshot (`wms-default`, `nearest-now`, 6-hourly)
+- Service: `https://nowcoast.noaa.gov/geoserver/grtofs/wms`, layer `rtofs_west_sfc_currents`, WMS 1.3.0, EPSG:3857, PNG, `TIME={ver}`
+- Index: `https://nowcoast.noaa.gov/geoserver/grtofs/rtofs_west_sfc_currents/ows?service=WMS&version=1.3.0&request=GetCapabilities`
+- Terms: the capabilities state `Fees` "NONE" and `AccessConstraints` "NONE"; NOAA data, public domain (https://www.weather.gov/disclaimer).
+- Attribution: NOAA RTOFS ocean model surface currents via nowCOAST (NOS and NWS/NCEP; US government, public domain). Max zoom 8.
+- Coverage: US West coast waters and the eastern Pacific, 179.9 W to 101.8 W, 14.4 N to 62.4 N (capabilities box).
+- Notes: a forecast model's frame nearest to the run, not an observation. The `time` default is the last forecast hour (days ahead,
+  2026-10-27 on 2026-10-23), so the source picks the listed instant nearest now instead.
+
 
 ## Not shipped, with the reason
 
@@ -283,10 +320,6 @@ OUTSIDE the repository (see README.md, "Chart sources").
   CLI 2026.10.8 lists such a source as "downloads are disabled for this map".
 - Keyed sources: Lantmateriet topographic web chart (Sweden, free key; terms not retrieved).
 - Anygis.ru proxy entries: a third-party proxy that rehosts other providers' tiles.
-- nowCOAST `tropical_cyclones` and `alerts`: the capabilities carry no `<Dimension>` at all (`grep -c '<Dimension'` gives 0 on
-  both), so no snapshot is possible; a cached picture would never refresh.
-- nowCOAST `grtofs` (RTOFS currents): the `time` dimension default is the LAST forecast hour (2026-10-25T00:00:00Z on 2026-10-22,
-  about +3 days), so a `wms-default` snapshot is not "now". Waits for a CLI feature (a snapshot of the frame nearest now).
 - EOX Sentinel-2 Cloudless 2016: not needed (2025 is bundled).
 - Copernicus Marine waves and currents: no key needed for tiles and the licence allows copies, so it is a base-set candidate
   that is undecided.

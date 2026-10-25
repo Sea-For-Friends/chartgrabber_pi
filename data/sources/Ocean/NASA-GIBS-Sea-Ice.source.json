@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "guid": "{544D656E-F024-4E79-ADC9-4981D7AE601A}",
+  "name": "NASA sea ice concentration (daily, MUR)",
+  "group": "Ocean",
+  "layer": true,
+  "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/GHRSST_L4_MUR_Sea_Ice_Concentration/default/{ver}/GoogleMapsCompatible_Level7/{z}/{y}/{x}.png",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Ocean_GIBS_MUR_Sea_Ice_Concentration",
+  "cacheType": 71,
+  "license": "Imagery: NASA Global Imagery Browse Services (GIBS), GHRSST MUR L4 sea ice concentration (JPL PO.DAAC)",
+  "maxConnections": 1,
+  "maxZoom": 7,
+  "snapshot": {
+    "index": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/GHRSST_L4_MUR_Sea_Ice_Concentration/default/GoogleMapsCompatible_Level7/all/2026-01-01--2100-01-01.xml",
+    "type": "wmts-domain"
+  }
+}

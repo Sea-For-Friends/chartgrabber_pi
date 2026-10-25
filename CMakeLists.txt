@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 # Calendar version YYYY.MM.N: set only at a release; until then the next planned one.
-project(chartgrabber_pi VERSION 2026.10.3 LANGUAGES CXX)
+project(chartgrabber_pi VERSION 2026.10.4 LANGUAGES CXX)
 
 option(CG_BUILD_TESTS "Build the GoogleTest unit tests" ON)
 # Host tuple of the build host's OpenCPN, e.g. debian-x86_64 (see the README). Never "all":

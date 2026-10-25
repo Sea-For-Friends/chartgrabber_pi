@@ -457,11 +457,13 @@ wxString sourcesStatusText(SourcesStatus status, int records, FolderState folder
                          n);
     case FolderState::Empty:
         return records == 1
-                   ? _("1 chart source available. Put your own chart source (.zmp) files in your folder "
+                   ? _("1 chart source available. Put your own chart source (.zmp or .source.json) files in "
+                       "your folder "
                        "to add more.")
-                   : wxString::Format(_("%s chart sources available. Put your own chart source (.zmp) "
-                                        "files in your folder to add more."),
-                                      n);
+                   : wxString::Format(
+                         _("%s chart sources available. Put your own chart source (.zmp or .source.json) "
+                           "files in your folder to add more."),
+                         n);
     case FolderState::Holds:
         break;
     }

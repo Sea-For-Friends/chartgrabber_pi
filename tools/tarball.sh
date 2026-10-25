@@ -42,14 +42,17 @@ src=$here/data/sources
 refuse() { echo "tarball.sh: $1" >&2; exit 2; }
 [[ -n $version && $version != */* ]] || refuse "metadata.xml <version> is '${version}': empty or holding a / (the folder is data/sources-<version>)"
 [[ -d $src ]] || refuse "data/sources is missing"
-# the CLI's walk: depth 6, entries ending .zmp (any case), file or directory; hidden entries do not count
-[[ -n $(find "$src" -mindepth 1 -maxdepth 6 -name '.*' -prune -o -iname '*.zmp' -print -quit) ]] ||
-    refuse "data/sources holds no .zmp entry"
+# the CLI's walk: depth 6, entries ending .zmp (any case), file or directory, or a regular file ending .source.json;
+# hidden entries do not count
+[[ -n $(find "$src" -mindepth 1 -maxdepth 6 -name '.*' -prune -o \( -iname '*.zmp' -o -type f -iname '*.source.json' \) -print -quit) ]] ||
+    refuse "data/sources holds no .zmp entry and no .source.json file"
 for t in LICENSE NOTICE; do
     [[ -n $(find "$src" -mindepth 1 -maxdepth 1 -type f -name "$t*" -print -quit) ]] ||
         refuse "data/sources has no top-level $t* file (terms travel with the sources)"
 done
 name=$(tr -d '\r' <"$build/tarball-name.txt") # a Windows CMake writes CRLF into both files
+# the Windows FILE and top dir say windows-x86; metadata.xml keeps <target>msvc-wx32 (OpenCPN needs it)
+((win)) && name=${name/-msvc-wx32-10-x86/-windows-x86}
 
 epoch=${SOURCE_DATE_EPOCH:-$(git -C "$here" log -1 --format=%ct 2>/dev/null || true)}
 [[ $epoch =~ ^[0-9]+$ ]] || { echo "tarball.sh: no commit time: set SOURCE_DATE_EPOCH (a tree without git)" >&2; exit 1; }
