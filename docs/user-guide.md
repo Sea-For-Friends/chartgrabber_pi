@@ -47,6 +47,7 @@ You need OpenCPN 5.10.2 or newer and Chart Grabber CLI 2026.10.9 or newer.
 
    There is no build for Raspberry Pi OS bookworm (Debian 12 arm64) or Ubuntu 22.04.
 2. **Import**: OpenCPN, Options, Plugins, **Import plugin...**, choose the tarball, enable Chart Grabber. To update, import the new tarball over the old one.
+   OpenCPN 5.10.2 (Debian 12 and 13 packages) may show no Chart Grabber toolbar button until you press **OK** to close Options or restart OpenCPN; until then use the right-click menu **Chart Grabber: new chart of this view...**.
 3. **Install the Chart Grabber CLI** package, e.g. `sudo apt install ./chart-grabber-cli_2026.10.10_amd64.deb`. Arch and CachyOS: put `chart-grabber-cli` on your PATH or choose it in [Settings](#settings-reference).
 4. **Windows**: the CLI comes in its own 64-bit zip. Unpack it; the plugin looks for `chart-grabber-cli.exe` in this order: the program chosen in Settings, the `cli` folder of the plugin's data folder, `Program Files\Chart Grabber CLI\`, then PATH.
 5. **Ubuntu 24.04**: its own OpenCPN (5.8.4) is too old; install OpenCPN from the OpenCPN PPA (`ppa:opencpn/opencpn`).
@@ -62,6 +63,8 @@ Debian 12: `sudo apt install -t bookworm-backports opencpn`.
 5. Press **Download**. A strip shows progress.
 6. At "Chart added", press **Show**. If the chart is not visible, click it in the chart bar at the bottom. MBTiles charts need OpenGL (Options > Display > Advanced).
 
+
+![The downloaded chart in OpenCPN with OpenSeaMap buoys and lights on top](images/chart-seamarks.png)
 
 ## Bundled charts
 
@@ -120,6 +123,8 @@ Debian 12: `sudo apt install -t bookworm-backports opencpn`.
 - Radar reaches about 80-130 NM off the coast; far offshore only satellite pictures show the weather.
 - In My charts, **More...**, **Update to latest weather** takes the newest picture as a new chart named with its time.
 
+![Rain radar (RainViewer) over the Norway sea chart](images/weather.png)
+
 ## At sea and on slow links
 
 - **Offline**: finished charts need no connection. **Build from saved tiles** remakes a chart from tiles already on disk.
@@ -162,6 +167,7 @@ OpenCPN, Options, Plugins, Chart Grabber, **Preferences**.
 | Chart added but not visible | Click it in the chart bar; turn on OpenGL (Options > Display > Advanced). |
 | Source greyed in More sources, or Seamarks on top disabled | It cannot be made into an OpenCPN chart; the text beside it says why. |
 | "Area too large for this detail" | Choose a smaller area or less detail. |
+| No Chart Grabber button on the toolbar | OpenCPN 5.10.2 adds it only at startup or on Options **OK**: press OK or restart OpenCPN. Meanwhile right-click the chart: **Chart Grabber: new chart of this view...**. |
 | Import plugin refuses the tarball | Check the [system table](#install) and OpenCPN 5.10.2 or newer. |
 
 ## Help and licence

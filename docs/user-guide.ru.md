@@ -49,6 +49,7 @@ Chart Grabber — плагин OpenCPN, который скачивает кар
 
    Сборки для Raspberry Pi OS bookworm (Debian 12 arm64) и Ubuntu 22.04 нет.
 2. **Импорт**: OpenCPN, Options (параметры), Plugins (плагины), **Import plugin...** (импортировать плагин), выберите архив, включите Chart Grabber. Для обновления импортируйте новый архив поверх старого.
+   В OpenCPN 5.10.2 (пакеты Debian 12 и 13) кнопки Chart Grabber на панели инструментов может не быть, пока вы не закроете Options кнопкой **OK** или не перезапустите OpenCPN; до тех пор пользуйтесь меню правой кнопки **Chart Grabber: new chart of this view...**.
 3. **Установите пакет Chart Grabber CLI**, например `sudo apt install ./chart-grabber-cli_2026.10.10_amd64.deb`. Arch и CachyOS: положите `chart-grabber-cli` в PATH или укажите его в [настройках](#справочник-настроек).
 4. **Windows**: CLI поставляется отдельным 64-битным zip-архивом. Распакуйте его; плагин ищет `chart-grabber-cli.exe` в таком порядке: программа, указанная в настройках, папка `cli` в папке данных плагина, `Program Files\Chart Grabber CLI\`, затем PATH.
 5. **Ubuntu 24.04**: её собственный OpenCPN (5.8.4) слишком старый; установите OpenCPN из PPA OpenCPN (`ppa:opencpn/opencpn`).
@@ -64,6 +65,8 @@ Debian 12: `sudo apt install -t bookworm-backports opencpn`.
 5. Нажмите **Download** (скачать). Ход скачивания показывает полоска.
 6. При "Chart added" (карта добавлена) нажмите **Show** (показать). Если карту не видно, щёлкните по ней в панели карт внизу. Для карт MBTiles нужен OpenGL (Options > Display > Advanced).
 
+
+![Скачанная карта в OpenCPN с бакенами и огнями OpenSeaMap поверх](images/chart-seamarks.png)
 
 ## Карты в комплекте
 
@@ -122,6 +125,8 @@ Debian 12: `sudo apt install -t bookworm-backports opencpn`.
 - Радар достаёт примерно на 80-130 NM от берега; далеко в море погоду показывают только спутниковые снимки.
 - В My charts, **More...**, **Update to latest weather** (обновить до свежей погоды) берёт самый новый снимок и создаёт новую карту, названную по его времени.
 
+![Радар осадков (RainViewer) поверх морской карты Норвегии](images/weather.png)
+
 ## В море и на медленной связи
 
 - **Без интернета**: готовым картам связь не нужна. **Build from saved tiles** заново собирает карту из тайлов, которые уже есть на диске.
@@ -164,6 +169,7 @@ OpenCPN, Options, Plugins, Chart Grabber, **Preferences** (настройки).
 | Карта добавлена, но её не видно | Щёлкните по ней в панели карт; включите OpenGL (Options > Display > Advanced). |
 | Источник серый в More sources или Seamarks on top недоступен | Из него нельзя сделать карту OpenCPN; текст рядом объясняет почему. |
 | "Area too large for this detail" (район слишком велик для этой подробности) | Выберите район поменьше или меньшую подробность. |
+| Нет кнопки Chart Grabber на панели инструментов | OpenCPN 5.10.2 добавляет её только при запуске или по **OK** в Options: нажмите OK или перезапустите OpenCPN. Пока что щёлкните по карте правой кнопкой: **Chart Grabber: new chart of this view...**. |
 | Import plugin не принимает архив | Сверьтесь с [таблицей систем](#установка) и проверьте, что OpenCPN 5.10.2 или новее. |
 
 ## Помощь и лицензия

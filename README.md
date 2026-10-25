@@ -8,6 +8,15 @@ internet afterwards.
 Display name "Chart Grabber"; OpenCPN common name `ChartGrabber`; library `libchartgrabber_pi.so`.
 Version 2026.10.4. Source for release binaries: tag `v2026.10.4`. User guide: [docs/user-guide.md](docs/user-guide.md) (Russian: [docs/user-guide.ru.md](docs/user-guide.ru.md)).
 
+![New chart dialog: area, chart source, seamarks overlay and download estimate](docs/images/new-chart.png)
+*New chart: pick an area, a source and seamarks on top, and see the estimate before downloading.*
+
+![My charts dialog: list of downloaded charts with stop, resume and update](docs/images/my-charts.png)
+*My charts: your downloaded charts; stop, resume and update.*
+
+![Rain radar shown as its own chart over the Kartverket chart near Bergen](docs/images/weather.png)
+*Weather on top: today's rain radar over your chart, refreshed with Update to latest weather.*
+
 ## Requirements
 
 - OpenCPN 5.10.2 or newer (plugin API 1.18), Linux, wxWidgets 3.2 / GTK 3 (the build OpenCPN itself uses). On Windows the
