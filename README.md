@@ -61,7 +61,7 @@ Checksums are on the release page. All releases: [plugin](https://github.com/Sea
 
 ## Chart sources
 
-The plugin ships 28 chart sources in `data/sources/`, in seven groups that the New chart page shows as menus. Each was
+The plugin ships 28 chart sources in `data/sources/` as `*.source.json` files (the CLI's JSON format), in seven groups that the New chart page shows as menus. Each was
 tried with the tile program and a real small download. Details, terms and credits per source: `data/sources/README.md`.
 
 | Group | What it is for a sailor |
@@ -72,14 +72,14 @@ tried with the tile program and a real small download. Details, terms and credit
 | Satellite | Sentinel-2 (10 m, worldwide), USGS (USA), Esri World Imagery (grey: its terms may forbid offline use). |
 | Coast and land | OpenTopoMap, a land and relief chart (grey: throttled, one connection). |
 | Weather now | One picture of the weather as it is now: rain radar, clouds, precipitation, tropical cyclones, US weather warnings (Europe, US, worldwide). |
-| Ocean | Sea surface temperature and sea ice (one daily picture); ocean currents forecast (RTOFS, Atlantic and Pacific). |
+| Ocean | Sea surface temperature and sea ice (one daily picture), surface currents of the US East and West coast waters (a model's picture). |
 
 The satellite gap: what sailors ask for most, Google, Bing and Esri high-resolution imagery for reefs, cannot be shipped;
 those providers forbid saving their tiles. The imagery that can be shipped, Sentinel-2 at 10 m and USGS, shows reef edges,
 banks and passes, but not single coral heads.
 
 Sources that need a key, and Navionics, are not in this repository. They live in a separate folder outside it, one folder
-with a short README per source. To add one, put its `.zmp` folder (with your own key where the file says `KEY`) into a
+with a short README per source. To add one, put its `.zmp` folder or `.source.json` file (with your own key where the file says `KEY`) into a
 folder of your own (by default `Charts/Chart sources` in your home folder) and, if you use another folder, choose it in
 Preferences, row "Chart sources"; it is read after the bundled sources.
 
