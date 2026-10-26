@@ -6,7 +6,7 @@ tiles and exports them to MBTiles; the plugin adds the result to OpenCPN's chart
 internet afterwards.
 
 Display name "Chart Grabber"; OpenCPN common name `ChartGrabber`; library `libchartgrabber_pi.so`.
-Version 2026.10.4. Source for release binaries: tag `v2026.10.4`. User guide: [docs/user-guide.md](docs/user-guide.md) (Russian: [docs/user-guide.ru.md](docs/user-guide.ru.md)).
+Version 2026.10.4. Source for release binaries: tag `v2026.10.4`. User guide: [docs/user-guide.md](docs/user-guide.md).
 
 ![New chart dialog: area, chart source, seamarks overlay and download estimate](docs/images/new-chart.png)
 *New chart: pick an area, a source and seamarks on top, and see the estimate before downloading.*

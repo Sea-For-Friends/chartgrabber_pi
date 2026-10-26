@@ -1,6 +1,5 @@
 # Chart Grabber user guide
 
-По-русски: [Руководство пользователя](user-guide.ru.md)
 
 ## Contents
 
