@@ -13,7 +13,7 @@ downloads it and adds it to OpenCPN's chart list. The chart then works with no i
 ![Rain radar shown as its own chart over the Kartverket chart near Bergen](docs/images/weather.png)
 *Weather on top: today's rain radar over your chart, refreshed with Update to latest weather.*
 
-The download itself is done by a separate program, the Chart Grabber CLI. Chart Grabber CLI is an independent port of
+The download itself is done by a separate program, the [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli). [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) is an independent port of
 SAS.Planet ([sasgis/sas.planet.src](https://github.com/sasgis/sas.planet.src)) to C++ and Qt. It is not an official
 SAS.Planet project. Thanks to the SAS.Planet authors.
 
@@ -37,13 +37,13 @@ Debian 12 gets OpenCPN from bookworm-backports.
 
 ## Install
 
-1. Install the Chart Grabber CLI for your system.
+1. Install the [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) for your system.
 2. Download the plugin file for your system.
 3. In OpenCPN: Options > Plugins > **Import plugin...**, pick the plugin file, **Enable** it, then **OK** (or restart OpenCPN).
 
 ## Downloads
 
-| System | Plugin | Chart Grabber CLI |
+| System | Plugin | [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) |
 |---|---|---|
 | Debian 12, 64-bit PC | [chartgrabber_pi-2026.10.4-debian-x86_64-12-x86_64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.10.4/chartgrabber_pi-2026.10.4-debian-x86_64-12-x86_64.tar.gz) | [chart-grabber-cli_2026.10.11_debian12_amd64.deb](https://github.com/Sea-For-Friends/chart-grabber-cli/releases/download/v2026.10.11/chart-grabber-cli_2026.10.11_debian12_amd64.deb) |
 | Debian 13, 64-bit PC | [chartgrabber_pi-2026.10.4-debian-x86_64-13-x86_64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.10.4/chartgrabber_pi-2026.10.4-debian-x86_64-13-x86_64.tar.gz) | [chart-grabber-cli_2026.10.11_debian13_amd64.deb](https://github.com/Sea-For-Friends/chart-grabber-cli/releases/download/v2026.10.11/chart-grabber-cli_2026.10.11_debian13_amd64.deb) |

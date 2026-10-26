@@ -18,19 +18,19 @@
 
 ## What it is
 
-Chart Grabber is an OpenCPN plugin that downloads charts for use offline. You pick an area (the current view, a drawn rectangle or a corridor along a route), a chart source and the detail; the Chart Grabber CLI downloads it in the background. The result is added to OpenCPN as an MBTiles chart.
+Chart Grabber is an OpenCPN plugin that downloads charts for use offline. You pick an area (the current view, a drawn rectangle or a corridor along a route), a chart source and the detail; the [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) downloads it in the background. The result is added to OpenCPN as an MBTiles chart.
 
 **Not official charts. Do not use for navigation alone. Respect the terms of use of each chart source.**
 
 ## What problems it solves
 
-- **Plugin and CLI together.** Before, sailors typically downloaded tiles with SAS.Planet or Mobile Atlas Creator (MOBAC), sometimes processed them in QGIS, converted them into a format OpenCPN reads (MBTiles or KAP) and added the folder to OpenCPN. Chart Grabber CLI is an independent port of SAS.Planet ([sasgis/sas.planet.src](https://github.com/sasgis/sas.planet.src)) to C++ and Qt. It is not an official SAS.Planet project. Thanks to the SAS.Planet authors. Like SAS.Planet, it is GPL-3.0-or-later. Chart Grabber is not affiliated with MOBAC or QGIS. Now it is one dialog inside OpenCPN, and the chart appears in OpenCPN's chart list. Resume, Update and the weather refresh are handled too.
+- **Plugin and CLI together.** Before, sailors typically downloaded tiles with SAS.Planet or Mobile Atlas Creator (MOBAC), sometimes processed them in QGIS, converted them into a format OpenCPN reads (MBTiles or KAP) and added the folder to OpenCPN. [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) is an independent port of SAS.Planet ([sasgis/sas.planet.src](https://github.com/sasgis/sas.planet.src)) to C++ and Qt. It is not an official SAS.Planet project. Thanks to the SAS.Planet authors. Like SAS.Planet, it is GPL-3.0-or-later. Chart Grabber is not affiliated with MOBAC or QGIS. Now it is one dialog inside OpenCPN, and the chart appears in OpenCPN's chart list. Resume, Update and the weather refresh are handled too.
 - **The plugin** is the OpenCPN side: the area (current view, drawn on the chart, or along a route), the estimate before you download, My charts and the settings.
-- **The Chart Grabber CLI** is a standalone command-line program that downloads tiles and writes MBTiles without OpenCPN. Scripts, other chart plotters, a server or a Raspberry Pi without OpenCPN can use it, for example to refresh weather charts on a schedule (cron). See the [Chart Grabber CLI documentation](#chart-grabber-cli-documentation).
+- **The [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli)** is a standalone command-line program that downloads tiles and writes MBTiles without OpenCPN. Scripts, other chart plotters, a server or a Raspberry Pi without OpenCPN can use it, for example to refresh weather charts on a schedule (cron). See the [Chart Grabber CLI documentation](#chart-grabber-cli-documentation).
 
 ## Install
 
-You need OpenCPN 5.10.2 or newer and Chart Grabber CLI 2026.10.9 or newer.
+You need OpenCPN 5.10.2 or newer and [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) 2026.10.9 or newer.
 
 1. **Pick the tarball** for your system (full notes: the release's COMPAT.md):
 
@@ -47,7 +47,7 @@ You need OpenCPN 5.10.2 or newer and Chart Grabber CLI 2026.10.9 or newer.
    There is no build for Raspberry Pi OS bookworm (Debian 12 arm64) or Ubuntu 22.04.
 2. **Import**: OpenCPN, Options, Plugins, **Import plugin...**, choose the tarball, enable Chart Grabber. To update, import the new tarball over the old one.
    OpenCPN 5.10.2 (Debian 12 and 13 packages) may show no Chart Grabber toolbar button until you press **OK** to close Options or restart OpenCPN; until then use the right-click menu **Chart Grabber: new chart of this view...**.
-3. **Install the Chart Grabber CLI** package, e.g. `sudo apt install ./chart-grabber-cli_2026.10.10_amd64.deb`. Arch and CachyOS: put `chart-grabber-cli` on your PATH or choose it in [Settings](#settings-reference).
+3. **Install the [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli)** package, e.g. `sudo apt install ./chart-grabber-cli_2026.10.10_amd64.deb`. Arch and CachyOS: put `chart-grabber-cli` on your PATH or choose it in [Settings](#settings-reference).
 4. **Windows**: the CLI comes in its own 64-bit zip. Unpack it; the plugin looks for `chart-grabber-cli.exe` in this order: the program chosen in Settings, the `cli` folder of the plugin's data folder, `Program Files\Chart Grabber CLI\`, then PATH.
 5. **Ubuntu 24.04**: its own OpenCPN (5.8.4) is too old; install OpenCPN from the OpenCPN PPA (`ppa:opencpn/opencpn`).
 
@@ -150,7 +150,7 @@ OpenCPN, Options, Plugins, Chart Grabber, **Preferences**.
 | Saved tiles, **Clear...** | | Space used; deletes saved tiles |
 | Save charts in (Advanced) | `Charts/ChartGrabber` in your home | Where new charts go |
 | Saved tiles in (Advanced) | OpenCPN's data folder | Where tiles are kept |
-| Chart Grabber CLI (Advanced) | found automatically | The program, if elsewhere |
+| [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) (Advanced) | found automatically | The program, if elsewhere |
 | Add new charts to OpenCPN's chart list | on | Registers new charts |
 | Warn before very large or very small detail choices | on | Asks before extreme detail |
 | Show download progress on the chart | off | Off: progress in its own small window |
@@ -161,8 +161,8 @@ OpenCPN, Options, Plugins, Chart Grabber, **Preferences**.
 
 | Symptom | Fix |
 |---|---|
-| "Chart Grabber CLI was not found" | Install the CLI (Windows: unpack the zip) or choose it under Advanced in Settings. |
-| "Chart Grabber CLI ... is too old" | Install Chart Grabber CLI 2026.10.9 or newer. |
+| "[Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) was not found" | Install the CLI (Windows: unpack the zip) or choose it under Advanced in Settings. |
+| "[Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) ... is too old" | Install [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) 2026.10.9 or newer. |
 | Chart added but not visible | Click it in the chart bar; turn on OpenGL (Options > Display > Advanced). |
 | Source greyed in More sources, or Seamarks on top disabled | It cannot be made into an OpenCPN chart; the text beside it says why. |
 | "Area too large for this detail" | Choose a smaller area or less detail. |
@@ -172,6 +172,6 @@ OpenCPN, Options, Plugins, Chart Grabber, **Preferences**.
 ## Help and licence
 
 - With a problem report, send the log file (Settings, Advanced, **Log file**, **Open**) and the strip's **Details** text.
-- <a id="chart-grabber-cli-documentation"></a>**Chart Grabber CLI documentation**: the [CLI guide](https://github.com/Sea-For-Friends/chart-grabber-cli/tree/main/docs/user), [making your own chart sources](https://github.com/Sea-For-Friends/chart-grabber-cli/blob/main/docs/user/sources-tutorial.md) and [example sources](https://github.com/Sea-For-Friends/chart-grabber-cli/tree/main/docs/user/examples/sources). From the next CLI release, the .deb carries these documents in `/usr/share/doc/chart-grabber-cli/` and the Windows zip in its `docs` folder.
+- <a id="chart-grabber-cli-documentation"></a>**[Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) documentation**: the [CLI guide](https://github.com/Sea-For-Friends/chart-grabber-cli/tree/main/docs/user), [making your own chart sources](https://github.com/Sea-For-Friends/chart-grabber-cli/blob/main/docs/user/sources-tutorial.md) and [example sources](https://github.com/Sea-For-Friends/chart-grabber-cli/tree/main/docs/user/examples/sources). From the next CLI release, the .deb carries these documents in `/usr/share/doc/chart-grabber-cli/` and the Windows zip in its `docs` folder.
 - Changes: [CHANGELOG](../CHANGELOG.md).
 - GPL-3.0-or-later ([LICENSE](../LICENSE)); chart source definitions CC0-1.0 ([licence](../data/sources/LICENSE)).
