@@ -30,28 +30,32 @@ Chart Grabber is an OpenCPN plugin that downloads charts for use offline. You pi
 
 ## Install
 
-You need OpenCPN 5.10.2 or newer and [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) 2026.10.9 or newer.
+You need OpenCPN 5.10.2 or newer. The [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) 2026.10.13, the program that does the download, is inside the plugin file on every system: **Import** is the only install step. Chart Grabber is not in OpenCPN's plugin catalog yet; once it is listed, the Plugin Manager can install and update it, until then (and always on Arch and CachyOS) use Import.
 
 1. **Pick the tarball** for your system (full notes: the release's COMPAT.md):
 
-   | System | `chartgrabber_pi-2026.10.4-` ... |
+   | System | `chartgrabber_pi-2026.10.6-` ... |
    |---|---|
    | Debian 13 x86-64 | `debian-x86_64-13-x86_64.tar.gz` |
    | Debian 13 arm64, Raspberry Pi OS trixie 64-bit | `debian-arm64-13-arm64.tar.gz` |
    | Debian 12, Ubuntu 24.04, Mint 22 (x86-64) | `debian-x86_64-12-x86_64.tar.gz` |
-   | Ubuntu 24.04 arm64 | `ubuntu-arm64-24.04-arm64.tar.gz` |
+   | Debian 12 arm64, Raspberry Pi OS bookworm 64-bit, Ubuntu 24.04 arm64 | `debian-arm64-12-arm64.tar.gz` |
    | Ubuntu 26.04 x86-64 / arm64 | `ubuntu-x86_64-26.04-x86_64.tar.gz` / `ubuntu-arm64-26.04-arm64.tar.gz` |
    | Arch / CachyOS | `arch-x86_64-rolling-x86_64.tar.gz` / `cachyos-x86_64-rolling-x86_64.tar.gz` |
    | Windows 10 and newer | `windows-x86.tar.gz` |
 
-   There is no build for Raspberry Pi OS bookworm (Debian 12 arm64) or Ubuntu 22.04.
+   There is no build for Ubuntu 22.04.
 2. **Import**: OpenCPN, Options, Plugins, **Import plugin...**, choose the tarball, enable Chart Grabber. To update, import the new tarball over the old one.
    OpenCPN 5.10.2 (Debian 12 and 13 packages) may show no Chart Grabber toolbar button until you press **OK** to close Options or restart OpenCPN; until then use the right-click menu **Chart Grabber: new chart of this view...**.
-3. **Install the [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli)** package, e.g. `sudo apt install ./chart-grabber-cli_2026.10.10_amd64.deb`. Arch and CachyOS: put `chart-grabber-cli` on your PATH or choose it in [Settings](#settings-reference).
-4. **Windows**: the CLI comes in its own 64-bit zip. Unpack it; the plugin looks for `chart-grabber-cli.exe` in this order: the program chosen in Settings, the `cli` folder of the plugin's data folder, `Program Files\Chart Grabber CLI\`, then PATH.
-5. **Ubuntu 24.04**: its own OpenCPN (5.8.4) is too old; install OpenCPN from the OpenCPN PPA (`ppa:opencpn/opencpn`).
+3. **Ubuntu 24.04**: its own OpenCPN (5.8.4) is too old; install OpenCPN from the OpenCPN PPA (`ppa:opencpn/opencpn`).
 
 Debian 12: `sudo apt install -t bookworm-backports opencpn`.
+
+The Linux file needs the graphics libraries `libopengl0`, `libglx0` and `libegl1`; OpenCPN's own package from Debian 12, Debian 13 or Ubuntu 24.04 installs them, a hand-built OpenCPN may not (Arch and CachyOS: `libglvnd`).
+
+The plugin uses the CLI from its own folder first. A CLI you installed yourself (the `.deb` or the Windows zip of the [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) releases, for scripts and automation) is used only when you choose it in [Settings](#settings-reference).
+
+**Updating from 2026.10.4 or older** (those needed a separately installed CLI): import the new tarball over the old one; nothing else is needed, and the separate CLI can be removed unless you use it in scripts. If you once chose a CLI under Settings, Advanced, **Chart Grabber CLI**, the plugin keeps using that one: click **Use default** in that row to switch to the CLI inside the plugin.
 
 ## First chart in 2 minutes
 
@@ -62,6 +66,7 @@ Debian 12: `sudo apt install -t bookworm-backports opencpn`.
 5. Press **Download**. A strip shows progress.
 6. At "Chart added", press **Show**. If the chart is not visible, click it in the chart bar at the bottom. MBTiles charts need OpenGL (Options > Display > Advanced).
 
+![The New chart page](images/new-chart.png)
 
 ![The downloaded chart in OpenCPN with OpenSeaMap buoys and lights on top](images/chart-seamarks.png)
 
@@ -115,6 +120,7 @@ Debian 12: `sudo apt install -t bookworm-backports opencpn`.
 - **Stop** saves progress: "Stopped. Resume any time from My charts." **Resume** continues.
 - **Update...** downloads again the tiles older than **Today (all tiles)**, **1 month**, **6 months** or **1 year**.
 
+![My charts](images/my-charts.png)
 
 ## Weather
 
@@ -141,7 +147,6 @@ Debian 12: `sudo apt install -t bookworm-backports opencpn`.
 
 OpenCPN, Options, Plugins, Chart Grabber, **Preferences**.
 
-
 | Setting | Default | Meaning |
 |---|---|---|
 | Chart sources | `Charts/Chart sources` in your home | Your own `.zmp` sources |
@@ -150,7 +155,7 @@ OpenCPN, Options, Plugins, Chart Grabber, **Preferences**.
 | Saved tiles, **Clear...** | | Space used; deletes saved tiles |
 | Save charts in (Advanced) | `Charts/ChartGrabber` in your home | Where new charts go |
 | Saved tiles in (Advanced) | OpenCPN's data folder | Where tiles are kept |
-| [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) (Advanced) | found automatically | The program, if elsewhere |
+| [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) (Advanced) | the one inside the plugin | The program, if you want another one |
 | Add new charts to OpenCPN's chart list | on | Registers new charts |
 | Warn before very large or very small detail choices | on | Asks before extreme detail |
 | Show download progress on the chart | off | Off: progress in its own small window |
@@ -161,8 +166,8 @@ OpenCPN, Options, Plugins, Chart Grabber, **Preferences**.
 
 | Symptom | Fix |
 |---|---|
-| "[Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) was not found" | Install the CLI (Windows: unpack the zip) or choose it under Advanced in Settings. |
-| "[Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) ... is too old" | Install [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) 2026.10.9 or newer. |
+| "[Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) was not found" | Import the plugin file of this release again (the CLI is inside it), or choose the CLI under Advanced in Settings. |
+| "[Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) ... is too old" | Import the plugin file of this release (it carries CLI 2026.10.13), or choose a CLI 2026.10.9 or newer under Advanced in Settings. |
 | Chart added but not visible | Click it in the chart bar; turn on OpenGL (Options > Display > Advanced). |
 | Source greyed in More sources, or Seamarks on top disabled | It cannot be made into an OpenCPN chart; the text beside it says why. |
 | "Area too large for this detail" | Choose a smaller area or less detail. |
