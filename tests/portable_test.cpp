@@ -174,10 +174,18 @@ TEST(SameVolume, Table) {
     }
 }
 
-TEST(DefaultCliPaths, PosixIsTheInstallPath) {
-    const std::vector<std::string> want = {"/usr/bin/chart-grabber-cli"};
-    EXPECT_EQ(defaultCliPaths(Os::Posix, "C:\\Data", "C:\\PF"), want);
-    EXPECT_EQ(defaultCliPaths(Os::Posix, "", ""), want);
+TEST(DefaultCliPaths, PosixIsTheBundledCliThenTheInstallPath) {
+    EXPECT_EQ(defaultCliPaths(Os::Posix, "/home/u/.local/share/opencpn/plugins/chartgrabber_pi", "C:\\PF"),
+              (std::vector<std::string>{
+                  "/home/u/.local/share/opencpn/plugins/chartgrabber_pi/cli/chart-grabber-cli",
+                  "/usr/bin/chart-grabber-cli"}));
+    // a space and non-ASCII letters in the data dir, a trailing slash
+    EXPECT_EQ(defaultCliPaths(Os::Posix, "/home/u/Иван O'Neil/opencpn dir/", ""),
+              (std::vector<std::string>{"/home/u/Иван O'Neil/opencpn dir/cli/chart-grabber-cli",
+                                        "/usr/bin/chart-grabber-cli"}));
+    // no data dir: today's list
+    EXPECT_EQ(defaultCliPaths(Os::Posix, "", "C:\\PF"),
+              (std::vector<std::string>{"/usr/bin/chart-grabber-cli"}));
 }
 
 TEST(DefaultCliPaths, WindowsOrderWithOrWithoutTrailingSeparator) {

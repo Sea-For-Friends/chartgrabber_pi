@@ -56,6 +56,10 @@ public:
     static inline std::function<bool()>
         isWaylandForTest; // static: the constructor reads it too; tests reset it
 
+    // Test seam: the display's work area in screen pixels (null = wxDisplay); the real one cannot be made
+    // small.
+    static inline std::function<wxRect()> workAreaForTest;
+
 private:
     void place();
     void logPlaced(); // the `placed` line of
@@ -108,6 +112,9 @@ private:
     wxPoint lastTick_,
         storedAt_; // window host (X11): the frame's position at the last tick / last stored drop
     bool haveTick_ = false, haveStored_ = false;
+    wxPoint
+        lastSet_; // window host: where place() left the frame; another position = moved by the system menu
+    bool haveSet_ = false;
     wxPoint pressPoint_, pressPos_; // canvas client pixels
     bool placedSinceShow_ = false;  // the log's `placed` line of this show was written
     wxString lastPlaced_;           // the last `placed` text written

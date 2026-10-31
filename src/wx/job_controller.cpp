@@ -227,11 +227,11 @@ void JobController::start(cg::ChartRecord record, cg::RunKind kind, bool overwri
             startFailed(why);
             return;
         }
-        if (!probeCli(*cli)) {
+        const cg::Settings cliSettings = config_.cliSettings(settings_);
+        if (!probeCli(*cli, cliSettings)) {
             startFailed({}, cliTooOldText());
             return;
         }
-        const cg::Settings cliSettings = config_.cliSettings(settings_);
         // The plugin's own cache root: created here so the CLI and the disk check find it; failure only
         // logged.
         if (kind != cg::RunKind::BuildFromSaved &&

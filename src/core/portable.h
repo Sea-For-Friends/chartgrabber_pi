@@ -50,10 +50,12 @@ bool sameVolume(std::string_view a, std::string_view b);
 bool isProgramFile(const std::string& path, Os os = kHostOs);
 // True when the name ends in ".exe" (ASCII case-insensitive). Used by findOnPath to add the suffix once.
 bool hasExeSuffix(std::string_view name);
-// The automatic places of the CLI, in order, before PATH (section 8.2, 18.3). Posix: {"/usr/bin/" +
-// kDefaultCliName} (both strings ignored). Windows: joinPath(joinPath(pluginDataDir, "cli"), exe) when
-// pluginDataDir is not empty, then joinPath(joinPath(programFiles, kCliWindowsFolder), exe) when programFiles
-// is not empty; exe = kDefaultCliName + ".exe".
+// The automatic places of the CLI, in order, before PATH (section 8.2, 18.3). Posix:
+// joinPath(joinPath(pluginDataDir, "cli"), kDefaultCliName) when pluginDataDir is not empty (the CLI bundled
+// in the tarball, ), then "/usr/bin/" + kDefaultCliName (programFiles ignored). Windows:
+// joinPath(joinPath(pluginDataDir, "cli"), exe) when pluginDataDir is not empty, then
+// joinPath(joinPath(programFiles, kCliWindowsFolder), exe) when programFiles is not empty; exe =
+// kDefaultCliName + ".exe".
 std::vector<std::string> defaultCliPaths(Os os, std::string_view pluginDataDir,
                                          std::string_view programFiles);
 // UTF-8 std::string <-> std::filesystem::path through char8_t (MSVC would read a narrow string in the ANSI

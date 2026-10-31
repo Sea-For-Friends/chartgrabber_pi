@@ -283,7 +283,7 @@ std::string& SettingsDialog::key(PathKind kind) {
     return pending_.cliPath;
 }
 
-// with no chosen program: /usr/bin, else PATH; empty = none.
+// With no chosen program: the bundled CLI, /usr/bin, else PATH; empty = none.
 std::string SettingsDialog::automaticCli() const {
     std::string why;
     return resolveCli(cg::Settings{}, &why, cliDefaultPaths, cliPathEnv).value_or(std::string());
@@ -522,7 +522,8 @@ void SettingsDialog::startCheck() {
                  sourcesStatusText(SourcesStatus::CliNotReady));
         return;
     }
-    if (!probeCli(*cli)) {
+    const cg::Settings forCli = config_.cliSettings(pending_);
+    if (!probeCli(*cli, forCli)) {
         notReady(cliStatusText(CliStatus::TooOld, probedCliVersion(*cli), {}),
                  sourcesStatusText(SourcesStatus::CliNotReady));
         return;
@@ -534,7 +535,6 @@ void SettingsDialog::startCheck() {
                  false); // the plugin's own files are missing, not the CLI: Advanced stays folded
         return;
     }
-    const cg::Settings forCli = config_.cliSettings(pending_);
     const std::string folder = config_.sourcesDir(pending_);
     std::error_code ec;
     const FolderState folderState = forCli.cliMaps.size() > 1 ? FolderState::Holds

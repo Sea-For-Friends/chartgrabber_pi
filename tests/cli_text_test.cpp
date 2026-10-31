@@ -85,12 +85,12 @@ TEST(CliVersion, SupportedFromTheMinimumOn) {
 
 // / the pinned release (a real capture) is supported.
 TEST(CliVersion, PinnedReleaseCapturedVersionLine) {
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.10/version.stdout", std::ios::binary);
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.13/version.stdout", std::ios::binary);
     ASSERT_TRUE(in.good());
     std::ostringstream ss;
     ss << in.rdbuf();
     const auto v = parseVersionLine(ss.str());
     ASSERT_TRUE(v);
-    EXPECT_EQ(v->commit, "6f3cf463bfaf");
+    EXPECT_EQ(v->commit, "a970b543798b");
     EXPECT_TRUE(supportedCli(v));
 }

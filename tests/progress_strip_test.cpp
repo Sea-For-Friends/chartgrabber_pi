@@ -785,6 +785,7 @@ protected:
             strip_->Destroy();
         strip_ = nullptr;
         ProgressStrip::isWaylandForTest = nullptr;
+        ProgressStrip::workAreaForTest = nullptr;
         StripPlaceTest::TearDown();
     }
     void makeWindowStrip(ProgressStrip::Role role = ProgressStrip::Role::Job) {
@@ -822,6 +823,10 @@ TEST_F(StripWindowHostTest, BothRolesLiveInAFloatingFrameOfTheCanvasWindowAndThe
         EXPECT_NE(0, frame()->GetWindowStyleFlag() & wxFRAME_NO_TASKBAR);
         EXPECT_NE(0, frame()->GetWindowStyleFlag() & wxBORDER_NONE);
         EXPECT_EQ(0, frame()->GetWindowStyleFlag() & wxCAPTION);
+#ifdef __WXMSW__ // the system menu's Close is enabled only with the close box
+        EXPECT_NE(0, frame()->GetWindowStyleFlag() & wxSYSTEM_MENU);
+        EXPECT_NE(0, frame()->GetWindowStyleFlag() & wxCLOSE_BOX);
+#endif
         EXPECT_EQ("Chart Grabber", frame()->GetTitle());
         for (wxWindow* c : canvas_->GetChildren())
             EXPECT_EQ(nullptr, dynamic_cast<ProgressStrip*>(c));
@@ -1054,6 +1059,157 @@ TEST_F(StripWindowDragTest, AThrowingMouseHandlerIsLoggedAndTheStripStaysUsable)
     send(strip_, wxEVT_MOTION, from + wxPoint(30, 0), true);
     EXPECT_EQ(1u, calls_.size());
     EXPECT_NO_THROW(strip_->showResult("again", "", {}));
+}
+
+// ---- : the window host stays inside the display's work area; Escape ----
+
+class StripWorkAreaTest : public StripWindowDragTest {
+protected:
+    wxRect workArea() const {
+        const int d = wxDisplay::GetFromWindow(frame());
+        return wxDisplay(d == wxNOT_FOUND ? 0u : static_cast<unsigned>(d)).GetClientArea();
+    }
+    wxButton* button(const wxString& label) const {
+        for (wxWindow* c : strip_->GetChildren())
+            if (auto* b = dynamic_cast<wxButton*>(c); b && b->GetLabel() == label)
+                return b;
+        return nullptr;
+    }
+    void expectInside(const wxRect& work, const char* what) {
+        const wxRect r = frame()->GetRect();
+        EXPECT_GE(r.x, work.x + 8) << what;
+        EXPECT_GE(r.y, work.y + 8) << what;
+        EXPECT_LE(r.GetRight(), work.GetRight() - 8) << what;
+        EXPECT_LE(r.GetBottom(), work.GetBottom() - 8) << what;
+        for (const char* label : {"Stop", "Details"}) {
+            ASSERT_NE(button(label), nullptr);
+            const wxRect b = button(label)->GetScreenRect();
+            EXPECT_TRUE(work.Contains(b)) << what << ": " << label;
+        }
+    }
+    void drag() { // moved_ = true through the seam; the test places the frame as the window manager would
+        const wxPoint from = inside(strip_);
+        send(strip_, wxEVT_LEFT_DOWN, from, true);
+        send(strip_, wxEVT_MOTION, from + wxPoint(30, 0), true);
+        ASSERT_EQ(1u, calls_.size());
+    }
+};
+
+TEST_F(StripWorkAreaTest, ADraggedStripNearTheBottomOrTheRightEdgeMovesBackInsideWhenDetailsOpens) {
+    makeDraggable(false);
+    drag();
+    const wxRect work = workArea();
+    const int h = frame()->GetSize().y, w = frame()->GetSize().x;
+    frame()->Move(137, work.GetBottom() - h - 2);
+    strip_->openDetails(true);
+    EXPECT_TRUE(pump([&] { return frame()->GetRect().GetBottom() <= work.GetBottom() - 8; }));
+    expectInside(work, "bottom");
+    EXPECT_EQ(137, frame()->GetPosition().x) << "the left edge is kept";
+    EXPECT_GT(frame()->GetSize().y, h);
+    strip_->openDetails(false);
+    frame()->Move(work.GetRight() - w + 1, 211); // Details closed again: the right edge passes the work area
+    EXPECT_TRUE(pump([&] { return frame()->GetRect().GetRight() <= work.GetRight() - 8; }));
+    expectInside(work, "right");
+    EXPECT_EQ(211, frame()->GetPosition().y) << "the top edge is kept";
+}
+
+TEST_F(StripWorkAreaTest, AnAnchoredStripOnACanvasBelowTheWorkAreaIsPulledInside) {
+    makeDraggable(false);
+    const wxRect work = workArea();
+    canvas_->Move(20, work.GetBottom() - 300); // the canvas reaches 300 px below the screen
+    ASSERT_TRUE(pump([&] { return canvas_->GetPosition().y == work.GetBottom() - 300; }));
+    strip_->openDetails(true);
+    EXPECT_TRUE(pump([&] { return frame()->GetRect().GetBottom() <= work.GetBottom() - 8; }));
+    expectInside(work, "anchored");
+    canvas_->Move(20, 20);
+}
+
+TEST_F(StripWorkAreaTest, ATooLowWorkAreaCapsTheFrameShortensDetailsAndClosingGivesTheEightRowsBack) {
+    makeDraggable(false);
+    ProgressStrip::workAreaForTest = [] { return wxRect(0, 0, 1000, 150); };
+    const int full = 8 * details()->GetCharHeight() + 8;
+    strip_->openDetails(true);
+    EXPECT_TRUE(pump([&] { return frame()->GetSize().y == 150 - 16; })) << frame()->GetSize().y;
+    EXPECT_EQ(8, frame()->GetPosition().y);
+    EXPECT_LT(details()->GetMinSize().y, full);
+    EXPECT_GE(details()->GetMinSize().y, 2 * details()->GetCharHeight() + 8);
+    const wxRect work(0, 0, 1000, 150);
+    EXPECT_TRUE(work.Contains(button("Stop")->GetScreenRect()));
+    EXPECT_TRUE(work.Contains(button("Details")->GetScreenRect()));
+    strip_->openDetails(false);
+    EXPECT_EQ(full, details()->GetMinSize().y);
+    EXPECT_LT(frame()->GetSize().y, 150 - 16);
+}
+
+#ifdef __WXMSW__ // the detection is MSW only (a GTK window manager may shift the frame itself)
+TEST_F(StripWorkAreaTest, AFrameMovedByTheSystemMenuStaysWhereItIsPutAndItsDropIsStored) {
+    makeDraggable(false); // no begin-move call: what the system menu's Move does on Windows
+    const wxPoint put = frame()->GetPosition() + wxPoint(137, -61);
+    frame()->Move(put);
+    EXPECT_TRUE(pump([&] { return key("StripCorner") != "<absent>"; }))
+        << "the timer notices it and stores the drop";
+    EXPECT_EQ(put, frame()->GetPosition()) << "not pulled back to the anchor";
+    canvas_->Move(canvas_->GetPosition() + wxPoint(10, 0));
+    wxStopWatch watch;
+    while (watch.Time() < 1300) {
+        wxTheApp->Yield(true);
+        wxMilliSleep(20);
+    }
+    EXPECT_EQ(put, frame()->GetPosition()) << "and it does not follow the canvas any more";
+}
+#endif
+
+TEST_F(StripWorkAreaTest, TheSystemMenuCloseActsLikeEscapeAndNeverDestroysTheFrame) {
+    makeDraggable(false);
+    int stops = 0;
+    strip_->onStop = [&] { ++stops; };
+    const auto close = [&](bool canVeto) {
+        wxCloseEvent e(wxEVT_CLOSE_WINDOW, frame()->GetId());
+        e.SetEventObject(frame());
+        e.SetCanVeto(canVeto);
+        frame()->ProcessWindowEvent(e);
+        return e.GetVeto();
+    };
+    EXPECT_TRUE(close(true)) << "vetoed: the frame stays";
+    EXPECT_EQ(1, stops) << "running: Close is Stop";
+    EXPECT_TRUE(frame()->IsShown());
+    strip_->showResult("done", "", {{"Open", [] {}}});
+    EXPECT_TRUE(close(true));
+    EXPECT_EQ(1, stops);
+    EXPECT_FALSE(frame()->IsShown()) << "after the run: Close hides the strip";
+    EXPECT_FALSE(close(false)) << "a close that cannot be vetoed is left to wx";
+    EXPECT_EQ(1, stops);
+}
+
+TEST_F(StripWorkAreaTest, EscapeStopsTheRunClosesTheResultAndLeavesOtherKeysAlone) {
+    makeDraggable(false);
+    int stops = 0;
+    strip_->onStop = [&] { ++stops; };
+    const auto press = [&](wxWindow* to, int code) {
+        wxKeyEvent e(wxEVT_CHAR_HOOK);
+        e.SetEventObject(to);
+        e.m_keyCode = code;
+        to->ProcessWindowEvent(e);
+        return e.GetSkipped();
+    };
+    EXPECT_TRUE(press(frame(), 'A'));
+    EXPECT_EQ(0, stops);
+    press(frame(), WXK_ESCAPE);
+    EXPECT_EQ(1, stops);
+    EXPECT_TRUE(frame()->IsShown()) << "Escape while running is Stop, not Close";
+    strip_->showResult("done", "", {{"Open", [] {}}});
+    EXPECT_TRUE(press(frame(), WXK_RETURN));
+    EXPECT_TRUE(frame()->IsShown());
+    press(frame(), WXK_ESCAPE);
+    EXPECT_FALSE(frame()->IsShown());
+    EXPECT_EQ(1, stops) << "a finished result does not call Stop";
+    makeStrip(); // the chart host leaves the keys to OpenCPN
+    strip_->onStop = [&] { ++stops; };
+    run();
+    press(canvas_, WXK_ESCAPE);
+    press(strip_, WXK_ESCAPE);
+    EXPECT_EQ(1, stops);
+    EXPECT_TRUE(strip_->IsShown());
 }
 
 // OpenCPN's canvas sits inside the main frame; a canvas that is itself a top-level window (the other

@@ -233,7 +233,7 @@ TEST(MessagesOutcome, FixedHeadlinesOfSection93) {
         EXPECT_EQ(u(outcomeHeadline(o, none, {}, "ignored")), text) << static_cast<int>(o);
 }
 
-// exit 4 whose last error is the CLI's snapshot line (a real line, tests/fixtures/cli-2026.10.10/
+// : exit 4 whose last error is the CLI's snapshot line (a real line, tests/fixtures/cli-2026.10.13/
 // run-weather-snapshot-failed.stderr) gives the weather text; any other last error keeps the landed one.
 TEST(MessagesOutcome, ASnapshotFailureHasItsOwnHeadline) {
     EXPECT_EQ(u(outcomeHeadline(cg::Outcome::DownloadIncomplete, {}, {},
@@ -283,8 +283,8 @@ TEST(MessagesOutcome, RefusalTextBranches) {
         EXPECT_EQ(u(refusalText(in)), text) << in;
 }
 
-// the S-15 and S-16 refusals. The first and third lines are the captured ones (tests/fixtures/
-// cli-2026.10.10/run-cache-refused.stderr, estimate-area-too-large.stderr); the "cannot open the cache"
+// : the S-15 and S-16 refusals. The first and third lines are the captured ones (tests/fixtures/
+// cli-2026.10.13/run-cache-refused.stderr, estimate-area-too-large.stderr); the "cannot open the cache"
 // forms are HAND-MADE from core v2026.10.6 src/cg/app/job_checks.cpp (the capture produced the other form).
 TEST(MessagesOutcome, TheCacheAndAreaSizeRefusals) {
     const std::string cache =
@@ -303,9 +303,9 @@ TEST(MessagesOutcome, TheCacheAndAreaSizeRefusals) {
         large);
     EXPECT_EQ(u(tooLargeText()), large);
     EXPECT_EQ(u(cacheRefusedText()), cache);
-    // the captured BerkeleyDB line also holds ": cannot open the cache: ", so its check comes first.
-    // the line is the captured fixture, made a lastError the way the runner does.
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.10/run-cache-berkeleydb.stderr",
+    // : the captured BerkeleyDB line also holds ": cannot open the cache: ", so its check comes first.
+    // : the line is the captured fixture, made a lastError the way the runner does.
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.13/run-cache-berkeleydb.stderr",
                      std::ios::binary);
     std::string line;
     ASSERT_TRUE(std::getline(in, line));

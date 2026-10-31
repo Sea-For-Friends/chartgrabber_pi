@@ -19,18 +19,17 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdint> // ocpn_plugin.h uses uint8_t / uint64_t without including it
 #include <cstdlib>
 #include <filesystem>
 #include <map>
+#include <memory>
 #include <system_error>
 #include <tuple>
-#ifdef __WINDOWS__
-#include <cstdint> // ocpn_plugin.h uses uint8_t / uint64_t without including it
-#include <memory>
 #include <vector>
 
 #include <ocpn_plugin.h> // GetPluginDataDir
-#else
+#ifndef __WINDOWS__
 #include <csignal>
 #include <fcntl.h>
 #include <pthread.h>
@@ -363,26 +362,33 @@ void CliRunner::onStderrLine(std::string_view line) {
     cg::guarded("runner stderr callback", [&] { cb_.onStderr(parsed); });
 }
 
-std::optional<cg::CliVersion> probeCli(const std::string& program) {
+std::optional<cg::CliVersion> probeCli(const std::string& program, const cg::Settings& cliSettings) {
     const std::optional<ProbeKey> key = probeKey(program);
     if (key) {
         if (const auto it = g_probeCache.find(*key); it != g_probeCache.end()) {
             return it->second.supported;
         }
     }
+    std::vector<std::string> args{program};
+    for (std::string& a : cg::versionArguments(cliSettings))
+        args.push_back(std::move(a));
     wxProcess child;
     child.Redirect();
     long rc;
     {
         wxLogNull quiet; // a failure is the answer "no version", not a dialog
 #ifdef __WINDOWS__
-        rc = wxExecute(cg::fromUtf8(cg::windowsCommandLine({program, "--version"})),
+        rc = wxExecute(cg::fromUtf8(cg::windowsCommandLine(args)),
                        wxEXEC_SYNC | wxEXEC_NOEVENTS | wxEXEC_HIDE_CONSOLE, &child);
 #else
-        const wxString prog = cg::fromUtf8(program);
-        const wxString opt = "--version";
-        const wchar_t* argv[] = {prog.wc_str(), opt.wc_str(), nullptr};
-        rc = wxExecute(argv, wxEXEC_SYNC | wxEXEC_NOEVENTS, &child);
+        std::vector<wxString> strs;
+        for (const std::string& a : args)
+            strs.push_back(cg::fromUtf8(a));
+        std::vector<const wchar_t*> argv;
+        for (const wxString& w : strs)
+            argv.push_back(w.wc_str());
+        argv.push_back(nullptr);
+        rc = wxExecute(argv.data(), wxEXEC_SYNC | wxEXEC_NOEVENTS, &child);
 #endif
     }
     std::string out;
@@ -434,7 +440,7 @@ std::vector<std::string> hostCliPaths() {
     return cg::defaultCliPaths(cg::Os::Windows, cg::toUtf8(GetPluginDataDir("chartgrabber_pi")),
                                cg::toUtf8(programFiles));
 #else
-    return cg::defaultCliPaths(cg::Os::Posix, "", "");
+    return cg::defaultCliPaths(cg::Os::Posix, cg::toUtf8(GetPluginDataDir("chartgrabber_pi")), "");
 #endif
 }
 

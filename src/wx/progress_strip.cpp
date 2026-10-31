@@ -7,6 +7,7 @@
 #include "messages.h"
 
 #include <wx/dcclient.h>
+#include <wx/display.h>
 #include <wx/intl.h>
 #include <wx/settings.h>
 
@@ -14,6 +15,9 @@
 
 #include <ocpn_plugin.h>
 
+#ifdef __WXMSW__
+#include <wx/msw/wrapwin.h>
+#endif
 #ifdef __WXGTK__
 #include <gdk/gdk.h>
 #include <gtk/gtk.h>
@@ -57,8 +61,14 @@ namespace {
 wxWindow* hostParent(wxWindow* canvas, ProgressStrip::Host host) {
     if (host == ProgressStrip::Host::Canvas)
         return canvas;
-    auto* frame = new wxFrame(wxGetTopLevelParent(canvas), wxID_ANY, _("Chart Grabber"), wxDefaultPosition,
-                              wxDefaultSize, wxFRAME_FLOAT_ON_PARENT | wxFRAME_NO_TASKBAR | wxBORDER_NONE);
+    auto* frame = new wxFrame(
+        wxGetTopLevelParent(canvas), wxID_ANY, _("Chart Grabber"), wxDefaultPosition, wxDefaultSize,
+        wxFRAME_FLOAT_ON_PARENT | wxFRAME_NO_TASKBAR | wxBORDER_NONE
+#ifdef __WXMSW__
+            | wxSYSTEM_MENU // WS_SYSMENU: Alt+Space and the system Move
+            | wxCLOSE_BOX   // without it wx greys the menu's Close; WM_CLOSE -> close handler
+#endif
+    );
     return frame;
 }
 } // namespace
@@ -132,6 +142,31 @@ ProgressStrip::ProgressStrip(wxWindow* canvas, const Look& look, Role role, Conf
     if (draggable)
         Bind(wxEVT_MOUSE_CAPTURE_LOST,
              [this](wxMouseCaptureLostEvent&) { cg::guarded("strip capture lost", [&] { endDrag(true); }); });
+    if (frame_) { // the chart host leaves the keys to OpenCPN
+        const auto escape = [this] {
+            if (running_ && onStop)
+                onStop();
+            else if (!running_)
+                Hide(); // what every result Close does
+        };
+        frame_->Bind(wxEVT_CHAR_HOOK, [this, escape](wxKeyEvent& e) {
+            cg::guarded("strip key", [&] {
+                if (e.GetKeyCode() != WXK_ESCAPE)
+                    return e.Skip();
+                escape();
+            });
+        });
+        // the system menu's Close / Alt+F4 act like Escape; the frame is never destroyed behind the strip's
+        // back
+        frame_->Bind(wxEVT_CLOSE_WINDOW, [this, escape](wxCloseEvent& e) {
+            cg::guarded("strip close", [&] {
+                if (!e.CanVeto())
+                    return e.Skip();
+                e.Veto();
+                escape();
+            });
+        });
+    }
     stop_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
         cg::guarded("strip stop", [&] {
             if (onStop)
@@ -361,16 +396,45 @@ void ProgressStrip::place() {
         if (!changed)
             break;
     }
-    const wxSize best = column_->GetMinSize() + border;
+    wxRect work; // window host, not Wayland: the display's work area (screen pixels), else empty
+    if (frame_ && !onWayland() && workAreaForTest) {
+        work = workAreaForTest();
+    } else if (frame_ && !onWayland()) {
+        const wxPoint mid = frame_->GetPosition() + wxPoint(frame_->GetSize().x / 2, frame_->GetSize().y / 2);
+        int d = wxDisplay::GetFromPoint(moved_ ? mid : canvas_->ClientToScreen(wxPoint(0, 0)));
+        work = wxDisplay(d == wxNOT_FOUND ? 0u : static_cast<unsigned>(d)).GetClientArea();
+    }
+    const int fullDetails = kDetailRows * detailsText_->GetCharHeight() + 8;
+    detailsText_->SetMinSize(wxSize(-1, fullDetails));
+    wxSize best = column_->GetMinSize() + border;
+    if (!work.IsEmpty() && detailsText_->IsShown() && best.y > work.height - 2 * margin) {
+        // too low for the Details fold: it gets shorter (two rows at least) and scrolls
+        const int floorH = 2 * detailsText_->GetCharHeight() + 8;
+        const int h = std::max(fullDetails - (best.y - (work.height - 2 * margin)), floorH);
+        detailsText_->SetMinSize(wxSize(-1, h));
+        best = column_->GetMinSize() + border;
+    }
     const int width = cg::stripWidth(best.x, cs.x, minStripWidth(), margin);
     const cg::StripAnchor px{anchor_.corner, FromDIP(anchor_.dx), FromDIP(anchor_.dy)};
     const cg::StripRect r = cg::placeStrip(px, width, best.y, safe(), margin);
-    if (frame_ && moved_) { // the compositor / window manager placed it: only the size follows
-        frame_->SetSize(r.width, r.height);
-        frame_->Layout();
-    } else if (frame_) { // screen pixels; the sizer makes the panel fill the frame
-        const wxPoint at = canvas_->ClientToScreen(wxPoint(r.x, r.y));
-        frame_->SetSize(at.x, at.y, r.width, r.height);
+#ifdef __WXMSW__ // GTK keeps its old behaviour: a window manager may shift the frame by itself
+    if (frame_ && !moved_ && haveSet_ && frame_->IsShown() && frame_->GetPosition() != lastSet_) {
+        moved_ = true; // not by place(): the system menu's Move (Alt+Space); it stays where it is put
+        haveTick_ = false;
+    }
+#endif
+    if (frame_) { // screen pixels; the sizer makes the panel fill the frame
+        // moved: the compositor / window manager placed it, only the size follows (and the work-area clamp)
+        const wxPoint at = moved_ ? frame_->GetPosition() : canvas_->ClientToScreen(wxPoint(r.x, r.y));
+        cg::StripRect f{at.x, at.y, r.width, r.height};
+        if (!work.IsEmpty())
+            f = cg::fitInWorkArea(f, {work.x, work.y, work.width, work.height}, margin);
+        if (moved_ && f.x == at.x && f.y == at.y)
+            frame_->SetSize(f.width, f.height);
+        else
+            frame_->SetSize(f.x, f.y, f.width, f.height);
+        lastSet_ = frame_->GetPosition();
+        haveSet_ = true;
         frame_->Layout();
     } else {
         SetSize(r.x, r.y, r.width, r.height);
@@ -446,10 +510,16 @@ void ProgressStrip::onWindowMouse(wxMouseEvent& e) {
         else
             gtk_window_begin_move_drag(GTK_WINDOW(frame_->GetHandle()), 1, at.x, at.y, time);
 #endif
+#ifdef __WXMSW__
+        else { // the native caption drag: the system runs the move loop until the release
+            ::ReleaseCapture();
+            ::SendMessage(static_cast<HWND>(frame_->GetHandle()), WM_NCLBUTTONDOWN, HTCAPTION, 0);
+        }
+#endif
     } else if (type == wxEVT_LEFT_UP) {
         pressed_ = false;
     } else if (type == wxEVT_LEFT_DCLICK && !onWayland()) { // the place is only remembered on X11
-        pressed_ = moved_ = haveTick_ = haveStored_ = false;
+        pressed_ = moved_ = haveTick_ = haveStored_ = haveSet_ = false;
         anchor_ = {cg::StripCorner::BottomLeft, cg::kStripDefaultDx, cg::kStripDefaultDy};
         if (winStore_)
             winStore_->setStripAnchor(std::nullopt);

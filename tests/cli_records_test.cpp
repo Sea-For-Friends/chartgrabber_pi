@@ -20,7 +20,7 @@ using namespace cg;
 namespace {
 
 std::vector<std::string> fixtureLines(const std::string& name) {
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.10/" + name, std::ios::binary);
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.13/" + name, std::ios::binary);
     EXPECT_TRUE(in.good()) << name;
     std::vector<std::string> out;
     for (std::string line; std::getline(in, line);) {
@@ -29,10 +29,10 @@ std::vector<std::string> fixtureLines(const std::string& name) {
     return out;
 }
 
-// proofs 3 and 8: the captured lines of the pinned 2026.10.10 (15 columns: field 10 `origin` is
+//  proofs 3 and 8: the captured lines of the pinned 2026.10.13 (15 columns: field 10 `origin` is
 // `user`, the last is `navigationWarning`); the record is read by position and `origin` changes nothing.
 TEST(Records, SourcesOfThePinnedRelease) {
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.10/sources-two-folders.stdout",
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.13/sources-two-folders.stdout",
                      std::ios::binary);
     ASSERT_TRUE(in.good());
     std::vector<SourceRecord> recs;
@@ -133,7 +133,7 @@ TEST(CliRecordsStdout, SourceEmptyGroupAndExtraFields) {
 // NavigationWarning=1 gets the flag too; the plain bundled one does not.
 TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
     const auto flags = [](const char* file) {
-        std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.10/" + file, std::ios::binary);
+        std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.13/" + file, std::ios::binary);
         EXPECT_TRUE(in.good()) << file;
         std::map<std::string, bool> out;
         for (std::string line; std::getline(in, line);) {
@@ -167,7 +167,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
 // (Nautical charts 3, Seamarks and traffic 3, Depth 4, Satellite 3, Coast and land 1, Weather now 10, Ocean
 // 4 after ), and the fourteen sources of Weather now and Ocean (and only they) refresh as snapshots.
 TEST(Records, BundledSetGroupsAndSnapshots) {
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.10/sources-bundled-all.stdout",
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.13/sources-bundled-all.stdout",
                      std::ios::binary);
     ASSERT_TRUE(in.good());
     std::map<std::string, int> groups;
@@ -552,7 +552,7 @@ TEST(CliRecordsStderr, ProgressAndPhase) {
     EXPECT_EQ(std::get<PhaseRecord>(p).guid, "{G}");
 }
 
-// the `note:` line of the first start (captured, 2026.10.10) is a message of kind Other with
+//  proof 3: the `note:` line of the first start (captured, 2026.10.13) is a message of kind Other with
 // its whole text; the line next to it is a Warning and no line of the capture is an Error (lastError stays
 // empty).
 TEST(CliRecordsStderr, TheFirstStartNoteIsOtherAndNeverAnError) {
@@ -733,7 +733,7 @@ TEST(CliRecordsStderr, MessagesAndBadProtocolLinesAreOther) {
     }
 }
 
-// every stderr line of the captured CLI 2026.10.10 runs is a record or a message; a line
+//  proof 7: every stderr line of the captured CLI 2026.10.13 runs is a record or a message; a line
 // starting "phase<TAB>" / "progress<TAB>" is never "other", the `warning:` lines are warnings, and the
 // numbers of a record are the fields of the line (the first progress record of the stopped run, literal from
 // the capture).

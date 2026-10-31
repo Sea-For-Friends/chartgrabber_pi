@@ -141,13 +141,25 @@ void addMaps(std::vector<std::string>& a, const Settings& s, Os os) {
         a.push_back(nativeSeparators(d, os));
     }
 }
+// ONE element, the '=' form: CLI 2026.10.9 reads only --datadir=DIR.
+void addDataDir(std::vector<std::string>& a, const Settings& s, Os os) {
+    if (!s.cliDataDir.empty())
+        a.push_back("--datadir=" + nativeSeparators(s.cliDataDir, os));
+}
 } // namespace
+
+std::vector<std::string> versionArguments(const Settings& s, Os os) {
+    std::vector<std::string> a{"--version"};
+    addDataDir(a, s, os);
+    return a;
+}
 
 std::vector<std::string> sourcesArguments(const Settings& s, Os os) {
     std::vector<std::string> a{"sources"};
     a.emplace_back("--format=tsv");
     addMaps(a, s, os);
     addIf(a, "--cache", nativeSeparators(s.cacheDir, os));
+    addDataDir(a, s, os);
     return a;
 }
 
@@ -157,6 +169,7 @@ std::vector<std::string> estimateArguments(const JobSpec& job, const Settings& s
     a.emplace_back("--progress=lines");
     addMaps(a, s, os);
     addIf(a, "--cache", nativeSeparators(s.cacheDir, os));
+    addDataDir(a, s, os);
     addIf(a, "--source", job.sourceGuid);
     addIf(a, "--overlay", job.overlayGuid);
     if (job.areaKind == AreaKind::Route) {
@@ -180,6 +193,7 @@ std::vector<std::string> runArguments(const std::string& jobIniPath, RunKind kin
     a.emplace_back("--progress=lines");
     addMaps(a, s, os);
     addIf(a, "--cache", nativeSeparators(s.cacheDir, os));
+    addDataDir(a, s, os);
     addIf(a, "--proxy", s.proxy);
     if (s.slowConnection) {
         a.emplace_back("--threads");

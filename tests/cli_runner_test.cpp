@@ -3,6 +3,7 @@
 // and resolveCli. Children are small `sh` scripts (inline or written to a temp directory), never the real
 // CLI. Needs a wx event loop: a global environment starts a wxAppConsole, each test runs inside its own loop.
 #include "cli_runner.h"
+#include "ocpn_fakes.h"
 #include "plugin_log.h"
 #include "sources_stub.h"
 #include "wx_env.h"
@@ -613,8 +614,12 @@ TEST(ResolveCli, MissingOrNonExecutableDefaultFallsToPath) {
     }
 }
 
-TEST(ResolveCli, HostCliPathsIsTheInstalledOneOnLinux) {
-    EXPECT_EQ(hostCliPaths(), std::vector<std::string>{"/usr/bin/chart-grabber-cli"});
+TEST(ResolveCli, HostCliPathsIsTheBundledThenTheInstalledOneOnLinux) {
+    ocpn_fake::dataDir = wxString::FromUTF8("/home/u/Иван/plugin dir");
+    EXPECT_EQ(hostCliPaths(), (std::vector<std::string>{"/home/u/Иван/plugin dir/cli/chart-grabber-cli",
+                                                        "/usr/bin/chart-grabber-cli"}));
+    EXPECT_EQ(ocpn_fake::dataDirAsked, "chartgrabber_pi");
+    ocpn_fake::dataDir.clear();
 }
 
 // the first runnable entry of the list wins; an empty list goes to PATH.
@@ -751,7 +756,7 @@ TEST(ProbeCli, SupportedOrTooOldAndItsLogLine) {
         TempDir tmp;
         const std::string cli = tmp.write("probe-cli", countingScript(row.body), true);
         LogScope log;
-        const auto v = probeCli(cli);
+        const auto v = probeCli(cli, cg::Settings{});
         ASSERT_EQ(v.has_value(), row.supported);
         if (v) {
             EXPECT_EQ(v->program, "chart-grabber-cli");
@@ -790,13 +795,36 @@ TEST(ProbeCli, StopPreludeReactsOnlyToTheOption) {
         << "sh -c, option: EOF stops it";
 }
 
-// 200 real probes of the Sources stand-in (a new file each: the probe cache is keyed on the file)
+// : the child gets exactly "--version" and ONE "--datadir=DIR" argument (a directory with a
+// space, a quote and Cyrillic stays one argument); with an empty data dir only "--version".
+TEST(ProbeCli, ArgvIsVersionAndTheDatadir) {
+    TempDir tmp;
+    const std::string body = "for a; do printf '%s\\n' \"$a\" >> \"$(dirname \"$0\")/argv\"; done\n"
+                             "echo 'chart-grabber-cli 2026.10.9 (abc)'";
+    const auto argvOf = [&](const std::string& name, const std::string& dataDir) {
+        const std::string cli = tmp.write(name, countingScript(body), true);
+        cg::Settings s;
+        s.cliDataDir = dataDir;
+        EXPECT_TRUE(probeCli(cli, s));
+        std::vector<std::string> lines;
+        std::ifstream in(tmp.dir() / "argv");
+        for (std::string l; std::getline(in, l);)
+            lines.push_back(l);
+        std::filesystem::remove(tmp.dir() / "argv");
+        return lines;
+    };
+    const std::string dir = (tmp.dir() / "d \xD0\x96 a'b" / "cli-data").string();
+    EXPECT_EQ(argvOf("with-data", dir), (std::vector<std::string>{"--version", "--datadir=" + dir}));
+    EXPECT_EQ(argvOf("no-data", ""), (std::vector<std::string>{"--version"}));
+}
+
+// : 200 real probes of the Sources stand-in (a new file each: the probe cache is keyed on the file)
 // all see the version line, none "no version".
 TEST(ProbeCli, SourcesStandInAnswersEveryProbe) {
     TempDir tmp;
     for (int i = 0; i < 200; ++i) {
         stub::Sources src(tmp.dir(), std::string("p") + std::to_string(i));
-        ASSERT_TRUE(probeCli(src.cli())) << "probe " << i;
+        ASSERT_TRUE(probeCli(src.cli(), cg::Settings{})) << "probe " << i;
     }
 }
 
@@ -808,12 +836,12 @@ TEST(ProbeCli, ProbedVersionComesFromTheCache) {
     const std::string old = tmp.write("old-cli", countingScript("echo 'old-tiles 0.0.9 (x)'"), true);
     const std::string none = tmp.write("none-cli", countingScript("echo 'hello'"), true);
     EXPECT_EQ(probedCliVersion(cli), "") << "never probed";
-    ASSERT_TRUE(probeCli(cli));
+    ASSERT_TRUE(probeCli(cli, cg::Settings{}));
     EXPECT_EQ(probedCliVersion(cli), "2026.10.9");
     EXPECT_EQ(runsOf(tmp), 1) << "probedCliVersion started no process";
-    EXPECT_FALSE(probeCli(old));
+    EXPECT_FALSE(probeCli(old, cg::Settings{}));
     EXPECT_EQ(probedCliVersion(old), "0.0.9") << "a too old program still has its version";
-    EXPECT_FALSE(probeCli(none));
+    EXPECT_FALSE(probeCli(none, cg::Settings{}));
     EXPECT_EQ(probedCliVersion(none), "") << "no version line";
     EXPECT_EQ(probedCliVersion((tmp.dir() / "gone").string()), "") << "not cacheable: no file";
 }
@@ -838,7 +866,7 @@ TEST(ProbeCli, LogLineIsCutOnACharacterBoundary) {
         TempDir tmp;
         const std::string cli = tmp.write("probe-cli", countingScript("echo '" + row.line + "'"), true);
         LogScope log;
-        EXPECT_FALSE(probeCli(cli));
+        EXPECT_FALSE(probeCli(cli, cg::Settings{}));
         ASSERT_EQ(log->messages.size(), 1u);
         EXPECT_EQ(log->messages[0], "ChartGrabber: tile program " + row.logged + " - too old");
     }
@@ -854,35 +882,35 @@ TEST(ProbeCli, CachedPerPathSizeAndModificationTime) {
     const auto t0 = fs::last_write_time(cli) - std::chrono::hours(2);
     fs::last_write_time(cli, t0);
     LogScope log;
-    EXPECT_FALSE(probeCli(cli));
+    EXPECT_FALSE(probeCli(cli, cg::Settings{}));
     EXPECT_EQ(runsOf(tmp), 1);
-    EXPECT_FALSE(probeCli(cli));
+    EXPECT_FALSE(probeCli(cli, cg::Settings{}));
     EXPECT_EQ(runsOf(tmp), 1) << "a second call must not run the program again";
     EXPECT_EQ(log->messages.size(), 1u);
 
     // Only the size changes (same modification time): the program runs again.
     tmp.write("probe-cli", countingScript("echo 'chart-grabber-cli 2026.10.9 (aa)'"), true);
     fs::last_write_time(cli, t0);
-    EXPECT_TRUE(probeCli(cli));
+    EXPECT_TRUE(probeCli(cli, cg::Settings{}));
     EXPECT_EQ(runsOf(tmp), 2);
     EXPECT_EQ(log->messages.size(), 2u);
 
     // Same size, same time, other content: the identity is the same, the answer comes from the cache.
     tmp.write("probe-cli", countingScript("echo 'chart-grabber-cli 2026.10.3 (aa)'"), true);
     fs::last_write_time(cli, t0);
-    EXPECT_TRUE(probeCli(cli));
+    EXPECT_TRUE(probeCli(cli, cg::Settings{}));
     EXPECT_EQ(runsOf(tmp), 2);
 
     // Same size, only the modification time moves: the program runs again and the new answer is used.
     fs::last_write_time(cli, t0 + std::chrono::hours(1));
-    EXPECT_FALSE(probeCli(cli));
+    EXPECT_FALSE(probeCli(cli, cg::Settings{}));
     EXPECT_EQ(runsOf(tmp), 3);
     EXPECT_EQ(log->messages.size(), 3u);
 
     // A "too old" answer is cached as well.
     const std::string old = tmp.write("old-cli", countingScript("exit 2"), true);
-    EXPECT_FALSE(probeCli(old));
-    EXPECT_FALSE(probeCli(old));
+    EXPECT_FALSE(probeCli(old, cg::Settings{}));
+    EXPECT_FALSE(probeCli(old, cg::Settings{}));
     EXPECT_EQ(runsOf(tmp), 4) << "old-cli ran once, probe-cli three times";
     EXPECT_EQ(log->messages.size(), 4u);
 }

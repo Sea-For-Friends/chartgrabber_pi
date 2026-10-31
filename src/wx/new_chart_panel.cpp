@@ -78,9 +78,9 @@ constexpr Curated kCurated[] = {
     // the two weather pictures are bases, core 9b2ef52c, line 2 of params.txt
     {"{FE84A175-2C0F-420F-86DF-5900DE16A33C}", false, false}, // Weather now/EUMETView-GeoColour.zmp:2
     {"{8B9C244E-E978-4267-8FE4-D703534C0789}", false, false}, // Weather now/NASA-GIBS-VIIRS-TrueColor.zmp:2
-    // the two EMODnet vessel-density layers:
-    // GUIDs from the CLI 2026.10.10 `sources` records,
-    // tests/fixtures/cli-2026.10.10/sources-bundled-all.stdout
+    // the two EMODnet vessel-density layers (kind layer, group Seamarks and traffic):
+    // GUIDs from the CLI 2026.10.13 `sources` records,
+    // tests/fixtures/cli-2026.10.13/sources-bundled-all.stdout
     {"{99D06D6A-F7FA-4F06-8C00-D9F96307C0F3}", false,
      false}, // Seamarks and traffic/EMODnet-Vessel-Density.zmp
     {"{478CBB2F-70D1-4573-8C50-B5361CE2AA46}", false,
@@ -856,7 +856,7 @@ void NewChartPanel::reloadSources() {
     }
     if (!sourcesRunner_)
         sourcesRunner_ = std::make_unique<CliRunner>();
-    if (!probeCli(*cli)) {
+    if (!probeCli(*cli, config_.cliSettings(settings_))) {
         sourceFailed(cliTooOldText());
         return;
     }
@@ -1287,7 +1287,7 @@ void NewChartPanel::startEstimate() {
         estimateFailed(cliNotFoundText());
         return;
     }
-    if (!probeCli(*cli)) {
+    if (!probeCli(*cli, config_.cliSettings(settings))) {
         estimateFailed(cliTooOldText());
         return;
     }

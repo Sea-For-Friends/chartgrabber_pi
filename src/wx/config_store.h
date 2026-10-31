@@ -54,13 +54,16 @@ public:
     // cacheDir, else <private data>/plugins/chartgrabber/cache (null location: <home>/.opencpn/...); decision
     // 0003
     std::string cliCacheRoot(const cg::Settings& s) const;
+    // <private data>/plugins/chartgrabber/cli-data (empty/null location: <home>/.opencpn/...): --datadir of
+    // every CLI run, so the CLI never writes its own home folders
+    std::string cliDataDir() const;
     // mapsDir, else <home>/Charts/<cg::kSourcesFolderName>; never created by the plugin
     std::string sourcesDir(const cg::Settings& s) const;
     // The bundled sources folder: set once by Init; empty until set.
     void setBundledSourcesDir(std::string dir);
     std::string bundledSourcesDir() const;
-    // s with cacheDir resolved and cliMaps = {bundled folder} + {sourcesDir(s) when it holds a chart source}:
-    // every argument builder call in src/wx takes this copy
+    // s with cacheDir and cliDataDir resolved and cliMaps = {bundled folder} + {sourcesDir(s) when it holds a
+    // chart source}: every argument builder call in src/wx takes this copy
     cg::Settings cliSettings(const cg::Settings& s) const;
     std::vector<cg::ChartRecord> loadCharts() const; // every <jobsDir>/*/chart.ini, newest first
     std::vector<std::string>

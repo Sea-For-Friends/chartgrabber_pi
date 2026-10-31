@@ -7,8 +7,8 @@
   <api-version>1.18</api-version>
   <open-source>yes</open-source>
   <author>@CG_AUTHOR@</author>
-  <source>local build</source>
-  <info-url></info-url>
+  <source>https://github.com/Sea-For-Friends/chartgrabber_pi</source>
+  <info-url>https://github.com/Sea-For-Friends/chartgrabber_pi</info-url>
   <description>Pick an area on the chart, a chart source and the detail; Chart Grabber downloads it with Chart Grabber CLI and adds it to OpenCPN as a chart that works without internet.</description>
   <target>@CG_TARGET@</target>
   <target-version>@CG_TARGET_VERSION@</target-version>

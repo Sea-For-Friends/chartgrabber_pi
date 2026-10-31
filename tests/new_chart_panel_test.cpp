@@ -257,7 +257,9 @@ protected:
     // The arguments of a sources run with empty MapsDir / CacheDir, ).
     std::string defaultSourcesArgv(const std::string& format = " --format=tsv") const {
         return "sources" + format + " --cache " + (root_ / "private").string() +
-               "/plugins/chartgrabber/cache --stop-on-stdin";
+               "/plugins/chartgrabber/cache"
+               " --datadir=" +
+               (root_ / "private").string() + "/plugins/chartgrabber/cli-data --stop-on-stdin";
     }
 
     // ---- fixture
@@ -667,11 +669,11 @@ std::string slurpText(const fs::path& p) {
     return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 }
 
-// the real `note:` line of the first start (cli-2026.10.10/sources-first-start-note: stdout
+//  proof 3: the real `note:` line of the first start (cli-2026.10.13/sources-first-start-note: stdout
 // the 3 records, stderr a `note:` line and a `warning:`, exit 0) changes nothing: the same choice and status
 // as without stderr.
 TEST_F(PanelTest, TheFirstStartNoteOfTheCliChangesNothingInTheChoice) {
-    const fs::path fx = fs::path(CG_FIXTURES_DIR) / "cli-2026.10.10";
+    const fs::path fx = fs::path(CG_FIXTURES_DIR) / "cli-2026.10.13";
     const std::string err = slurpText(fx / "sources-first-start-note.stderr");
     ASSERT_EQ(err.rfind("note: moved ", 0), 0u) << err;
     sources_->rawRecords(slurpText(fx / "sources-first-start-note.stdout"));
@@ -827,7 +829,10 @@ TEST_F(PanelTest, AReloadReadsTheSettingsAgainAndKeepsTheUsersPick) {
     EXPECT_EQ(selected(), kNameMapnik) << "the user's pick is LastSource of the session";
     EXPECT_EQ(other.argv(), std::vector<std::string>{"sources --format=tsv --maps " + bundled + " --maps " +
                                                      mapsDir + " --cache " + (root_ / "private").string() +
-                                                     "/plugins/chartgrabber/cache --stop-on-stdin"});
+                                                     "/plugins/chartgrabber/cache"
+                                                     " --datadir=" +
+                                                     (root_ / "private").string() +
+                                                     "/plugins/chartgrabber/cli-data --stop-on-stdin"});
     EXPECT_EQ(sources_->argv().size(), 1u) << "the old settings were not used again";
 }
 
@@ -849,7 +854,10 @@ TEST_F(PanelTest, WithTheBundledSourcesAndNoFolderTheChoiceIsFilled) {
     EXPECT_EQ(selected(), kNameEsri) << "no LastSource: the first curated base";
     EXPECT_EQ(other.argv(), std::vector<std::string>{"sources --format=tsv --maps " + bundled + " --cache " +
                                                      (root_ / "private").string() +
-                                                     "/plugins/chartgrabber/cache --stop-on-stdin"});
+                                                     "/plugins/chartgrabber/cache"
+                                                     " --datadir=" +
+                                                     (root_ / "private").string() +
+                                                     "/plugins/chartgrabber/cli-data --stop-on-stdin"});
 }
 
 // ---- the seamarks checkbox ----
@@ -1819,9 +1827,9 @@ TEST_F(PanelTest, AChosenBaseThatBecomesRefusedAfterReloadLeavesTheChoiceAndTheN
 // =====================================================================================================
 // the estimate the enable order and the Download flow Advanced threads and
 // chart folder. The tile program is the stand-in of tests/sources_stub.h; its `estimate` and `run`
-// answers are CR 2 records (the tsv level, version 2026.10.0); the real CLI is NOT used here (the manual
-// proof is in handoffs/.md). Expected values are literals of the spec or of the captures in
-// tests/fixtures/cli-2026.10.10/.
+// answers are CR 2 records (the tsv level, version 2026.10.0); the real CLI is NOT used here).
+// Expected values are literals or the captures in
+// tests/fixtures/cli-2026.10.13/.
 // =====================================================================================================
 
 const char* const kTooLarge = "Area too large for this detail - choose a smaller area or less detail"; // 7.5
@@ -2013,7 +2021,10 @@ TEST_F(DownloadTest, TheEstimateLineShowsTheSumsAndTheCliGetsTheArgumentsOfSpec8
     EXPECT_EQ(sources_->estimateArgv(),
               std::vector<std::string>{
                   "estimate --format=tsv --progress=lines --cache " + (root_ / "private").string() +
-                  "/plugins/chartgrabber/cache --source " + kEsri + " --overlay " + kSeamarkLayer +
+                  "/plugins/chartgrabber/cache"
+                  " --datadir=" +
+                  (root_ / "private").string() + "/plugins/chartgrabber/cli-data --source " + kEsri +
+                  " --overlay " + kSeamarkLayer +
                   " --bbox 5.00000000,45.00000000,15.00000000,55.00000000 --zooms 8-14 --stop-on-stdin"});
     EXPECT_EQ(sources_->estimateLcAll(), std::vector<std::string>{"C.UTF-8"});
     EXPECT_EQ(status(), "");
@@ -2037,10 +2048,11 @@ TEST_F(DownloadTest, APickedMapsFolderIsPassedToTheEstimateAndTheRun) {
     sources_->estimateOut(estimate1950());
     ready();
     const std::string cache = (root_ / "private").string() + "/plugins/chartgrabber/cache";
+    const std::string data = " --datadir=" + (root_ / "private").string() + "/plugins/chartgrabber/cli-data";
     EXPECT_EQ(sources_->estimateArgv(),
               std::vector<std::string>{
                   "estimate --format=tsv --progress=lines --maps " + bundled + " --maps " + maps +
-                  " --cache " + cache + " --source " + kEsri + " --overlay " + kSeamarkLayer +
+                  " --cache " + cache + data + " --source " + kEsri + " --overlay " + kSeamarkLayer +
                   " --bbox 5.00000000,45.00000000,15.00000000,55.00000000 --zooms 8-14 --stop-on-stdin"});
     Answerer answers({});
     download();
@@ -2049,7 +2061,7 @@ TEST_F(DownloadTest, APickedMapsFolderIsPassedToTheEstimateAndTheRun) {
     EXPECT_EQ(sources_->runArgv(),
               std::vector<std::string>{"run --job " + (jobDirs()[0] / "job.ini").string() +
                                        " --format=tsv --progress=lines --maps " + bundled + " --maps " +
-                                       maps + " --cache " + cache + " --stop-on-stdin"});
+                                       maps + " --cache " + cache + data + " --stop-on-stdin"});
     sources_->holdRun(false);
     destroyDialog();
 }
@@ -2141,10 +2153,11 @@ TEST_F(DownloadTest, ARouteIsEstimatedAsACorridorFromTheGpxFileOfTheJobsFolder) 
     press(route());
     waitEstimate();
     const std::string gpx = (jobsRoot() / "estimate-route.gpx").string();
-    const std::string expected = "estimate --format=tsv --progress=lines --cache " +
-                                 (root_ / "private").string() + "/plugins/chartgrabber/cache --source " +
-                                 kEsri + " --overlay " + kSeamarkLayer + " --route " + gpx +
-                                 " --corridor-nm 2.0 --zooms 8-14 --stop-on-stdin";
+    const std::string expected =
+        "estimate --format=tsv --progress=lines --cache " + (root_ / "private").string() +
+        "/plugins/chartgrabber/cache --datadir=" + (root_ / "private").string() +
+        "/plugins/chartgrabber/cli-data --source " + kEsri + " --overlay " + kSeamarkLayer + " --route " +
+        gpx + " --corridor-nm 2.0 --zooms 8-14 --stop-on-stdin";
     EXPECT_EQ(sources_->estimateArgv().back(), expected) << "a route is a corridor, never a --bbox";
     const std::string text = slurpText(gpx);
     EXPECT_NE(text.find("<name>\xD0\x90\xD0\xBB\xD1\x84\xD0\xB0 d&apos;x</name>"), std::string::npos) << text;
@@ -2160,7 +2173,7 @@ TEST_F(DownloadTest, ARouteIsEstimatedAsACorridorFromTheGpxFileOfTheJobsFolder) 
 }
 
 TEST_F(DownloadTest, EveryEstimateFailureShowsItsTextInPlaceOfTheLineAndDownloadStaysOff) {
-    const fs::path fx = fs::path(CG_FIXTURES_DIR) / "cli-2026.10.10";
+    const fs::path fx = fs::path(CG_FIXTURES_DIR) / "cli-2026.10.13";
     struct Row {
         const char* name;
         int exitCode;
@@ -2392,7 +2405,10 @@ TEST_F(DownloadTest, DownloadWritesTheJobFilesSavesTheChoiceStartsTheJobAndHides
         EXPECT_EQ(sources_->runArgv(),
                   std::vector<std::string>{"run --job " + (job / "job.ini").string() +
                                            " --format=tsv --progress=lines --cache " +
-                                           (root_ / "private").string() + "/plugins/chartgrabber/cache" +
+                                           (root_ / "private").string() +
+                                           "/plugins/chartgrabber/cache"
+                                           " --datadir=" +
+                                           (root_ / "private").string() + "/plugins/chartgrabber/cli-data" +
                                            (row.slow ? " --threads 1" : "") + " --stop-on-stdin"});
         EXPECT_FALSE(dialog_->IsShown()) << "onStarted hides the dialog";
         EXPECT_TRUE(jobs_->busy());
@@ -2873,10 +2889,10 @@ TEST_F(DownloadTest, AJobFolderThatAlreadyExistsGetsTheSuffixMinusTwo) {
 
 // ---- the range in the job, LastZooms and the cost lines ----
 
-// The 10 `estimate` records of the captured run (cli-2026.10.10/run-continued.stdout, base + seamarks, zooms
+// The 10 `estimate` records of the captured run (cli-2026.10.13/run-continued.stdout, base + seamarks, zooms
 // 9-13).
 static std::string capturedEstimates() {
-    std::istringstream in(slurpText(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.10" / "run-continued.stdout"));
+    std::istringstream in(slurpText(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.13" / "run-continued.stdout"));
     std::string out;
     for (std::string line; std::getline(in, line);)
         if (line.rfind("estimate\t", 0) == 0)
@@ -3385,7 +3401,7 @@ TEST_F(DetailWarningTest, TheQuestionFitsEightHundredByFourEightyInTouchMode) {
 }
 
 // ---- Weather on top ----
-// The stand-in prints the lines of the real CLI 2026.10.10 `sources` output (tests/fixtures/cli-2026.10.10/
+// The stand-in prints the lines of the real CLI 2026.10.13 `sources` output (tests/fixtures/cli-2026.10.13/
 // sources-bundled-all.stdout, 28 rows since ) unless a case edits one line; every edit is named at its
 // test.
 
@@ -3457,7 +3473,7 @@ protected:
         return lines;
     }
     // The stand-in prints the fixture of `dir`, after `edit`.
-    void useFixture(const char* dir = "cli-2026.10.10",
+    void useFixture(const char* dir = "cli-2026.10.13",
                     const std::function<void(std::vector<std::string>&)>& edit = {}) {
         std::vector<std::string> lines = fixture(dir);
         if (edit)
@@ -3469,7 +3485,7 @@ protected:
     }
     // Field `n` (0 = "source") of the fixture line of `guid`.
     std::string fieldOf(const char* guid, int n) const {
-        for (const std::string& l : fixture("cli-2026.10.10"))
+        for (const std::string& l : fixture("cli-2026.10.13"))
             if (l.find(std::string("\t") + guid + "\t") != std::string::npos) {
                 std::vector<std::string> f;
                 std::istringstream in(l);
@@ -3532,7 +3548,7 @@ TEST_F(PanelWeatherTest, WithoutFieldElevenThereIsNoWeatherControlAndThePageKeep
     });
     // The dialog size after the stand-in printed the lines of the fixture, `edit`ed.
     const auto sizeWith = [&](const std::function<void(std::vector<std::string>&)>& edit) {
-        useFixture("cli-2026.10.10", edit);
+        useFixture("cli-2026.10.13", edit);
         makeDialog();
         waitEstimate();
         const wxSize size = dialog_->GetSize();
@@ -3591,7 +3607,7 @@ TEST_F(PanelWeatherTest,
         EXPECT_EQ(u(weatherChoice()->GetToolTipText()), fullNames[i]);
     }
     destroyDialog();
-    useFixture("cli-2026.10.10", [&](std::vector<std::string>& lines) {
+    useFixture("cli-2026.10.13", [&](std::vector<std::string>& lines) {
         editLine(lines, kDwd, "\tok\t", std::string("\t") + kRefusedVerdict + "\t");
     });
     makeDialog();
@@ -3623,7 +3639,7 @@ TEST_F(PanelWeatherTest, TickingShowsTheScaleAndCreditLineAndTheCoverageLineAndU
     EXPECT_FALSE(shows(kCoverage));
     EXPECT_FALSE(weatherChoice()->IsEnabled());
     destroyDialog();
-    useFixture("cli-2026.10.10",
+    useFixture("cli-2026.10.13",
                [&](std::vector<std::string>& lines) { editLine(lines, kRainViewer, kRainViewerCredit, ""); });
     makeDialog();
     waitEstimate();
@@ -3668,7 +3684,7 @@ TEST_F(PanelWeatherTest, LastWeatherAndItsSourceSelectTheLayerAndCloseSavesNothi
 // and a Cyrillic name put FIRST in CLI order; the RainViewer line dropped.
 TEST_F(PanelWeatherTest, TheShippedLayersComeFirstInTheFixedOrderAndRainViewerIsTheDefault) {
     const char* const kExtra = "{00000000-0000-4000-8000-0000000000AA}";
-    useFixture("cli-2026.10.10", [&](std::vector<std::string>& lines) {
+    useFixture("cli-2026.10.13", [&](std::vector<std::string>& lines) {
         std::string extra;
         for (const std::string& l : lines)
             if (l.find(kRainViewer) != std::string::npos)
@@ -3687,7 +3703,7 @@ TEST_F(PanelWeatherTest, TheShippedLayersComeFirstInTheFixedOrderAndRainViewerIs
     EXPECT_EQ(weatherEntries(), expected);
     EXPECT_EQ(weatherChoice()->GetSelection(), 0) << "no LastWeatherSource: RainViewer";
     destroyDialog();
-    useFixture("cli-2026.10.10", [&](std::vector<std::string>& lines) {
+    useFixture("cli-2026.10.13", [&](std::vector<std::string>& lines) {
         lines.erase(
             std::remove_if(lines.begin(), lines.end(),
                            [&](const std::string& l) { return l.find(kRainViewer) != std::string::npos; }),
@@ -3702,7 +3718,7 @@ TEST_F(PanelWeatherTest, TheShippedLayersComeFirstInTheFixedOrderAndRainViewerIs
 
 // and 3.
 TEST_F(PanelWeatherTest, TheWeatherPicturesAreBasesAfterTheCuratedMapsWithoutImageryLineTermsNoteOrSeamarks) {
-    useFixture("cli-2026.10.10", dropMarine);
+    useFixture("cli-2026.10.13", dropMarine);
     makeDialog();
     waitEstimate();
     const std::string geoLabel = "EUMETSAT MTG GeoColour (Europe, Africa, Atlanti...";
@@ -3890,7 +3906,7 @@ TEST_F(PanelWeatherTest, AnOldNamedWeatherFileDoesNotAskToReplace) {
 // Proof 8. Edited fixture line: the seamark layer's maxZoom (field 13, empty) set to 6; hand-made from the
 // real line.
 TEST_F(PanelWeatherTest, TheSeamarkLayersLimitAddsItsZoomAndTheEstimateAndJobIniCarryTheList) {
-    useFixture("cli-2026.10.10", [&](std::vector<std::string>& lines) {
+    useFixture("cli-2026.10.13", [&](std::vector<std::string>& lines) {
         editLine(lines, kSeamarkLayer, "CC-BY-SA\t", "CC-BY-SA\t6");
     });
     store_->setDisclaimerShown();
@@ -3974,7 +3990,7 @@ TEST_F(PanelWeatherTouchTest, TheLongestCreditStillFitsEightHundredByFourEightyA
     ocpn_fake::scale = 1.0;
     store_->setDisclaimerShown();
     sources_->rawRecords(
-        slurpText(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.10" / "sources-bundled-all.stdout"));
+        slurpText(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.13" / "sources-bundled-all.stdout"));
     sources_->holdRun(true);
     addRoute("cccccccc-0000-4000-8000-000000000003", "Long", {{45.0, 0.0}, {46.0, 10.0}});
     saveLast([&](ConfigStore::LastChoice& c) {
@@ -4023,7 +4039,7 @@ TEST_F(PanelWeatherTouchTest, TheLongestCreditStillFitsEightHundredByFourEightyA
 }
 
 // ---- Marine vessel-density layers ----
-// The stand-in prints tests/fixtures/cli-2026.10.10/sources-bundled-all.stdout: it holds the two
+// The stand-in prints tests/fixtures/cli-2026.10.13/sources-bundled-all.stdout: it holds the two
 // vessel-density records of data/sources/Marine (kind layer, maxZoom 9), verbatim.
 const char* const kVesselAll = "{99D06D6A-F7FA-4F06-8C00-D9F96307C0F3}";
 const char* const kVesselSailing = "{478CBB2F-70D1-4573-8C50-B5361CE2AA46}";
@@ -4032,7 +4048,7 @@ const char* const kVesselAllName = "EMODnet vessel density 2023, all ship types 
 class PanelVesselTest : public PanelWeatherTest {
 protected:
     void useVessels(const std::function<void(std::vector<std::string>&)>& edit = {}) {
-        useFixture("cli-2026.10.10", edit);
+        useFixture("cli-2026.10.13", edit);
     }
 };
 
@@ -4067,7 +4083,7 @@ TEST_F(PanelVesselTest, TheTwoLayersFollowTheWeatherBasesAndDownloadRunsThemAsAB
 
 // Proof 3: a CLI without them leaves the choice as it was; a refused record is not offered.
 TEST_F(PanelVesselTest, WithoutTheRecordsOrWithARefusedOneTheChoiceIsUnchanged) {
-    useFixture("cli-2026.10.10", dropMarine);
+    useFixture("cli-2026.10.13", dropMarine);
     makeDialog();
     waitEstimate();
     EXPECT_EQ(entries().size(), 8u);

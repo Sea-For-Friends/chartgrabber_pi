@@ -187,7 +187,12 @@ bool isProgramFile(const std::string& path, Os os) {
 std::vector<std::string> defaultCliPaths(Os os, std::string_view pluginDataDir,
                                          std::string_view programFiles) {
     if (os == Os::Posix) {
-        return {std::string(kCliInstallDir) + std::string(kDefaultCliName)};
+        std::vector<std::string> posix;
+        if (!pluginDataDir.empty()) { // the CLI bundled in the plugin tarball
+            posix.push_back(joinPath(joinPath(pluginDataDir, "cli", Os::Posix), kDefaultCliName, Os::Posix));
+        }
+        posix.push_back(std::string(kCliInstallDir) + std::string(kDefaultCliName));
+        return posix;
     }
     const std::string exe = std::string(kDefaultCliName) + ".exe";
     std::vector<std::string> out;

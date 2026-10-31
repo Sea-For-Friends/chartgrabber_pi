@@ -288,6 +288,7 @@ protected:
                 "--progress=lines",
                 "--cache",
                 (root_ / "private" / "plugins" / "chartgrabber" / "cache").string(),
+                "--datadir=" + (root_ / "private" / "plugins" / "chartgrabber" / "cli-data").string(),
                 "--overwrite",
                 "--stop-on-stdin"};
     }
@@ -550,6 +551,7 @@ TEST_F(ChartsTest, UpdateChoiceStartsTheJobWithTheDateCancelAndBudgetNoStartNoth
         "--progress=lines",
         "--cache",
         (root_ / "private" / "plugins" / "chartgrabber" / "cache").string(),
+        "--datadir=" + (root_ / "private" / "plugins" / "chartgrabber" / "cli-data").string(),
         "--overwrite"};
     const std::string before = slurp(jobDir(chart.id) / "chart.ini");
 
@@ -575,10 +577,10 @@ TEST_F(ChartsTest, UpdateChoiceStartsTheJobWithTheDateCancelAndBudgetNoStartNoth
     EXPECT_EQ(budgetAsks, 1);
     ASSERT_TRUE(jobs_->busy());
     ASSERT_TRUE(waitIdle());
-    EXPECT_EQ(argsOf(chart.id, 1),
-              (std::vector<std::string>{"run", "--job", head[2], "--format=tsv", "--progress=lines",
-                                        "--cache", head[6], "--threads", "1", "--overwrite", "--replace",
-                                        "--replace-older-than=2026-02-28T07:08:09", "--stop-on-stdin"}));
+    EXPECT_EQ(argsOf(chart.id, 1), (std::vector<std::string>{
+                                       "run", "--job", head[2], "--format=tsv", "--progress=lines", "--cache",
+                                       head[6], head[7], "--threads", "1", "--overwrite", "--replace",
+                                       "--replace-older-than=2026-02-28T07:08:09", "--stop-on-stdin"}));
     EXPECT_EQ(rows()[0].texts.back(), "Complete");
 
     s.dataBudgetMb = 1; // Yes: starts, with the 6 months date
@@ -601,7 +603,7 @@ TEST_F(ChartsTest, UpdateChoiceStartsTheJobWithTheDateCancelAndBudgetNoStartNoth
     ASSERT_TRUE(waitIdle());
     EXPECT_EQ(argsOf(chart.id, 3),
               (std::vector<std::string>{"run", "--job", head[2], "--format=tsv", "--progress=lines",
-                                        "--cache", head[6], "--overwrite", "--replace",
+                                        "--cache", head[6], head[7], "--overwrite", "--replace",
                                         "--replace-older-than=2025-09-30T07:08:09", "--stop-on-stdin"}));
     EXPECT_EQ(rows()[0].texts.back(), "Complete");
 }

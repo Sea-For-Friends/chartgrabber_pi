@@ -353,6 +353,14 @@ void ConfigStore::setStripHintShown() {
     config_->Flush();
 }
 
+namespace {
+// <private data>: OpenCPN's location when set and not empty, else <home>/.opencpn
+std::string privateDataBase() {
+    const wxString* location = GetpPrivateApplicationDataLocation();
+    return location && !location->empty() ? cg::toUtf8(*location) : homeDir() + "/.opencpn";
+}
+} // namespace
+
 std::string ConfigStore::chartDir(const cg::Settings& s) const {
     if (!s.chartDir.empty())
         return s.chartDir;
@@ -371,9 +379,11 @@ std::string ConfigStore::jobsDir() const {
 std::string ConfigStore::cliCacheRoot(const cg::Settings& s) const {
     if (!s.cacheDir.empty())
         return s.cacheDir;
-    const wxString* location = GetpPrivateApplicationDataLocation();
-    const std::string base = location ? cg::toUtf8(*location) : homeDir() + "/.opencpn";
-    return base + "/plugins/chartgrabber/cache";
+    return privateDataBase() + "/plugins/chartgrabber/cache";
+}
+
+std::string ConfigStore::cliDataDir() const {
+    return privateDataBase() + "/plugins/chartgrabber/cli-data";
 }
 
 // Decision 0004: the user's own chart sources, outside the folder OpenCPN scans.
@@ -402,6 +412,7 @@ cg::Settings ConfigStore::cliSettings(const cg::Settings& s) const {
     if (cg::countSourceEntries(folder, 1) > 0)
         out.cliMaps.push_back(folder);
     out.cacheDir = cliCacheRoot(s);
+    out.cliDataDir = cliDataDir();
     return out;
 }
 

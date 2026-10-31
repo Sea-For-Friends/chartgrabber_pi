@@ -173,10 +173,15 @@ protected:
             settings_.cliMaps = {*maps};
         settings_.cacheDir = (tmp_ / "cache").string();
         fs::create_directories(settings_.cacheDir);
+        settings_.cliDataDir = (tmp_ / "cli-data" / "d\xC3\xA9 a'b").string(); // created by the CLI
         const auto box = parseBBox(env("CG_BBOX").value_or("-1.5,50.5,-1.0,50.9"));
         ASSERT_TRUE(box) << "CG_BBOX is not west,south,east,north";
         bbox_ = *box;
-        ASSERT_TRUE(probeCli(*cli)) << "probeCli(" << *cli << ") failed: too old or not a tile program";
+        ASSERT_TRUE(probeCli(*cli, settings_))
+            << "probeCli(" << *cli << ") failed: too old or not a tile program";
+        // : CLI 2026.10.13 creates the data folder (its fontconfig sysroot) already for `--version`;
+        // DatadirEqualsFormCreatesTheFolder needs it absent.
+        fs::remove_all(settings_.cliDataDir);
     }
     void TearDown() override {
         if (!tmp_.empty()) {
@@ -362,6 +367,15 @@ TEST_F(ContractTest, SourcesEstimateAndWhenAskedRunExport) {
 // stopped at once ends 143 with the CLI's own last line; with CG_RUN=1 a run stopped after its first progress
 // record ends 143 within the grace and the same run again ends 0. A kill would show as exit -9 and as a run
 // slower than the grace.
+// : the CLI honours the one-element --datadir=DIR form and creates the folder.
+TEST_F(ContractTest, DatadirEqualsFormCreatesTheFolder) {
+    ASSERT_FALSE(fs::exists(settings_.cliDataDir));
+    Result sources;
+    ASSERT_TRUE(exec(sources, sourcesArguments(settings_), false, 60000));
+    EXPECT_EQ(sources.exitCode, 0) << sources.tail(5);
+    EXPECT_TRUE(fs::is_directory(settings_.cliDataDir));
+}
+
 TEST_F(ContractTest, StopThroughStdinGives143AndTheSessionContinues) {
     const std::string line = "chart-grabber-cli: stop requested on stdin; exit 143";
     const auto stopLine = [&](const Result& r) {

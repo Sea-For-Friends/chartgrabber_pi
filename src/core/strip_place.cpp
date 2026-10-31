@@ -31,6 +31,14 @@ StripRect placeStrip(const StripAnchor& a, int w, int h, const StripRect& safe, 
     return {x, y, w, h};
 }
 
+StripRect fitInWorkArea(const StripRect& frame, const StripRect& work, int margin) {
+    StripRect r = frame;
+    r.height = std::max(std::min(r.height, work.height - 2 * margin), 1);
+    r.x = std::max(std::min(r.x, work.x + work.width - margin - r.width), work.x + margin);
+    r.y = std::max(std::min(r.y, work.y + work.height - margin - r.height), work.y + margin);
+    return r;
+}
+
 StripAnchor anchorFromDrop(const StripRect& strip, const StripRect& safe) {
     // Doubled coordinates keep the centre exact: 2 * centre = 2 * origin + size.
     const bool right = 2 * strip.x + strip.width > 2 * safe.x + safe.width;

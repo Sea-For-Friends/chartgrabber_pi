@@ -136,6 +136,37 @@ TEST(StripPlace, WidthKeepsBestCapsAtSixtyPercentAndTheMinimumAndTheMargins) {
     EXPECT_EQ(stripWidth(0, 1000, 320, 8), 1);     // never below 1
 }
 
+TEST(StripPlace, FitInWorkAreaMovesOnlyTheOverflowingSideAndCapsTheHeight) {
+    struct Case {
+        const char* what;
+        StripRect frame, work;
+        StripRect want;
+    };
+    const StripRect work{0, 0, 1000, 700};
+    const Case cases[] = {
+        {"inside is unchanged", {137, 211, 300, 90}, work, {137, 211, 300, 90}},
+        {"bottom past: up by the overflow", {137, 650, 300, 90}, work, {137, 602, 300, 90}},
+        {"right past: left by the overflow", {790, 211, 300, 90}, work, {692, 211, 300, 90}},
+        {"both past", {900, 690, 300, 90}, work, {692, 602, 300, 90}},
+        {"above and left of the margin", {3, 2, 300, 90}, work, {8, 8, 300, 90}},
+        {"taller than the room", {137, 211, 300, 900}, work, {137, 8, 300, 684}},
+        {"origin: taskbar on top, second monitor at negative x",
+         {-1500, 80, 300, 90},
+         {-1920, 40, 1920, 700},
+         {-1500, 80, 300, 90}},
+        {"origin: bottom past", {-1500, 700, 300, 90}, {-1920, 40, 1920, 700}, {-1500, 642, 300, 90}},
+        {"origin: left of the work area", {-1930, 41, 300, 90}, {-1920, 40, 1920, 700}, {-1912, 48, 300, 90}},
+        {"no room at all: height 1", {10, 10, 300, 90}, {0, 0, 1000, 10}, {10, 8, 300, 1}},
+    };
+    for (const Case& c : cases) {
+        const StripRect got = fitInWorkArea(c.frame, c.work, 8);
+        EXPECT_EQ(got.x, c.want.x) << c.what;
+        EXPECT_EQ(got.y, c.want.y) << c.what;
+        EXPECT_EQ(got.width, c.want.width) << c.what;
+        EXPECT_EQ(got.height, c.want.height) << c.what;
+    }
+}
+
 TEST(StripPlace, CornerKeysRoundTripAndOnlyTheExactLowerCaseParses) {
     const std::pair<StripCorner, const char*> all[] = {{StripCorner::TopRight, "tr"},
                                                        {StripCorner::BottomLeft, "bl"},

@@ -237,6 +237,66 @@ TEST(ArgumentsNativePath, PosixKeepsEveryByte) {
                     "--cache", "/c\\d", "--proxy", "http://h:3128/"}));
 }
 
+// : ONE `--datadir=DIR` element right after the --cache pair on sources, estimate, run,
+// export; never the two-element form; none when cliDataDir is empty.
+TEST(Arguments, DatadirIsOneEqualsElementAfterCacheOnEveryCommand) {
+    struct Case {
+        Os os;
+        const char* cache;
+        const char* data;
+        const char* want;
+    };
+    const Case cases[] = {
+        {Os::Posix, "/ca che", "/d\xC3\xA9 a'b/cli-data", "--datadir=/d\xC3\xA9 a'b/cli-data"},
+        {Os::Windows, "C:/P D/cache", "C:/P D/\xC3\xA9'/cli-data", "--datadir=C:\\P D\\\xC3\xA9'\\cli-data"},
+    };
+    for (const Case& c : cases) {
+        Settings s = fullSettings();
+        s.cacheDir = c.cache;
+        s.cliDataDir = c.data;
+        const Args all[] = {
+            sourcesArguments(s, c.os),
+            estimateArguments(viewBase(), s, c.os),
+            runArguments("/j/job.ini", RunKind::Download, false, s, "", c.os),
+            runArguments("/j/job.ini", RunKind::BuildFromSaved, false, s, "", c.os),
+        };
+        for (const Args& a : all) {
+            int n = 0;
+            std::size_t at = 0;
+            for (std::size_t i = 0; i < a.size(); ++i) {
+                if (a[i].rfind("--datadir", 0) == 0) {
+                    ++n;
+                    at = i;
+                }
+            }
+            ASSERT_EQ(n, 1) << a[0];
+            EXPECT_EQ(a[at], c.want) << a[0];
+            ASSERT_GE(at, 2u);
+            EXPECT_EQ(a[at - 2], "--cache") << a[0];
+        }
+        s.cliDataDir.clear();
+        for (const Args& a : {sourcesArguments(s, c.os), estimateArguments(viewBase(), s, c.os),
+                              runArguments("/j/job.ini", RunKind::Update, false, s, "x", c.os)}) {
+            for (const std::string& e : a)
+                EXPECT_NE(e.rfind("--datadir", 0), 0u) << a[0];
+        }
+    }
+}
+
+// : the `--version` probe argv is "--version" and ONE `--datadir=DIR` element (the
+// '=' form, native separators of `os`); only "--version" when cliDataDir is empty.
+TEST(Arguments, VersionProbeCarriesTheDatadir) {
+    Settings s = fullSettings();
+    s.cliDataDir = "/d\xC3\xA9 a'b/cli-data";
+    EXPECT_EQ(versionArguments(s, Os::Posix), (Args{"--version", "--datadir=/d\xC3\xA9 a'b/cli-data"}));
+    s.cliDataDir = "C:/P D/\xC3\xA9'/cli-data";
+    EXPECT_EQ(versionArguments(s, Os::Windows),
+              (Args{"--version", "--datadir=C:\\P D\\\xC3\xA9'\\cli-data"}));
+    s.cliDataDir.clear();
+    EXPECT_EQ(versionArguments(s, Os::Posix), (Args{"--version"}));
+    EXPECT_EQ(versionArguments(s, Os::Windows), (Args{"--version"}));
+}
+
 TEST(OlderThanDate, MonthsBackClampTheDayAndCrossTheYear) {
     EXPECT_EQ(olderThanDate(2026, 2, 5, 7, 8, 9, 0), "2026-02-05T07:08:09");
     EXPECT_EQ(olderThanDate(2026, 3, 31, 23, 59, 58, 1), "2026-02-28T23:59:58");

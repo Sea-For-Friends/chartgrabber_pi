@@ -29,6 +29,11 @@ StripRect safeArea(int canvasWidth, int canvasHeight, int chartbarHeight);
 // `margin`; a strip wider (higher) than the room gets x = safe.x + margin (y = safe.y + margin). The anchor
 // is never changed.
 StripRect placeStrip(const StripAnchor& a, int w, int h, const StripRect& safe, int margin);
+// Window host (screen pixels): `frame` fitted into the display's work area `work` with `margin`. The height
+// is capped at work.height - 2 * margin (never < 1); a right edge past the work area moves the frame left, a
+// bottom edge past it moves it up (the other side is kept); then x >= work.x + margin and y >= work.y +
+// margin. Width unchanged.
+StripRect fitInWorkArea(const StripRect& frame, const StripRect& work, int margin);
 // After a drop at `strip` (already clamped): the corner of `safe` nearest to the strip's centre (ties: bottom
 // before top, left before right) and the distances from that corner to the strip's nearest corner (>= 0).
 StripAnchor anchorFromDrop(const StripRect& strip, const StripRect& safe);

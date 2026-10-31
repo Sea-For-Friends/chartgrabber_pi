@@ -354,6 +354,9 @@ protected:
     std::string defaultCache() const {
         return (root_ / "private" / "plugins" / "chartgrabber" / "cache").string();
     }
+    std::string defaultData() const {
+        return (root_ / "private" / "plugins" / "chartgrabber" / "cli-data").string();
+    }
     std::string iniOf(const std::string& id) const { return (jobDir(id) / "job.ini").string(); }
     // displayCommand text of the child: env, nice, the program (quoted), then `args`
     std::string shownCommand(const std::string& args) const {
@@ -897,9 +900,9 @@ TEST_F(JobTest, BuildFromSavedTilesRunsExportAndKeepsTheRecordNumbers) {
     ASSERT_TRUE(click("Build from saved tiles"));
     ASSERT_TRUE(runUntil([&] { return runs(r.id) == 2 && !jc().busy(); }));
     const std::vector<std::string> args = argsOf(r.id, 2);
-    EXPECT_EQ(args,
-              (std::vector<std::string>{"export", "--job", iniOf(r.id), "--format=tsv", "--progress=lines",
-                                        "--cache", defaultCache(), "--overwrite", "--stop-on-stdin"}));
+    EXPECT_EQ(args, (std::vector<std::string>{
+                        "export", "--job", iniOf(r.id), "--format=tsv", "--progress=lines", "--cache",
+                        defaultCache(), "--datadir=" + defaultData(), "--overwrite", "--stop-on-stdin"}));
     EXPECT_EQ(stripText(), "Chart added, 7 of 1 000 tiles are missing. Top up later to fill them.");
     const cg::ChartRecord c = chart(r.id);
     EXPECT_EQ(c.state, cg::ChartState::Missing);
@@ -942,7 +945,7 @@ TEST_F(JobTest, StopThenResumeContinuesTheSession) {
     // a CLI with --progress=lines has no progress note in the fold.
     EXPECT_EQ(detailsText(), kSource + ": z14 5/1300\n\nenv LC_ALL=C.UTF-8 nice -n 10 '" + withQuote +
                                  "' run --job " + iniOf(r.id) + " --format=tsv --progress=lines --cache " +
-                                 defaultCache() +
+                                 defaultCache() + " --datadir=" + defaultData() +
                                  " --overwrite\n"
                                  "warning: continuing the session of 2026-10-15 05:17:55\n");
     EXPECT_EQ(argsOf(r.id, 2).front(), "run");
@@ -964,6 +967,7 @@ TEST_F(JobTest, UpdateRunsWithTheDateKeepsItOnStopAndClearsItWhenDone) {
                                             "--progress=lines",
                                             "--cache",
                                             defaultCache(),
+                                            "--datadir=" + defaultData(),
                                             "--overwrite",
                                             "--replace",
                                             "--replace-older-than=2026-09-16T10:00:00",
@@ -1032,9 +1036,10 @@ TEST_F(JobTest, UserStopInSlowModeShowsTheStoppedTextNotTheBudgetText) {
     jc().stop();
     ASSERT_TRUE(waitIdle(10000));
     EXPECT_EQ(stripText(), "Stopped. Resume any time from My charts.");
-    EXPECT_EQ(argsOf(r.id, 1), (std::vector<std::string>{
-                                   "run", "--job", iniOf(r.id), "--format=tsv", "--progress=lines", "--cache",
-                                   defaultCache(), "--threads", "1", "--overwrite", "--stop-on-stdin"}));
+    EXPECT_EQ(argsOf(r.id, 1),
+              (std::vector<std::string>{"run", "--job", iniOf(r.id), "--format=tsv", "--progress=lines",
+                                        "--cache", defaultCache(), "--datadir=" + defaultData(), "--threads",
+                                        "1", "--overwrite", "--stop-on-stdin"}));
 }
 
 // ------------------------------------------------------------------------------------------ retry, budget
@@ -1304,8 +1309,8 @@ TEST_F(JobTest, ExtraArgumentsAreAppendedInDebugBuilds) {
     ASSERT_TRUE(waitIdle());
     EXPECT_EQ(argsOf(r.id, 1),
               (std::vector<std::string>{"run", "--job", iniOf(r.id), "--format=tsv", "--progress=lines",
-                                        "--cache", defaultCache(), "--overwrite", "--stall-timeout", "5", "x",
-                                        "--stop-on-stdin"}));
+                                        "--cache", defaultCache(), "--datadir=" + defaultData(),
+                                        "--overwrite", "--stall-timeout", "5", "x", "--stop-on-stdin"}));
 #endif
 }
 
@@ -1457,11 +1462,12 @@ TEST_F(JobTest, TheChildGetsLcAllAndTheTsvArgumentsAndStopStillEndsIt) {
     EXPECT_EQ(lcAll(r.id, 1), "C.UTF-8");
     EXPECT_EQ(argsOf(r.id, 1),
               (std::vector<std::string>{"run", "--job", iniOf(r.id), "--format=tsv", "--progress=lines",
-                                        "--cache", defaultCache(), "--overwrite", "--stop-on-stdin"}));
+                                        "--cache", defaultCache(), "--datadir=" + defaultData(),
+                                        "--overwrite", "--stop-on-stdin"}));
     EXPECT_NE(detailsText().find("\n" +
                                  shownCommand("run --job " + iniOf(r.id) +
                                               " --format=tsv --progress=lines --cache " + defaultCache() +
-                                              " --overwrite") +
+                                              " --datadir=" + defaultData() + " --overwrite") +
                                  "\n"),
               std::string::npos)
         << detailsText();
@@ -1491,22 +1497,22 @@ TEST_F(JobTest, GivenFoldersPassThroughUnchanged) {
     ASSERT_TRUE(waitIdle());
     EXPECT_EQ(argsOf(r.id, 1),
               (std::vector<std::string>{"run", "--job", iniOf(r.id), "--format=tsv", "--progress=lines",
-                                        "--maps", bundled, "--maps", maps, "--cache", cache, "--overwrite",
-                                        "--stop-on-stdin"}));
+                                        "--maps", bundled, "--maps", maps, "--cache", cache,
+                                        "--datadir=" + defaultData(), "--overwrite", "--stop-on-stdin"}));
     EXPECT_TRUE(fs::is_directory(cache));
     EXPECT_FALSE(fs::exists(defaultCache()));
     EXPECT_EQ(store_->loadSettings().cacheDir, cache);
 }
 
-// ---- the records of --progress=lines (CLI 2026.10.10), captured in tests/fixtures/cli-2026.10.10/
+// ---- : the records of --progress=lines (CLI 2026.10.13), captured in tests/fixtures/cli-2026.10.13/
 
 namespace {
 const std::string kEsri = "{7B743985-BC5F-4AB6-8915-AC5DBBB8F552}";
 const std::string kMarks = "{AB8A8685-AEC6-4E16-80DA-DC4AC37E4777}";
 
-// A capture of the pinned CLI 2026.10.10 with the scratch directory of its capture replaced by /scr.
+// A capture of the pinned CLI 2026.10.13 with the scratch directory of its capture replaced by /scr.
 std::string fixtureNew(const std::string& name) {
-    std::string t = slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.10" / name);
+    std::string t = slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.13" / name);
     EXPECT_FALSE(t.empty()) << name;
     for (std::size_t at; (at = t.find("$SCRATCH")) != std::string::npos;)
         t.replace(at, 8, "/scr");
@@ -1537,7 +1543,7 @@ TEST_F(JobTest, TheDetailsStartWithTheProgressLines) {
         detailsText(),
         kSource + ": z13 243/243\nSeamarks: z13 243/243\n\n" +
             shownCommand("run --job " + iniOf(r.id) + " --format=tsv --progress=lines --cache " +
-                         defaultCache() + " --overwrite") +
+                         defaultCache() + " --datadir=" + defaultData() + " --overwrite") +
             "\nwarning: \"Esri World Imagery\": the provider's terms of use may not allow downloading tiles "
             "for "
             "offline use. Read https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9 "
@@ -1562,7 +1568,7 @@ TEST_F(JobTest, ARunWhosePhaseDownloadHasNoProgressGoesOnToWritingAndEndsDone) {
     EXPECT_EQ(detailsText(),
               "\n" +
                   shownCommand("run --job " + iniOf(r.id) + " --format=tsv --progress=lines --cache " +
-                               defaultCache() + " --overwrite") +
+                               defaultCache() + " --datadir=" + defaultData() + " --overwrite") +
                   "\n");
     jc().stop();
     ASSERT_TRUE(waitIdle(10000));
@@ -1603,7 +1609,7 @@ TEST_F(JobTest, AResumeShapedStreamShowsTheProgressRecordForItsGuidAsGiven) {
     EXPECT_EQ(detailsText(),
               kSource + ": z11 19/243\n\n" +
                   shownCommand("run --job " + iniOf(r.id) + " --format=tsv --progress=lines --cache " +
-                               defaultCache() + " --overwrite") +
+                               defaultCache() + " --datadir=" + defaultData() + " --overwrite") +
                   "\nerror: cannot continue /scr/data/AutoSave/25574d75ff1b/" + kMarks +
                   "/final.sls: the session does not match the job\n");
     EXPECT_TRUE(jc().busy());
@@ -1675,14 +1681,14 @@ TEST_F(JobTest, AProgressRecordWithAnEmptyGuidKeepsTheJobRunningAndTheNextRecord
     ASSERT_TRUE(waitIdle(10000));
 }
 
-// the real stderr of the pinned 2026.10.10 CLI. A run (the plugin's command) puts the CLI's
+//  proof 5: the real stderr of the pinned 2026.10.13 CLI. A run (the plugin's command) puts the CLI's
 // navigation notice into Details exactly once, after the phase lines and before the first tile; an export
 // capture of the same job holds none. Nothing in the plugin matches the wording: the line is shown as it
 // came.
 TEST_F(JobTest, TheCliNavigationNoticeReachesDetailsOnceForARunAndNotForAnExport) {
     store_->setFirstSuccessShown();
     const auto capture = [](const char* name) {
-        return slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.10" / name);
+        return slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.13" / name);
     };
     const std::string notice =
         "warning: \"EMODnet Bathymetry (world)\": not for navigation. This source is not an "
@@ -1952,8 +1958,8 @@ TEST_F(JobTest, TheSixtiethTickSavesDoneQuietly) {
     ASSERT_TRUE(waitIdle(10000));
 }
 
-// ---- the weather follow-up, the picture's time, the snapshot failure text.
-// The weather records are the captured lines of the pinned CLI 2026.10.10 (tests/fixtures/cli-2026.10.10/,
+// ---- : the weather follow-up, the picture's time, the snapshot failure text.
+// The weather records are the captured lines of the pinned CLI 2026.10.13 (tests/fixtures/cli-2026.10.13/,
 // read from the files, `$SCRATCH` replaced by /scr); only the first job's lines are made by hand (a normal
 // chart).
 
@@ -1962,7 +1968,7 @@ const std::string kRain = "{1A696D82-F258-41A4-BCD6-7648D9E08DE2}";
 const std::string kRainName = "RainViewer radar (worldwide, current)";
 
 std::string fixtureWeather(const std::string& name) {
-    std::string t = slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.10" / name);
+    std::string t = slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.13" / name);
     EXPECT_FALSE(t.empty()) << name;
     for (std::size_t at; (at = t.find("$SCRATCH")) != std::string::npos;)
         t.replace(at, 8, "/scr");
@@ -2018,7 +2024,8 @@ TEST_F(WeatherTest, AChartDoneStartsTheFollowUpAndTheResultsJoin) {
     ASSERT_EQ(runs(next.id), 1);
     EXPECT_EQ(argsOf(next.id, 1),
               (std::vector<std::string>{"run", "--job", iniOf(next.id), "--format=tsv", "--progress=lines",
-                                        "--cache", defaultCache(), "--overwrite", "--stop-on-stdin"}));
+                                        "--cache", defaultCache(), "--datadir=" + defaultData(),
+                                        "--overwrite", "--stop-on-stdin"}));
     EXPECT_EQ(stripText(), firstHeadline() + " Chart added: North Sea - Weather.");
     EXPECT_EQ(buttons(), (std::vector<std::string>{"Show", "Close"}));
     const std::string d = detailsText();

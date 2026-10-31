@@ -32,8 +32,10 @@ struct JobSpec {
 std::string formatNumber(double value, int decimals); // std::to_chars, fixed, '.', locale-independent
 std::string jobIni(const JobSpec& job);               // exact text
 // `--format=tsv` always; `--progress=lines` for estimate, run and export.
-// The path values (--cache, --maps, --route, --job) are in the form of `os` (native separators on
-// Windows); the default is this system.
+// The path values (--cache, --maps, --route, --job) are in the form of `os`; the default is this system.
+// the `--version` probe: "--version" and, when Settings::cliDataDir is set, "--datadir=<dir>" (the
+// CLI writes nothing outside its data folder).
+std::vector<std::string> versionArguments(const Settings& s, Os os = kHostOs);
 std::vector<std::string> sourcesArguments(const Settings& s, Os os = kHostOs);
 std::vector<std::string> estimateArguments(const JobSpec& job, const Settings& s, Os os = kHostOs);
 enum class RunKind { Download, BuildFromSaved, Update };

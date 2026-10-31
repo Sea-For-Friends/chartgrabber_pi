@@ -382,6 +382,31 @@ TEST_F(Store, CliCacheRootWithoutAPrivateDataLocationIsUnderHomeOpencpn) {
     EXPECT_EQ(root, (root_ / "home").string() + "/.opencpn/plugins/chartgrabber/cache");
 }
 
+TEST_F(Store, CliCacheRootWithAnEmptyPrivateDataLocationIsUnderHomeOpencpn) {
+    ocpn_fake::privateData = wxString();
+    const std::string root = store_->cliCacheRoot(cg::Settings{});
+    const std::string data = store_->cliDataDir();
+    ocpn_fake::privateData = wxString::FromUTF8((root_ / "private").string());
+    EXPECT_EQ(root, (root_ / "home").string() + "/.opencpn/plugins/chartgrabber/cache");
+    EXPECT_EQ(data, (root_ / "home").string() + "/.opencpn/plugins/chartgrabber/cli-data");
+}
+
+// : --datadir of every CLI run, whatever CacheDir the sailor chose.
+TEST_F(Store, CliDataDirIsPrivateDataCliDataAndNotTheCacheDir) {
+    const std::string want = (root_ / "private").string() + "/plugins/chartgrabber/cli-data";
+    EXPECT_EQ(store_->cliDataDir(), want);
+    cg::Settings s;
+    s.cacheDir = "/ca\xC3\xA9 che";
+    const cg::Settings out = store_->cliSettings(s);
+    EXPECT_EQ(out.cliDataDir, want);
+    EXPECT_EQ(out.cacheDir, "/ca\xC3\xA9 che");
+    EXPECT_TRUE(s.cliDataDir.empty());
+    ocpn_fake::privateDataNull = true;
+    const std::string nul = store_->cliDataDir();
+    ocpn_fake::privateDataNull = false;
+    EXPECT_EQ(nul, (root_ / "home").string() + "/.opencpn/plugins/chartgrabber/cli-data");
+}
+
 TEST_F(Store, SourcesDirIsTheKeyOrTheDefaultUnderHome) {
     cg::Settings s;
     EXPECT_EQ(store_->sourcesDir(s), (root_ / "home").string() + "/Charts/Chart sources");

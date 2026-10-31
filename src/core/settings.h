@@ -16,18 +16,20 @@ inline constexpr std::string_view kCliInstallDir = "/usr/bin/";
 inline constexpr std::string_view kCliWindowsFolder = "Chart Grabber CLI";
 
 struct Settings {
-    std::string cliPath; // empty: the automatic places (cg::defaultCliPaths), else kDefaultCliName on PATH
+    std::string cliPath; // empty: the automatic places (cg::defaultCliPaths: bundled, /usr/bin), else
+                         // kDefaultCliName on PATH
     std::string
         mapsDir; // the chart-sources folder; empty: <home>/Charts/Chart sources (ConfigStore::sourcesDir)
     std::vector<std::string> cliMaps; // only in the cliSettings copy: the folders passed as --maps, in order
                                       // (bundled sources, then the sailor's folder when it holds a source)
     std::string cacheDir;             // empty: --cache not passed
-    std::string chartDir;             // empty: <home>/Charts/ChartGrabber
-    std::string proxy;                // empty: not passed
-    int threads = 2;                  // 1 in slow mode
-    double corridorNm = 2.0;          // total width (app-cli Q-5)
-    bool slowConnection = false;      // 1 thread, no auto-retry, budget on
-    int dataBudgetMb = 100;           // applies only when slowConnection
+    std::string cliDataDir;  // only in the cliSettings copy: --datadir=DIR for every run; empty: not passed
+    std::string chartDir;    // empty: <home>/Charts/ChartGrabber
+    std::string proxy;       // empty: not passed
+    int threads = 2;         // 1 in slow mode
+    double corridorNm = 2.0; // total width (app-cli Q-5)
+    bool slowConnection = false; //: 1 thread, no auto-retry, budget on
+    int dataBudgetMb = 100;      // applies only when slowConnection
     bool registerCharts = true;
     bool stripOnChart =
         false; // key StripOnChart: the progress strip is a child of the chart canvas

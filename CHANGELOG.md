@@ -8,15 +8,10 @@ Versions are calendar-based: `YYYY.MM.N` (year and month of the release, N = rel
 - Needs Chart Grabber CLI 2026.10.9 or newer (2026.10.13 is bundled and recommended).
 - The bundled CLI no longer writes a font cache outside OpenCPN's data folder, and prints no font warnings on newer systems.
 - The Linux CLI needs the graphics libraries `libopengl0`, `libglx0` and `libegl1`; OpenCPN's own package installs them on Debian 12, Debian 13 and Ubuntu 24.04.
-- The progress window stays on the screen and can be moved; on Windows it can also be closed with Escape or the window's Close.
-- Updating from 2026.10.4 or older: Import the new file; a separately installed CLI is no longer needed. A CLI chosen under Settings > Advanced is still used: **Use default** there switches to the bundled one.
-
-## 2026.10.5
-
-- The plugin file now carries the Chart Grabber CLI: Import the plugin and nothing else is needed on Debian 12 and 13 (64-bit PC and ARM 64-bit), Ubuntu and Windows. A CLI you installed yourself is not needed; the plugin uses its own copy first. On Arch and CachyOS the plugin file does not carry the CLI yet: choose a CLI you unpacked yourself in Settings.
-- Needs Chart Grabber CLI 2026.10.9 or newer (2026.10.12 is bundled and recommended).
 - New file for Debian 12, ARM 64-bit (Raspberry Pi OS bookworm); Ubuntu 24.04 ARM 64-bit takes it too.
 - The CLI runs with a data folder of the plugin (`--datadir`), so it leaves nothing in `~/.config/chart-grabber` or `~/.local/share/chart-grabber`.
+- The progress window stays on the screen and can be moved; on Windows it can also be closed with Escape or the window's Close.
+- Updating from 2026.10.4 or older: Import the new file; a separately installed CLI is no longer needed. A CLI chosen under Settings > Advanced is still used: **Use default** there switches to the bundled one.
 
 ## 2026.10.4
 
