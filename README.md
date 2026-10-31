@@ -94,6 +94,10 @@ with a short README per source. To add one, put its `.zmp` folder or `.source.js
 folder of your own (by default `Charts/Chart sources` in your home folder) and, if you use another folder, choose it in
 Preferences, row "Chart sources"; it is read after the bundled sources.
 
+[![OSS hosting by cloudsmith](https://img.shields.io/badge/OSS%20hosting%20by-cloudsmith-blue)](https://cloudsmith.com)
+
+Package repository hosting is graciously provided by [Cloudsmith](https://cloudsmith.com).
+
 ## Licence
 
 GPL-3.0-or-later, see `LICENSE`. `api/ocpn_plugin.h` is OpenCPN's own header (GPL-2.0-or-later). The chart source
