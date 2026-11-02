@@ -30,11 +30,11 @@ Chart Grabber is an OpenCPN plugin that downloads charts for use offline. You pi
 
 ## Install
 
-You need OpenCPN 5.10.2 or newer. The [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) 2026.10.13, the program that does the download, is inside the plugin file on every system: **Import** is the only install step. Chart Grabber is not in OpenCPN's plugin catalog yet; once it is listed, the Plugin Manager can install and update it, until then (and always on Arch and CachyOS) use Import.
+You need OpenCPN 5.10.2 or newer. The [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) 2026.10.14, the program that does the download, is inside the plugin file on every system: **Import** is the only install step. Chart Grabber is not in OpenCPN's plugin catalog yet; once it is listed, the Plugin Manager can install and update it, until then (and always on Arch and CachyOS) use Import.
 
 1. **Pick the tarball** for your system (full notes: the release's COMPAT.md):
 
-   | System | `chartgrabber_pi-2026.10.6-` ... |
+   | System | `chartgrabber_pi-2026.10.7-` ... |
    |---|---|
    | Debian 13 x86-64 | `debian-x86_64-13-x86_64.tar.gz` |
    | Debian 13 arm64, Raspberry Pi OS trixie 64-bit | `debian-arm64-13-arm64.tar.gz` |
@@ -43,8 +43,13 @@ You need OpenCPN 5.10.2 or newer. The [Chart Grabber CLI](https://github.com/Sea
    | Ubuntu 26.04 x86-64 / arm64 | `ubuntu-x86_64-26.04-x86_64.tar.gz` / `ubuntu-arm64-26.04-arm64.tar.gz` |
    | Arch / CachyOS | `arch-x86_64-rolling-x86_64.tar.gz` / `cachyos-x86_64-rolling-x86_64.tar.gz` |
    | Windows 10 and newer | `windows-x86.tar.gz` |
+   | macOS 12 or newer (Apple and Intel) | `macos-universal.tar.gz` |
+   | Debian 12 / Debian 13, 32-bit ARM (armhf) | `debian-armhf-12-armhf.tar.gz` / `debian-armhf-13-armhf.tar.gz` |
+   | Raspberry Pi OS 32-bit (Trixie) | `raspbian-armhf-13-armhf.tar.gz` |
+   | Flatpak OpenCPN 5.12 (runtime 24.08), 64-bit PC / ARM 64-bit | `flatpak-x86_64-24.08-x86_64.tar.gz` / `flatpak-aarch64-24.08-aarch64.tar.gz` |
+   | Flatpak OpenCPN 5.14 (runtime 25.08), 64-bit PC / ARM 64-bit | `flatpak-x86_64-25.08-x86_64.tar.gz` / `flatpak-aarch64-25.08-aarch64.tar.gz` |
 
-   There is no build for Ubuntu 22.04.
+   There is no build for Ubuntu 22.04, for the Raspberry Pi Zero, Zero W and Pi 1 (32-bit ARM needs a Pi 2 or newer), for Raspberry Pi OS 32-bit Bookworm, or for OpenCPN 5.10.2 on Flatpak. On Flatpak keep your chart folder inside your home folder.
 2. **Import**: OpenCPN, Options, Plugins, **Import plugin...**, choose the tarball, enable Chart Grabber. To update, import the new tarball over the old one.
    OpenCPN 5.10.2 (Debian 12 and 13 packages) may show no Chart Grabber toolbar button until you press **OK** to close Options or restart OpenCPN; until then use the right-click menu **Chart Grabber: new chart of this view...**.
 3. **Ubuntu 24.04**: its own OpenCPN (5.8.4) is too old; install OpenCPN from the OpenCPN PPA (`ppa:opencpn/opencpn`).
@@ -56,6 +61,12 @@ The Linux file needs the graphics libraries `libopengl0`, `libglx0` and `libegl1
 The plugin uses the CLI from its own folder first. A CLI you installed yourself (the `.deb` or the Windows zip of the [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) releases, for scripts and automation) is used only when you choose it in [Settings](#settings-reference).
 
 **Updating from 2026.10.4 or older** (those needed a separately installed CLI): import the new tarball over the old one; nothing else is needed, and the separate CLI can be removed unless you use it in scripts. If you once chose a CLI under Settings, Advanced, **Chart Grabber CLI**, the plugin keeps using that one: click **Use default** in that row to switch to the CLI inside the plugin.
+
+### OpenCPN for Android
+
+OpenCPN for Android is not supported, and Chart Grabber does not run there. Make the charts on a PC or a Raspberry Pi
+(the systems above), then copy the `.mbtiles` files to the chart folder on the tablet and add that folder in OpenCPN under
+Options, Charts, **Chart Files**. How the copy is done depends on the tablet; this route is not tested.
 
 ## First chart in 2 minutes
 
@@ -167,12 +178,32 @@ OpenCPN, Options, Plugins, Chart Grabber, **Preferences**.
 | Symptom | Fix |
 |---|---|
 | "[Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) was not found" | Import the plugin file of this release again (the CLI is inside it), or choose the CLI under Advanced in Settings. |
-| "[Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) ... is too old" | Import the plugin file of this release (it carries CLI 2026.10.13), or choose a CLI 2026.10.9 or newer under Advanced in Settings. |
+| "[Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) ... is too old" | Import the plugin file of this release (it carries CLI 2026.10.14), or choose a CLI 2026.10.9 or newer under Advanced in Settings. |
 | Chart added but not visible | Click it in the chart bar; turn on OpenGL (Options > Display > Advanced). |
 | Source greyed in More sources, or Seamarks on top disabled | It cannot be made into an OpenCPN chart; the text beside it says why. |
 | "Area too large for this detail" | Choose a smaller area or less detail. |
 | No Chart Grabber button on the toolbar | OpenCPN 5.10.2 adds it only at startup or on Options **OK**: press OK or restart OpenCPN. Meanwhile right-click the chart: **Chart Grabber: new chart of this view...**. |
 | Import plugin refuses the tarball | Check the [system table](#install) and OpenCPN 5.10.2 or newer. |
+| macOS asks "OpenCPN was prevented from modifying apps" or for local network access | Deny it or ignore it: in our macOS test (OpenCPN 5.12.4) nothing broke. The local network prompt appears when OpenCPN is started from a terminal app. |
+
+### Uninstall
+
+Options, Plugins, Chart Grabber, **Uninstall** removes the program only. Your charts and the plugin's data stay on purpose,
+so that nothing is lost. Delete them by hand if you do not want them. The plugin data folder can be large (one macOS test
+had 11 MB); deleting it frees the space, but the next download then fetches all of its data again, which takes time and data.
+
+| Your system | Plugin data folder to delete |
+|---|---|
+| Linux (Debian, Ubuntu, Arch, CachyOS) | `~/.opencpn/plugins/chartgrabber/` |
+| Flatpak OpenCPN | `~/.var/app/org.opencpn.OpenCPN/config/opencpn/plugins/chartgrabber/` |
+| macOS | `~/Library/Preferences/opencpn/plugins/chartgrabber/` |
+| Windows | `C:\ProgramData\opencpn\plugins\chartgrabber\` |
+
+Also stays, and can be removed by hand:
+
+- your chart files (`.mbtiles`): the folder `Charts/ChartGrabber` in your home folder, or the folder you chose under Settings, Advanced, **Save charts in**;
+- the chart folder entry in OpenCPN: Options, Charts, **Chart Files**, select the folder, **Remove**;
+- OpenCPN's own icon cache, the `iconCacheSVG` folder in the OpenCPN data folder (the one in the table, above `plugins`); OpenCPN recreates it as needed.
 
 ## Help and licence
 

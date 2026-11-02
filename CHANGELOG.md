@@ -2,6 +2,14 @@
 
 Versions are calendar-based: `YYYY.MM.N` (year and month of the release, N = release count within that month, from 0).
 
+## 2026.10.7
+
+- New systems: macOS 12 or newer (Apple and Intel Macs, one file); OpenCPN from Flathub (Flatpak) versions 5.12 and 5.14 on 64-bit PC and ARM 64-bit; Raspberry Pi OS 32-bit (Trixie) and Debian 12 and 13 on 32-bit ARM (armhf). OpenCPN 5.10.2 on Flatpak is not served: Flathub no longer has it.
+- Needs Chart Grabber CLI 2026.10.9 or newer (2026.10.14 is bundled and recommended).
+- The bundled CLI is 2026.10.14: it also runs on 32-bit ARM and macOS, and the 64-bit Linux files work on systems with glibc 2.35 or newer.
+- The New chart page warns "This is OpenCPN's starting view. Move the chart to your area first." when **Current view** is still the view OpenCPN opens with.
+- Updating from 2026.10.6: Import the new file over the old one.
+
 ## 2026.10.6
 
 - Every plugin file now carries the Chart Grabber CLI, Arch and CachyOS too: Import the plugin and nothing else is needed.
