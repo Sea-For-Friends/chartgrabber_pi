@@ -149,7 +149,7 @@ ProgressStrip::ProgressStrip(wxWindow* canvas, const Look& look, Role role, Conf
             else if (!running_)
                 Hide(); // what every result Close does
         };
-        frame_->Bind(wxEVT_CHAR_HOOK, [this, escape](wxKeyEvent& e) {
+        frame_->Bind(wxEVT_CHAR_HOOK, [escape](wxKeyEvent& e) {
             cg::guarded("strip key", [&] {
                 if (e.GetKeyCode() != WXK_ESCAPE)
                     return e.Skip();
@@ -158,7 +158,7 @@ ProgressStrip::ProgressStrip(wxWindow* canvas, const Look& look, Role role, Conf
         });
         // the system menu's Close / Alt+F4 act like Escape; the frame is never destroyed behind the strip's
         // back
-        frame_->Bind(wxEVT_CLOSE_WINDOW, [this, escape](wxCloseEvent& e) {
+        frame_->Bind(wxEVT_CLOSE_WINDOW, [escape](wxCloseEvent& e) {
             cg::guarded("strip close", [&] {
                 if (!e.CanVeto())
                     return e.Skip();
@@ -392,7 +392,9 @@ void ProgressStrip::place() {
             fitText(std::max(text_->GetBestSize().x - over, 1));
             column_->Layout();
         }
-        const bool changed = syncDetails() | updateDetailsButton(); // a new text may change the row
+        const bool detailsChanged = syncDetails(); // both run: no short-circuit
+        const bool buttonChanged = updateDetailsButton();
+        const bool changed = detailsChanged || buttonChanged; // a new text may change the row
         if (!changed)
             break;
     }

@@ -50,6 +50,9 @@ std::string formatZoomList(const std::vector<int>& zooms);
 // Pixels per metre (ground) at which the box's larger relative side fills the given pixels.
 double fitScalePpm(const BBox& box, int pixWidth, int pixHeight);
 LatLon centre(const BBox& box);
+// True when the box centre is within 0.01 degree (lat and lon) of OpenCPN's starting view: 0, 0 or
+// Georgetown SC 33.358 N 79.282 W.
+bool isStartView(const BBox& box);
 // Zoom limits; `zooms` sorted and unique. nullopt limit: unchanged; else the zooms <= limit, or
 // {limit} when that leaves none of a non-empty input (the source's last level).
 std::vector<int> limitZooms(const std::vector<int>& zooms, std::optional<int> limit);

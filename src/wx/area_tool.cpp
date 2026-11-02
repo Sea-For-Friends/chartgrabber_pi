@@ -7,7 +7,11 @@
 #include <wx/log.h>
 #include <wx/pen.h>
 
+#ifdef __APPLE__
+#include <OpenGL/gl.h>
+#else
 #include <GL/gl.h>
+#endif
 #include <algorithm>
 #include <cmath>
 #include <utility>

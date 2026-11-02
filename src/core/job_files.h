@@ -29,8 +29,14 @@ struct JobSpec {
     int threads = 2;
 };
 
-std::string formatNumber(double value, int decimals); // std::to_chars, fixed, '.', locale-independent
-std::string jobIni(const JobSpec& job);               // exact text
+// Fixed notation, '.', whatever the C and C++ locales are (a classic-locale stream: the floating <charconv>
+// overloads are missing in Apple libc++ before macOS 13.3 / 26.0).
+std::string formatNumber(double value, int decimals);
+// Whole text is one number as std::from_chars(double) accepts it (no space, no '+', no hex; "inf", "nan");
+// false otherwise, also out of range. Locale-independent. Known difference: macOS libc++ streams reject
+// subnormals ("1e-310", ERANGE) that from_chars accepts; irrelevant for coordinates and shares.
+bool parseDouble(std::string_view text, double& out);
+std::string jobIni(const JobSpec& job); // exact text
 // `--format=tsv` always; `--progress=lines` for estimate, run and export.
 // The path values (--cache, --maps, --route, --job) are in the form of `os`; the default is this system.
 // the `--version` probe: "--version" and, when Settings::cliDataDir is set, "--datadir=<dir>" (the

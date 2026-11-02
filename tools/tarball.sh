@@ -2,8 +2,8 @@
 # Pack the built plugin into the Plugin Manager tarball .
 # Usage: tools/tarball.sh <build-dir> [out-dir] [--cli-bundle <dir>]     (out-dir default: <build-dir>)
 # --cli-bundle: the content of <dir> (the unpacked core bundle, named
-# chart-grabber-cli-<N.N.N>-(linux-x86_64|linux-arm64|win64)) goes to .../chartgrabber_pi/cli/; modes: the program and every
-# *.so / *.so.* 755, the rest 644. Exit 2: name off the pattern, platform not fitting <target>/<target-arch> of metadata.xml,
+# chart-grabber-cli-<N.N.N>-(linux-x86_64|linux-arm64|linux-armhf|win64|macos-universal|macos-arm64)) goes to .../chartgrabber_pi/cli/; modes: the
+# program and every *.so / *.so.* (macOS: every file whose `file -b` starts with Mach-O) 755, the rest 644. Exit 2: name off the pattern, platform not fitting <target>/<target-arch> of metadata.xml,
 # no top-level executable chart-grabber-cli[.exe] (Windows: a regular file, exec bit not needed), any symlink, a chart-grabber.conf or portable.txt (file or folder, any depth: the CLI would go portable), or no NOTICE, LICENSE, licenses/. The bundled program is never run.
 # The two BUILT-FROM.txt lines "cli: <dir name>" and "cli-content-sha256: <hex>" go to stderr (the release record takes them).
 # The target/version/arch of metadata.xml are fixed at configure time (tools/vm.sh reads the tuple in the VM):
@@ -16,6 +16,13 @@
 # tools/vm.sh passes it), owner 0:0, sorted names, fixed modes (dirs 755, files 644, the library 755), gzip -n.
 # A <target> starting with msvc: <build>/chartgrabber_pi.dll, entries metadata.xml, plugins/chartgrabber_pi.dll (755),
 # plugins/chartgrabber_pi/data/ (the same icons and sources-<version>/).
+# A <target> darwin-wx32: <build>/libchartgrabber_pi.dylib, entries metadata.xml,
+# OpenCPN.app/Contents/PlugIns/libchartgrabber_pi.dylib (755), OpenCPN.app/Contents/SharedSupport/plugins/chartgrabber_pi/{data,cli}/
+# (OpenCPN's macOS import, 5.10.2 model/src/plugin_handler.cpp:640-680). A macos-arm64 bundle needs <target-arch> exactly arm64
+# (the CLI has no x86_64); macos-universal fits either; a Linux or Windows bundle never fits. Packed on Linux (GNU tar).
+# A <target> starting with flatpak-: no usr/; lib/opencpn/libchartgrabber_pi.so (755),
+# share/opencpn/plugins/chartgrabber_pi/{data,cli}/ (a Flatpak OpenCPN's import, 5.10.2 model/src/plugin_handler.cpp:549-578).
+# Fits: <target-arch> x86_64 takes linux-x86_64, aarch64 takes linux-arm64, anything else is refused. Plain Linux: linux-<arch> (armhf too).
 # The Linux tarball is built inside the VM of its architecture; the Windows one is packed on the host by tools/vm.sh from the DLL
 # fetched from plugin-win10 and the data of the synced commit.
 set -euo pipefail
@@ -38,9 +45,11 @@ out=$(cd "$out" && pwd)
 target=$(sed -n 's|.*<target>\(.*\)</target>.*|\1|p' "$build/metadata.xml" 2>/dev/null | head -1 || true)
 # Windows: <target> msvc*: the DLL of the Visual Studio build, layout plugins/ (the Plugin Manager import moves *.dll to bin\
 # and plugins/ to share\, 5.10.2 model/src/plugin_handler.cpp:515-535); tools/vm.sh packs it on the host from the fetched files.
-win=0
+win=0 mac=0 flat=0
+[[ $target == flatpak-* ]] && flat=1
 [[ ${target,,} == msvc* ]] && win=1
-if ((win)); then lib=$build/chartgrabber_pi.dll; else lib=$build/libchartgrabber_pi.so; fi
+[[ $target == darwin-wx32 ]] && mac=1
+if ((win)); then lib=$build/chartgrabber_pi.dll; elif ((mac)); then lib=$build/libchartgrabber_pi.dylib; else lib=$build/libchartgrabber_pi.so; fi
 for f in "$lib" "$build/metadata.xml" "$build/tarball-name.txt" \
          "$here/data/chartgrabber_tool.svg" "$here/data/chartgrabber_tool_toggled.svg" \
          "$here/data/chartgrabber_tool_rollover_toggled.svg"; do
@@ -68,12 +77,22 @@ done
 cliname=
 if [[ -n $bundle ]]; then
     cliname=$(basename "$bundle")
-    clire='^chart-grabber-cli-[0-9]+\.[0-9]+\.[0-9]+-(linux-x86_64|linux-arm64|win64)$'
-    [[ $cliname =~ $clire ]] || refuse "bundle dir name '$cliname' does not match chart-grabber-cli-N.N.N-(linux-x86_64|linux-arm64|win64)"
+    clire='^chart-grabber-cli-[0-9]+\.[0-9]+\.[0-9]+-(linux-x86_64|linux-arm64|linux-armhf|win64|macos-universal|macos-arm64)$'
+    [[ $cliname =~ $clire ]] || refuse "bundle dir name '$cliname' does not match chart-grabber-cli-N.N.N-(linux-x86_64|linux-arm64|linux-armhf|win64|macos-universal|macos-arm64)"
     plat=${BASH_REMATCH[1]}
     arch=$(sed -n 's|.*<target-arch>\(.*\)</target-arch>|\1|p' "$build/metadata.xml" | head -1)
     if ((win)); then want=win64; exe=chart-grabber-cli.exe; else want=linux-$arch; exe=chart-grabber-cli; fi
-    [[ $plat == "$want" ]] || refuse "bundle $plat does not fit this build (target '$target', arch '$arch')"
+    if ((flat)); then
+        case $arch in x86_64) want=linux-x86_64 ;; aarch64) want=linux-arm64 ;; *) want="(none: flatpak arch '$arch')" ;; esac
+    fi
+    if ((mac)); then
+        [[ $plat == macos-* ]] || refuse "bundle $plat does not fit this build (target '$target', arch '$arch')"
+        [[ $plat != macos-arm64 || $arch == arm64 ]] ||
+            refuse "bundle macos-arm64 needs <target-arch> arm64, this build has '$arch': rebuild with -DCMAKE_OSX_ARCHITECTURES=arm64: the CLI has no x86_64"
+        command -v file >/dev/null || refuse "no file(1) to tell the Mach-O files of the bundle"
+    else
+        [[ $plat == "$want" ]] || refuse "bundle $plat does not fit this build (target '$target', arch '$arch')"
+    fi
     if ((win)); then [[ -f $bundle/$exe ]]; else [[ -f $bundle/$exe && -x $bundle/$exe ]]; fi ||
         refuse "bundle has no executable top-level $exe"
     for t in NOTICE LICENSE; do [[ -f $bundle/$t ]] || refuse "bundle has no $t"; done
@@ -96,6 +115,12 @@ top=$stage/$name
 if ((win)); then
     libdst=$top/plugins/chartgrabber_pi.dll
     data=$top/plugins/chartgrabber_pi/data
+elif ((mac)); then
+    libdst=$top/OpenCPN.app/Contents/PlugIns/libchartgrabber_pi.dylib
+    data=$top/OpenCPN.app/Contents/SharedSupport/plugins/chartgrabber_pi/data
+elif ((flat)); then
+    libdst=$top/lib/opencpn/libchartgrabber_pi.so
+    data=$top/share/opencpn/plugins/chartgrabber_pi/data
 else
     libdst=$top/usr/lib/opencpn/libchartgrabber_pi.so
     data=$top/usr/share/opencpn/plugins/chartgrabber_pi/data
@@ -121,6 +146,11 @@ chmod 0755 "$libdst"
 if [[ -n $bundle ]]; then
     find "$clidst" -type f \( -name '*.so' -o -name '*.so.*' \) -exec chmod 0755 {} +
     chmod 0755 "$clidst/$exe"
+    if ((mac)); then
+        while IFS= read -r -d '' f; do
+            [[ $(file -b "$f") == Mach-O* ]] && chmod 0755 "$f"
+        done < <(find "$clidst" -type f -print0)
+    fi
     sum=$(cd "$bundle" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
     echo "cli: $cliname" >&2
     echo "cli-content-sha256: $sum" >&2

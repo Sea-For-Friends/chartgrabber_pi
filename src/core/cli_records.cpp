@@ -2,6 +2,7 @@
 #include "cli_records.h"
 
 #include "geo_math.h"
+#include "job_files.h"
 
 #include <algorithm>
 #include <charconv>
@@ -31,12 +32,13 @@ template <class T> bool num(std::string_view f, T& out) {
         return false;
     }
     T v{};
-    const auto r = std::from_chars(f.data(), f.data() + f.size(), v);
-    if (r.ec != std::errc() || r.ptr != f.data() + f.size()) {
-        return false;
-    }
     if constexpr (std::is_floating_point_v<T>) {
-        if (!std::isfinite(v)) { // nan / inf are not numbers of the contract
+        if (!parseDouble(f, v) || !std::isfinite(v)) { // nan / inf are not numbers of the contract
+            return false;
+        }
+    } else {
+        const auto r = std::from_chars(f.data(), f.data() + f.size(), v);
+        if (r.ec != std::errc() || r.ptr != f.data() + f.size()) {
             return false;
         }
     }

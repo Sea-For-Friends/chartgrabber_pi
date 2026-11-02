@@ -141,6 +141,10 @@ wxString phaseLine(const std::string& phase, const wxString& source) {
     return source + ": " + cg::fromUtf8(phase);
 }
 
+wxString startViewText() {
+    return _("This is OpenCPN's starting view. Move the chart to your area first.");
+}
+
 wxString cacheRefusedText() {
     return _("The folder for saved tiles cannot be used. Choose another one under Advanced in Preferences "
              "(Saved tiles in).");

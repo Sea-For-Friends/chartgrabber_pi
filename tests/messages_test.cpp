@@ -233,7 +233,7 @@ TEST(MessagesOutcome, FixedHeadlinesOfSection93) {
         EXPECT_EQ(u(outcomeHeadline(o, none, {}, "ignored")), text) << static_cast<int>(o);
 }
 
-// : exit 4 whose last error is the CLI's snapshot line (a real line, tests/fixtures/cli-2026.10.13/
+// : exit 4 whose last error is the CLI's snapshot line (a real line, tests/fixtures/cli-2026.10.14/
 // run-weather-snapshot-failed.stderr) gives the weather text; any other last error keeps the landed one.
 TEST(MessagesOutcome, ASnapshotFailureHasItsOwnHeadline) {
     EXPECT_EQ(u(outcomeHeadline(cg::Outcome::DownloadIncomplete, {}, {},
@@ -284,7 +284,7 @@ TEST(MessagesOutcome, RefusalTextBranches) {
 }
 
 // : the S-15 and S-16 refusals. The first and third lines are the captured ones (tests/fixtures/
-// cli-2026.10.13/run-cache-refused.stderr, estimate-area-too-large.stderr); the "cannot open the cache"
+// cli-2026.10.14/run-cache-refused.stderr, estimate-area-too-large.stderr); the "cannot open the cache"
 // forms are HAND-MADE from core v2026.10.6 src/cg/app/job_checks.cpp (the capture produced the other form).
 TEST(MessagesOutcome, TheCacheAndAreaSizeRefusals) {
     const std::string cache =
@@ -303,9 +303,10 @@ TEST(MessagesOutcome, TheCacheAndAreaSizeRefusals) {
         large);
     EXPECT_EQ(u(tooLargeText()), large);
     EXPECT_EQ(u(cacheRefusedText()), cache);
+    EXPECT_EQ(u(startViewText()), "This is OpenCPN's starting view. Move the chart to your area first.");
     // : the captured BerkeleyDB line also holds ": cannot open the cache: ", so its check comes first.
     // : the line is the captured fixture, made a lastError the way the runner does.
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.13/run-cache-berkeleydb.stderr",
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.14/run-cache-berkeleydb.stderr",
                      std::ios::binary);
     std::string line;
     ASSERT_TRUE(std::getline(in, line));
@@ -531,7 +532,8 @@ TEST(MessagesAscii, EveryFixedTextIsAscii) {
                                        outcomeHeadline(cg::Outcome::Killed, {}, {}, ""),
                                        creditText("x"),
                                        updateWeatherMenuText(),
-                                       snapshotAgeText(60)};
+                                       snapshotAgeText(60),
+                                       startViewText()};
     for (const wxString& t : all) {
         EXPECT_FALSE(t.empty());
         for (unsigned char c : u(t))
@@ -849,7 +851,8 @@ TEST(MessagesSweep, NoTextOfMessagesHSaysMapOrTileProgramAndAllAreAscii) {
           myChartsButtonText(3),
           creditText("x"),
           updateWeatherMenuText(),
-          snapshotAgeText(60)})
+          snapshotAgeText(60),
+          startViewText()})
         add(t);
     EXPECT_GT(all.size(), 400u);
     for (const wxString& t : all) {

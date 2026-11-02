@@ -298,6 +298,21 @@ TEST(FitScalePpm, LongitudeShrinksWithCosOfCentreLatitude) {
     EXPECT_NEAR(fitScalePpm(BBox{0, 59, 2, 61}, 300, 1000), 300.0 / 111320.0, 1e-12);
 }
 
+TEST(IsStartView, ZeroZeroAndGeorgetownWithinTheToleranceOnly) {
+    // BBox is {west, south, east, north}; each box is centred on (lat, lon).
+    const auto at = [](double lat, double lon) { return BBox{lon - 2, lat - 1, lon + 2, lat + 1}; };
+    EXPECT_TRUE(isStartView(at(0, 0)));
+    EXPECT_TRUE(isStartView(at(0.009, -0.009)));
+    EXPECT_TRUE(isStartView(at(33.358, -79.282)));
+    EXPECT_TRUE(isStartView(at(33.366, -79.274)));
+    EXPECT_FALSE(isStartView(at(0.011, 0))) << "lat alone outside";
+    EXPECT_FALSE(isStartView(at(0, 0.011))) << "lon alone outside";
+    EXPECT_FALSE(isStartView(at(33.369, -79.282)));
+    EXPECT_FALSE(isStartView(at(33.358, -79.271)));
+    EXPECT_FALSE(isStartView(at(33.358, 79.282))) << "east, not west";
+    EXPECT_FALSE(isStartView(at(50.0, 10.0)));
+}
+
 TEST(Centre, IsTheMidpoint) {
     const LatLon c = centre(BBox{10, 20, 14, 30});
     EXPECT_EQ(c.lat, 25);

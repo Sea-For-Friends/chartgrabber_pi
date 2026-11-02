@@ -9,7 +9,9 @@
 #include <charconv>
 #include <cmath>
 #include <cstdio>
+#include <iomanip>
 #include <map>
+#include <sstream>
 
 namespace cg {
 
@@ -37,8 +39,7 @@ std::optional<BBox> parseBBox(std::string_view text) {
         if (part.empty() || (i < 3) != (comma != std::string_view::npos)) {
             return std::nullopt;
         }
-        const auto r = std::from_chars(part.data(), part.data() + part.size(), v[i]);
-        if (r.ec != std::errc() || r.ptr != part.data() + part.size()) {
+        if (!parseDouble(part, v[i])) {
             return std::nullopt;
         }
         text = comma == std::string_view::npos ? std::string_view() : text.substr(comma + 1);
@@ -92,9 +93,51 @@ std::string xmlEscape(const std::string& s) {
 } // namespace
 
 std::string formatNumber(double value, int decimals) {
-    char buf[64];
-    const auto r = std::to_chars(buf, buf + sizeof buf, value, std::chars_format::fixed, decimals);
-    return std::string(buf, r.ptr);
+    std::ostringstream os;
+    os.imbue(std::locale::classic());
+    os << std::fixed << std::setprecision(decimals) << value;
+    return os.str();
+}
+
+bool parseDouble(std::string_view text, double& out) {
+    // The stream accepts a leading space and '+' that from_chars refuses, and has no inf / nan.
+    std::string_view body = text.substr(0, 1) == "-" ? text.substr(1) : text;
+    std::string low(body);
+    for (char& c : low) {
+        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    }
+    if (low == "inf" || low == "infinity" || low == "nan" ||
+        (low.size() >= 5 && low.compare(0, 4, "nan(") == 0 && low.back() == ')' &&
+         std::all_of(low.begin() + 4, low.end() - 1,
+                     [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; }))) {
+        const bool inf = low[0] == 'i';
+        out = inf ? HUGE_VAL : std::nan("");
+        if (text.size() != body.size()) {
+            out = -out;
+        }
+        return true;
+    }
+    if (body.empty() || !(std::isdigit(static_cast<unsigned char>(body[0])) || body[0] == '.')) {
+        return false;
+    }
+    // libc++ streams accept hex floats ("0x10", "0X1p3"); from_chars does not.
+    if (body.find_first_not_of("0123456789.eE+-") != std::string_view::npos) {
+        return false;
+    }
+    std::istringstream is{std::string(text)};
+    is.imbue(std::locale::classic());
+    double v = 0;
+    is >> std::noskipws >> v;
+    if (is.fail() || is.peek() != std::char_traits<char>::eof()) {
+        return false;
+    }
+    // Underflow to zero is out of range for from_chars (and not for the stream): a nonzero mantissa digit.
+    if (v == 0 &&
+        body.substr(0, body.find_first_of("eE")).find_first_of("123456789") != std::string_view::npos) {
+        return false;
+    }
+    out = v;
+    return true;
 }
 
 std::string jobIni(const JobSpec& job) {

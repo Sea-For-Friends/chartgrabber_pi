@@ -34,6 +34,7 @@ wxString outcomeHeadline(cg::Outcome o, const cg::FillTotals& fill, const std::v
                          std::string_view lastError);
 wxString refusalText(std::string_view lastError);
 wxString cacheRefusedText();
+wxString startViewText(); // the "Current view" is still OpenCPN's starting view
 wxString tooLargeText();
 wxString retryText(int attempt, int secondsLeft); // attempt is 1-based
 wxString budgetStopText(int budgetMb);

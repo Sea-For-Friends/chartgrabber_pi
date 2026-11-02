@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 # Calendar version YYYY.MM.N: set only at a release; until then the next planned one.
-project(chartgrabber_pi VERSION 2026.10.6 LANGUAGES CXX)
+project(chartgrabber_pi VERSION 2026.10.7 LANGUAGES CXX)
 
 option(CG_BUILD_TESTS "Build the GoogleTest unit tests" ON)
 # Host tuple of the build host's OpenCPN, e.g. debian-x86_64 (see the README). Never "all":
@@ -14,15 +14,16 @@ if(CG_TARGET_LOWER STREQUAL "all")
         " build host's OpenCPN, e.g. debian-x86_64")
 endif()
 set(CG_TARGET_VERSION "13" CACHE STRING "metadata.xml <target-version>")
-if(UNIX)
-    execute_process(COMMAND uname -m OUTPUT_VARIABLE CG_HOST_MACHINE OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if(CG_HOST_MACHINE STREQUAL "aarch64")
-        set(CG_HOST_MACHINE "arm64")
+if(APPLE AND CMAKE_OSX_ARCHITECTURES)
+    set(CG_HOST_MACHINE "${CMAKE_OSX_ARCHITECTURES}") # "arm64;x86_64" for the universal dylib
+elseif(UNIX)
+    if(NOT CG_TARGET_ARCH) # an explicit -DCG_TARGET_ARCH wins and must not trip the rule on an unknown processor
+        include(cmake/host_arch.cmake)
     endif()
 elseif(MSVC AND CMAKE_SIZEOF_VOID_P EQUAL 4)
     set(CG_HOST_MACHINE "x86") # Windows plugin DLL: x86
 endif()
-set(CG_TARGET_ARCH "${CG_HOST_MACHINE}" CACHE STRING "metadata.xml <target-arch>: x86_64 or arm64")
+set(CG_TARGET_ARCH "${CG_HOST_MACHINE}" CACHE STRING "metadata.xml <target-arch>: x86_64, arm64, armhf, aarch64 (Flatpak, passed explicitly)")
 set(CG_AUTHOR "Chart Grabber contributors" CACHE STRING "metadata.xml <author>")
 
 set(CMAKE_CXX_STANDARD 23)
@@ -63,7 +64,7 @@ endif()
 
 find_package(wxWidgets 3.2 REQUIRED COMPONENTS core base xml)
 find_package(OpenGL REQUIRED)
-if(UNIX)
+if(UNIX AND NOT APPLE)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0) # progress_strip.cpp: gtk_window_begin_move_drag
 endif()
@@ -96,8 +97,20 @@ target_compile_definitions(chartgrabber_pi PRIVATE ${wxWidgets_DEFINITIONS}
     CG_VERSION_PATCH=${PROJECT_VERSION_PATCH}
     "CG_VERSION_STRING=\"${PROJECT_VERSION}\"")
 target_link_libraries(chartgrabber_pi PRIVATE cg_core cg_options ${wxWidgets_LIBRARIES} OpenGL::GL)
-if(UNIX)
+if(UNIX AND NOT APPLE)
     target_link_libraries(chartgrabber_pi PRIVATE PkgConfig::GTK3)
+endif()
+if(APPLE)
+    # API symbols resolve against the OpenCPN executable at load time; OpenGL immediate mode is deprecated there.
+    target_link_options(chartgrabber_pi PRIVATE -Wl,-undefined,dynamic_lookup)
+    target_compile_definitions(chartgrabber_pi PRIVATE GL_SILENCE_DEPRECATION)
+    # strip (Release only, `true` otherwise) -> install_name_tool -> codesign, in this order: anything after codesign invalidates it.
+    # wx references become OpenCPN.app's short names; the otool -L list is read by cmake/mac_fix_wx.cmake.
+    add_custom_command(TARGET chartgrabber_pi POST_BUILD
+        COMMAND "$<IF:$<CONFIG:Release>,strip,true>" -x "$<TARGET_FILE:chartgrabber_pi>"
+        COMMAND ${CMAKE_COMMAND} -DCG_DYLIB=$<TARGET_FILE:chartgrabber_pi> -P ${CMAKE_SOURCE_DIR}/cmake/mac_fix_wx.cmake
+        COMMAND codesign --force -s - "$<TARGET_FILE:chartgrabber_pi>"
+        VERBATIM)
 endif()
 # Windows: the API symbols resolve against opencpn.lib (opencpn-libs api-18/msvc-wx32).
 set(CG_OPENCPN_LIB "" CACHE FILEPATH "opencpn.lib of opencpn-libs api-18/msvc-wx32 (Windows only)")
@@ -124,9 +137,17 @@ endif()
 string(REPLACE "/" "-" CG_TARGET_VERSION_FILE "${CG_TARGET_VERSION_FILE}")
 set(CG_TARBALL_NAME
     "chartgrabber_pi-${PROJECT_VERSION}-${CG_TARGET}-${CG_TARGET_VERSION_FILE}-${CG_TARGET_ARCH}")
+if(CG_TARGET STREQUAL "darwin-wx32") # M-3: macos-universal, or macos-<arch>
+    if(CG_TARGET_ARCH MATCHES "arm64" AND CG_TARGET_ARCH MATCHES "x86_64")
+        set(CG_MAC_ARCH_NAME "universal")
+    else()
+        set(CG_MAC_ARCH_NAME "${CG_TARGET_ARCH}")
+    endif()
+    set(CG_TARBALL_NAME "chartgrabber_pi-${PROJECT_VERSION}-macos-${CG_MAC_ARCH_NAME}")
+endif()
 file(WRITE "${CMAKE_BINARY_DIR}/tarball-name.txt" "${CG_TARBALL_NAME}\n")
 
-if(CG_BUILD_TESTS AND UNIX)
+if(CG_BUILD_TESTS AND UNIX AND NOT APPLE) # no tests on the Mac build host
     find_package(GTest REQUIRED)
     enable_testing()
     add_subdirectory(tests)

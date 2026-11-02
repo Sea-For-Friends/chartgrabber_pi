@@ -1,9 +1,11 @@
-# Fixtures: the output of the pinned CLI 2026.10.13
+# Fixtures: the output of the pinned CLI 2026.10.14
 
 Captured 2026-10-23 by `capture.sh` (bash, not run by the gate). The binary is
-`<pin-dir>/2026.10.13-a970b543/chart-grabber-cli-2026.10.13-linux-x86_64/chart-grabber-cli` (the unpacked Linux x86_64 bundle; `version.stdout`:
-`chart-grabber-cli 2026.10.13 (a970b543798b)`). Scratch HOME, cache and datadir; the scratch directory is replaced by the
+`<pin-dir>/2026.10.14-951d3db2/chart-grabber-cli-2026.10.14-linux-x86_64/chart-grabber-cli` (the unpacked Linux x86_64 bundle; `version.stdout`:
+`chart-grabber-cli 2026.10.14 (951d3db248cc)`). Scratch HOME, cache and datadir; the scratch directory is replaced by the
 literal `$SCRATCH`; `LC_ALL=C.UTF-8`. All cases are real and unedited otherwise, except the HAND-MADE ones marked below.
+
+(2026-11-02): `capture.sh` was run WITHOUT `--all` on 2026.10.14 (the x86_64 bundle, pin `2026.10.14-951d3db2`). Only `version.stdout` changed (version and commit); every other re-captured file is byte-identical to the 2026.10.13 one; the KEEP network cases stay.
 
 (2026-10-30): `capture.sh` was run WITHOUT `--all` on 2026.10.13 (the x86_64 bundle), WITHOUT the `/etc/fonts` workaround: no capture file holds a "Fontconfig" line (the bundle uses its own fontconfig since 2026.10.13), so the workaround is dropped. Only `version.stdout` changed (the version and commit); every other re-captured file is byte-identical to the 2026.10.12 one; the nine KEEP network cases are untouched. The scratch HOME of the run holds `.cache/chart-grabber/fontroot`: `capture.sh` runs `version` without `--datadir` (the release note: that is where the CLI then keeps its fontconfig sysroot).
 

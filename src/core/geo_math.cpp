@@ -2,8 +2,9 @@
 // Area arithmetic, Web Mercator tile counts, scale labels, detail bands and zoom lists (geo_math.h).
 #include "geo_math.h"
 
+#include "job_files.h"
+
 #include <algorithm>
-#include <charconv>
 #include <cmath>
 #include <cstddef>
 #include <iterator>
@@ -144,11 +145,9 @@ std::string formatScale(double denominator) {
     // Two significant digits, then the unit.
     const double step = std::pow(10.0, std::floor(std::log10(denominator)) - 1.0);
     const double r = std::round(denominator / step) * step;
-    // to_chars: locale-independent, libstdc++ 11+ (the C++20 format header needs 13; Debian 12 has GCC 12).
+    // formatNumber: locale-independent (no floating to_chars: Apple libc++ lacks it before macOS 13.3).
     const auto text = [](double v, int decimals, const char* unit) {
-        char buf[32];
-        const auto end = std::to_chars(buf, buf + sizeof buf, v, std::chars_format::fixed, decimals).ptr;
-        return std::string("1:") + std::string(buf, end) + unit;
+        return "1:" + formatNumber(v, decimals) + unit;
     };
     if (r >= 1e7)
         return text(r / 1e6, 0, "M");
@@ -250,6 +249,14 @@ double fitScalePpm(const BBox& box, int pixWidth, int pixHeight) {
 
 LatLon centre(const BBox& box) {
     return LatLon{(box.south + box.north) / 2.0, (box.west + box.east) / 2.0};
+}
+
+bool isStartView(const BBox& box) {
+    const LatLon c = centre(box);
+    const auto near = [&](double lat, double lon) {
+        return std::abs(c.lat - lat) <= 0.01 && std::abs(c.lon - lon) <= 0.01;
+    };
+    return near(0.0, 0.0) || near(33.358, -79.282);
 }
 
 std::vector<int> limitZooms(const std::vector<int>& zooms, std::optional<int> limit) {

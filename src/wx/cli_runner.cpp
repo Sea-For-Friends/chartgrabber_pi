@@ -205,9 +205,18 @@ void CliRunner::terminate() {
             in->Write("stop\n", 5); // an error is ignored: the grace kill covers it
 #ifndef __WINDOWS__
             if (!wasPending) {
+#ifdef __APPLE__
+                // macOS has no sigtimedwait: ignoring the signal discards a pending one (POSIX sigaction),
+                // then restore.
+                struct sigaction ignore{}, prev{};
+                ignore.sa_handler = SIG_IGN;
+                sigaction(SIGPIPE, &ignore, &prev);
+                sigaction(SIGPIPE, &prev, nullptr);
+#else
                 const timespec zero{0, 0};
                 while (sigtimedwait(&block, nullptr, &zero) == SIGPIPE) {
                 }
+#endif
             }
             pthread_sigmask(SIG_SETMASK, &old, nullptr);
 #endif
