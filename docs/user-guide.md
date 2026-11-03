@@ -158,21 +158,16 @@ Options, Charts, **Chart Files**. How the copy is done depends on the tablet; th
 
 Chart Grabber is not an official SAS.Planet project. The `.zmp` source folders it reads are the format of SAS.Planet, a free Windows chart program, and its community collects them. We do not run, check or endorse those collections.
 
-- [SAS.Planet maps and update instructions](https://codeberg.org/sasgis/doc) (Russian): where the community links the current collection of `.zmp` sources.
-- [SAS.Planet documentation](https://sasgis.github.io/) (Russian, with an English start page) and the [SAS.Planet releases](https://github.com/sasgis/sas.planet.src/releases/latest) (the program itself; you do not need it for Chart Grabber).
-- [SAS.Planet Telegram group](https://t.me/SAS_Planet) (Russian) for questions. The community forum, www.sasgis.org, refused automated access when this guide was written.
+- [SAS.Planet map collection](http://parasite.kicks-ass.org:3000/sasgis/maps) (git repository, readme in Russian): the full set of `.zmp` sources, also as one [zip archive](http://parasite.kicks-ass.org:3000/sasgis/maps/archive/master.zip). This is where the SAS.Planet download page points.
 
 **How to add one.** Download the collection and unpack it. Copy only the `.zmp` folders you want into `Charts/Chart sources` (Settings, **Chart sources**, **Open folder**). A `.zmp` that is a zip file works too. They are read after the bundled ones. The collection is large and most of it is road, city and mobile-network maps (and the odd Moon or sky chart), which are of little use at sea; do not copy it all.
 
-**What you may find there.** Only the first part of the collection (about a fifth) was read, so this is a sample, not a catalogue.
-- Seamarks and traffic: OpenSeaMap seamarks (the same as the bundled source). OpenSeaMap says its charts "can be used on board even without access to internet" and offers its tiles under CC-BY-SA ([OpenSeaMap](https://openseamap.org/index.php?id=kartendownload&L=1), [OSM wiki](https://wiki.openstreetmap.org/wiki/OpenSeaMap)).
-- Nautical charts, Depth, Satellite, Weather now, Ocean: entries exist, but none was found whose owner allows downloading for offline use, so none is named here. Several fetch through a third-party relay site, present themselves as a web browser, or load another service than their name says. Treat them as unverified.
-- The collection also contains commercial services (aerial imagery, road and sea charts) whose terms usually forbid downloading for offline use. Chart Grabber grants no right to their tiles: read each service's terms and follow them.
-
 **Before you use a source.**
-- Each tile server has its own terms of use. Respect them: how much you may download, whether offline copies are allowed, the credit line.
+- Each tile server has its own terms of use. Reading and following them is your responsibility: how much you may download, whether offline copies are allowed, the credit line. Chart Grabber grants no right to anyone's tiles.
 - Some sources need a key, or are not meant for navigation. "Not for navigation" applies to anything you add, as to the bundled charts.
-- A source written for a newer SAS.Planet may not work: Chart Grabber refuses sources that crop or cut tiles. Try a small area first. A source with a script (`GetUrlScript.txt`) can make web requests; read its files before you use it.
+- A source written for a newer SAS.Planet may not work: Chart Grabber refuses sources that crop or cut tiles. Try a small area first.
+
+**Check a source before you copy it.** A `.zmp` folder is plain text: open `params.txt` (the server address, `DefURLBase`, and the headers) and, if there is one, `GetUrlScript.txt`. Chart Grabber never runs programs from a source. A script builds the tile address; it cannot read or write your files, and it is stopped after 5 seconds. But that address can point to any server, and with `IsUseDownloaderInScript=1` in `params.txt` the script can also send web requests of its own. If you do not see where the requests go, do not use the source. More: [what a script may not do](https://github.com/Sea-For-Friends/chart-grabber-cli/blob/main/docs/user/sources-guide.md#what-a-script-may-not-do) in the Chart Grabber CLI guide.
 
 ## Settings reference
 
