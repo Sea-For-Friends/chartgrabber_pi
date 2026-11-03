@@ -18,19 +18,57 @@
 
 ## What it is
 
-Chart Grabber is an OpenCPN plugin that downloads charts for use offline. You pick an area (the current view, a drawn rectangle or a corridor along a route), a chart source and the detail; the [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) downloads it in the background. The result is added to OpenCPN as an MBTiles chart.
+Chart Grabber is an OpenCPN plugin that downloads charts for offline use. You pick an area (the current view, a rectangle you draw, or a corridor along a route), a chart source and the level of detail; the Chart Grabber CLI downloads it in the background, and the result is added to OpenCPN as an MBTiles chart.
 
 **Not official charts. Do not use for navigation alone. Respect the terms of use of each chart source.**
 
 ## What problems it solves
 
-- **Plugin and CLI together.** Before, sailors typically downloaded tiles with SAS.Planet or Mobile Atlas Creator (MOBAC), sometimes processed them in QGIS, converted them into a format OpenCPN reads (MBTiles or KAP) and added the folder to OpenCPN. [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) is an independent port of SAS.Planet ([sasgis/sas.planet.src](https://github.com/sasgis/sas.planet.src)) to C++ and Qt. It is not an official SAS.Planet project. Thanks to the SAS.Planet authors. Like SAS.Planet, it is GPL-3.0-or-later. Chart Grabber is not affiliated with MOBAC or QGIS. Now it is one dialog inside OpenCPN, and the chart appears in OpenCPN's chart list. Resume, Update and the weather refresh are handled too.
-- **The plugin** is the OpenCPN side: the area (current view, drawn on the chart, or along a route), the estimate before you download, My charts and the settings.
-- **The [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli)** is a standalone command-line program that downloads tiles and writes MBTiles without OpenCPN. Scripts, other chart plotters, a server or a Raspberry Pi without OpenCPN can use it, for example to refresh weather charts on a schedule (cron). See the [Chart Grabber CLI documentation](#chart-grabber-cli-documentation).
+Getting online charts into OpenCPN for offline use used to take several programs: download tiles with SAS.Planet or Mobile Atlas Creator (MOBAC), sometimes process them in QGIS, convert them to a format OpenCPN reads (MBTiles or KAP), then add the folder to OpenCPN. With Chart Grabber it is one dialog inside OpenCPN, and the chart appears in OpenCPN's chart list. Resuming, updating and refreshing weather are handled too.
+
+Chart Grabber has two parts:
+
+- **The plugin** is the OpenCPN side: choosing the area (current view, drawn on the chart, or along a route), the estimate before you download, My charts and the settings.
+- **The [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli)** does the downloading. It is a standalone command-line program that downloads tiles and writes MBTiles without OpenCPN, so scripts, other chart plotters, a server or a Raspberry Pi without OpenCPN can use it too, for example to refresh weather charts on a schedule with cron. See the [Chart Grabber CLI documentation](#chart-grabber-cli-documentation).
 
 ## Install
 
-You need OpenCPN 5.10.2 or newer. The [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) 2026.10.14, the program that does the download, is inside the plugin file on every system: **Import** is the only install step. Chart Grabber is not in OpenCPN's plugin catalog yet; once it is listed, the Plugin Manager can install and update it, until then (and always on Arch and CachyOS) use Import.
+You need OpenCPN 5.10.2 or newer. The Chart Grabber CLI 2026.10.14 is inside the plugin file on every system, so there is nothing else to install. The plugin always uses this bundled CLI unless you choose another one in [Settings](#settings-reference), for example one you installed from the CLI's `.deb` or Windows zip for your own scripts.
+
+**Getting OpenCPN:**
+
+- Debian 12: `sudo apt install -t bookworm-backports opencpn`.
+- Ubuntu 24.04: its own OpenCPN (5.8.4) is too old; install OpenCPN from the OpenCPN PPA (`ppa:opencpn/opencpn`).
+- Linux: the plugin needs the graphics libraries `libopengl0`, `libglx0` and `libegl1`. OpenCPN's own package on Debian 12, Debian 13 and Ubuntu 24.04 installs them; a hand-built OpenCPN may not (on Arch and CachyOS they come with `libglvnd`).
+
+There are two ways to install: from OpenCPN's Beta catalog, or by importing the plugin file. With either, OpenCPN 5.10.2 (the Debian 12 and 13 packages) may show no Chart Grabber toolbar button until you press **OK** to close Options or restart OpenCPN; until then, right-click the chart and choose **Chart Grabber: new chart of this view...**.
+
+### Install from the OpenCPN Beta catalog
+
+Chart Grabber is in OpenCPN's **Beta** plugin catalog for every system in the [table below](#install-by-import) except Arch and CachyOS.
+Installing from the catalog means the Plugin Manager offers later versions as **Update**.
+
+OpenCPN shows the master catalog by default; choosing another one is an expert setting you switch on in OpenCPN's config file:
+
+1. Close OpenCPN. It rewrites the config file when it exits, so an edit made while it runs is lost.
+2. Open the config file and add the line `CatalogExpert=1` to the `[PlugIns]` section (create the section if it is missing):
+
+   | System | OpenCPN's config file |
+   |---|---|
+   | Linux (Debian, Ubuntu, Arch, CachyOS) | `~/.opencpn/opencpn.conf` |
+   | Flatpak OpenCPN | `~/.var/app/org.opencpn.OpenCPN/config/opencpn/opencpn.conf` |
+   | macOS | `~/Library/Preferences/opencpn/opencpn.ini` |
+   | Windows | `C:\ProgramData\opencpn\opencpn.ini` |
+
+3. Start OpenCPN and open Options, Plugins, **Settings...** (without step 2 it shows only a "Disabled" message). Choose **Beta**.
+4. Click **Update Plugin Catalog: Beta**.
+5. Find **ChartGrabber** in the list, click **Install**, then enable it.
+
+If you installed Chart Grabber with **Import plugin...**, OpenCPN 5.10.2 shows no Install or Update for it in the catalog list. Uninstall it first (your charts and settings stay, see [Uninstall](#uninstall)), then install it from the catalog; from then on, new versions show **Update**. Newer OpenCPN versions show **Update** for an imported Chart Grabber as soon as the catalog has the same or a newer version.
+
+### Install by Import
+
+Use this route on Arch and CachyOS, which are not in the catalog, or if you prefer a file you downloaded yourself.
 
 1. **Pick the tarball** for your system (full notes: the release's COMPAT.md):
 
@@ -49,29 +87,19 @@ You need OpenCPN 5.10.2 or newer. The [Chart Grabber CLI](https://github.com/Sea
    | Flatpak OpenCPN 5.12 (runtime 24.08), 64-bit PC / ARM 64-bit | `flatpak-x86_64-24.08-x86_64.tar.gz` / `flatpak-aarch64-24.08-aarch64.tar.gz` |
    | Flatpak OpenCPN 5.14 (runtime 25.08), 64-bit PC / ARM 64-bit | `flatpak-x86_64-25.08-x86_64.tar.gz` / `flatpak-aarch64-25.08-aarch64.tar.gz` |
 
-   There is no build for Ubuntu 22.04, for the Raspberry Pi Zero, Zero W and Pi 1 (32-bit ARM needs a Pi 2 or newer), for Raspberry Pi OS 32-bit Bookworm, or for OpenCPN 5.10.2 on Flatpak. On Flatpak keep your chart folder inside your home folder.
-2. **Import**: OpenCPN, Options, Plugins, **Import plugin...**, choose the tarball, enable Chart Grabber. To update, import the new tarball over the old one.
-   OpenCPN 5.10.2 (Debian 12 and 13 packages) may show no Chart Grabber toolbar button until you press **OK** to close Options or restart OpenCPN; until then use the right-click menu **Chart Grabber: new chart of this view...**.
-3. **Ubuntu 24.04**: its own OpenCPN (5.8.4) is too old; install OpenCPN from the OpenCPN PPA (`ppa:opencpn/opencpn`).
+   There is no build for Ubuntu 22.04, for the Raspberry Pi Zero, Zero W and Pi 1 (32-bit ARM needs a Pi 2 or newer), for Raspberry Pi OS 32-bit Bookworm, or for OpenCPN 5.10.2 on Flatpak.
+2. **Import**: in OpenCPN, Options, Plugins, **Import plugin...**, choose the tarball, then enable Chart Grabber. To update, import the new tarball over the old one.
 
-Debian 12: `sudo apt install -t bookworm-backports opencpn`.
-
-The Linux file needs the graphics libraries `libopengl0`, `libglx0` and `libegl1`; OpenCPN's own package from Debian 12, Debian 13 or Ubuntu 24.04 installs them, a hand-built OpenCPN may not (Arch and CachyOS: `libglvnd`).
-
-The plugin uses the CLI from its own folder first. A CLI you installed yourself (the `.deb` or the Windows zip of the [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) releases, for scripts and automation) is used only when you choose it in [Settings](#settings-reference).
-
-**Updating from 2026.10.4 or older** (those needed a separately installed CLI): import the new tarball over the old one; nothing else is needed, and the separate CLI can be removed unless you use it in scripts. If you once chose a CLI under Settings, Advanced, **Chart Grabber CLI**, the plugin keeps using that one: click **Use default** in that row to switch to the CLI inside the plugin.
+**Updating from 2026.10.4 or older** (those needed a separately installed CLI): import the new tarball over the old one; nothing else is needed. You can remove the separate CLI unless your scripts use it. If you once chose a CLI under Settings, Advanced, **Chart Grabber CLI**, the plugin keeps using that one: click **Use default** in that row to switch to the bundled CLI.
 
 ### OpenCPN for Android
 
-OpenCPN for Android is not supported, and Chart Grabber does not run there. Make the charts on a PC or a Raspberry Pi
-(the systems above), then copy the `.mbtiles` files to the chart folder on the tablet and add that folder in OpenCPN under
-Options, Charts, **Chart Files**. How the copy is done depends on the tablet; this route is not tested.
+Chart Grabber does not run on OpenCPN for Android. Make the charts on a PC or a Raspberry Pi (the systems above), copy the `.mbtiles` files to a chart folder on the tablet, and add that folder in OpenCPN under Options, Charts, **Chart Files**. How to copy depends on the tablet; this route is not tested.
 
 ## First chart in 2 minutes
 
 1. Move the chart to the area you want.
-2. Click the **Chart Grabber** toolbar button, or right-click the chart: **Chart Grabber: new chart of this view...**. The **New chart** page opens with **Current view**.
+2. Click the **Chart Grabber** toolbar button, or right-click the chart and choose **Chart Grabber: new chart of this view...**. The **New chart** page opens with **Current view**.
 3. Pick a source under **Chart** (**More sources...** lists all of them).
 4. The estimate appears by itself: "About ... tiles, ... to download, ... on disk (... free)".
 5. Press **Download**. A strip shows progress.
@@ -118,26 +146,26 @@ Options, Charts, **Chart Files**. How the copy is done depends on the tablet; th
 
 - **Not for navigation**: everything in the Nautical charts and Depth groups is a picture of a chart or of depths, not a chart to navigate by.
 - **Satellite**: Sentinel-2 (10 m) and USGS show reef edges, banks and passes, not single coral heads.
-- **Greyed out**: Esri World Imagery, because Esri's terms say its imagery is "not intended to be used to export tiles for offline"; OpenTopoMap, because its server asks for no mass downloads. Reading the terms and complying is your responsibility.
-- **Terms of use and credits** per source: [data/sources/README.md](../data/sources/README.md).
+- **Greyed out**: Esri World Imagery, because Esri's terms say its imagery is "not intended to be used to export tiles for offline"; OpenTopoMap, because its server asks for no mass downloads. Reading and following the terms is your responsibility.
+- **Terms of use and credits** for each source: [data/sources/README.md](../data/sources/README.md).
 
 ## Everyday use
 
 - **Draw on chart**: drag a rectangle, or tap two corners. Right-click or **Cancel** to stop.
 - **Along route**: pick a route and its **Corridor width** (0.5 to 20 NM, default 2.0).
-- **Detail**: bands **Passage** and **Coastal** (on by default), **Approach**, **Harbour** (small areas only), each with its scale. The estimate says what one more level would add. Exact limits: **Advanced**, **Least detail** / **Most detail**.
+- **Detail**: the bands **Passage** and **Coastal** (on by default), **Approach** and **Harbour** (small areas only), each with its scale. The estimate tells you what one more level would add. For exact limits, use **Advanced**, **Least detail** / **Most detail**.
 - **Seamarks on top (OpenSeaMap)** adds buoys and lights over the chart.
-- **My charts** lists your charts with detail, size, date and state. **Show** displays one; **More...** offers **Top up**, **Update...**, **Build from saved tiles**, **Delete**, **Show in folder**.
-- **Stop** saves progress: "Stopped. Resume any time from My charts." **Resume** continues.
-- **Update...** downloads again the tiles older than **Today (all tiles)**, **1 month**, **6 months** or **1 year**.
+- **My charts** lists your charts with detail, size, date and state. **Show** displays one; **More...** offers **Top up**, **Update...**, **Build from saved tiles**, **Delete** and **Show in folder**.
+- **Stop** saves progress ("Stopped. Resume any time from My charts."); **Resume** continues.
+- **Update...** downloads again the tiles older than the age you pick: **Today (all tiles)**, **1 month**, **6 months** or **1 year**.
 
 ![My charts](images/my-charts.png)
 
 ## Weather
 
-- Tick **Weather on top** and pick a layer (rain radar, clouds, precipitation). It is made as its own chart.
-- Radar reaches about 80-130 NM off the coast; far offshore only satellite pictures show the weather.
-- In My charts, **More...**, **Update to latest weather** takes the newest picture as a new chart named with its time.
+- Tick **Weather on top** and pick a layer (rain radar, clouds, precipitation). It is made as a separate chart.
+- Radar reaches about 80-130 NM off the coast; far offshore, only satellite pictures show the weather.
+- In My charts, **More...**, **Update to latest weather** fetches the newest picture as a new chart named with its time.
 
 ![Rain radar (RainViewer) over the Norway sea chart](images/weather.png)
 
@@ -145,29 +173,29 @@ Options, Charts, **Chart Files**. How the copy is done depends on the tablet; th
 
 - **Offline**: finished charts need no connection. **Build from saved tiles** remakes a chart from tiles already on disk.
 - **Saved tiles** let Top up and Resume fetch only what is missing; Settings, **Clear...** frees the space.
-- **Slow or paid by the MB (mobile data, satellite)**: one connection, no automatic retries, and a **Limit per download** (default 100 MB): a larger download asks first, a running one stops at the limit ("Stopped at your data limit (100 MB). Resume to continue.").
-- **Retries**: otherwise a lost connection pauses the download and retries 3 times, 60 s apart ("No connection. Retry in 60 s (1 of 3)"); then "No connection. Download paused; your progress is saved."
+- **Slow or paid by the MB (mobile data, satellite)**: one connection, no automatic retries, and a **Limit per download** (default 100 MB). A larger download asks first; a running one stops at the limit ("Stopped at your data limit (100 MB). Resume to continue.").
+- **Retries**: with that setting off, a lost connection pauses the download and retries 3 times, 60 s apart ("No connection. Retry in 60 s (1 of 3)"), then gives up with "No connection. Download paused; your progress is saved."
 
 ## Your own sources
 
-- The 28 sources that come with the plugin: [Bundled charts](#bundled-charts).
-- Add your own `.zmp` source folders to `Charts/Chart sources` in your home folder (Settings, **Chart sources**, **Open folder** creates it), or **Change...** to another folder. They are read after the bundled ones.
+- The 28 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
+- Add your own `.zmp` source folders to `Charts/Chart sources` in your home folder (Settings, **Chart sources**, **Open folder** creates it), or pick another folder with **Change...**. They are read after the bundled ones.
 - Sources that need a key, and Navionics, are not bundled: put the source folder there and enter your key where its file says `KEY`.
 
 ### Where to find more sources
 
-Chart Grabber is not an official SAS.Planet project. The `.zmp` source folders it reads are the format of SAS.Planet, a free Windows chart program, and its community collects them. We do not run, check or endorse those collections.
+The `.zmp` source folders Chart Grabber reads use the format of SAS.Planet, a free Windows chart program, and its community collects them. We do not run, check or endorse those collections.
 
-- [SAS.Planet map collection](http://parasite.kicks-ass.org:3000/sasgis/maps) (git repository, readme in Russian): the full set of `.zmp` sources, also as one [zip archive](http://parasite.kicks-ass.org:3000/sasgis/maps/archive/master.zip). This is where the SAS.Planet download page points.
+- [SAS.Planet source collection](http://parasite.kicks-ass.org:3000/sasgis/maps) (git repository, readme in Russian): the full set of `.zmp` sources, also as one [zip archive](http://parasite.kicks-ass.org:3000/sasgis/maps/archive/master.zip). The SAS.Planet download page points here.
 
-**How to add one.** Download the collection and unpack it. Copy only the `.zmp` folders you want into `Charts/Chart sources` (Settings, **Chart sources**, **Open folder**). A `.zmp` that is a zip file works too. They are read after the bundled ones. The collection is large and most of it is road, city and mobile-network maps (and the odd Moon or sky chart), which are of little use at sea; do not copy it all.
+**How to add one.** Download the collection and unpack it, then copy only the `.zmp` folders you want into `Charts/Chart sources` (Settings, **Chart sources**, **Open folder**). A `.zmp` that is a zip file works too. Do not copy the whole collection: most of it is road, city and mobile-network layers (and the odd Moon or sky chart), of little use at sea.
 
 **Before you use a source.**
-- Each tile server has its own terms of use. Reading and following them is your responsibility: how much you may download, whether offline copies are allowed, the credit line. Chart Grabber grants no right to anyone's tiles.
-- Some sources need a key, or are not meant for navigation. "Not for navigation" applies to anything you add, as to the bundled charts.
+- Each tile server has its own terms of use: how much you may download, whether offline copies are allowed, the credit line. Reading and following them is your responsibility; Chart Grabber grants no right to anyone's tiles.
+- Some sources need a key, or are not meant for navigation. "Not for navigation" applies to anything you add, as it does to the bundled charts.
 - A source written for a newer SAS.Planet may not work: Chart Grabber refuses sources that crop or cut tiles. Try a small area first.
 
-**Check a source before you copy it.** A `.zmp` folder is plain text: open `params.txt` (the server address, `DefURLBase`, and the headers) and, if there is one, `GetUrlScript.txt`. Chart Grabber never runs programs from a source. A script builds the tile address; it cannot read or write your files, and it is stopped after 5 seconds. But that address can point to any server, and with `IsUseDownloaderInScript=1` in `params.txt` the script can also send web requests of its own. If you do not see where the requests go, do not use the source. More: [what a script may not do](https://github.com/Sea-For-Friends/chart-grabber-cli/blob/main/docs/user/sources-guide.md#what-a-script-may-not-do) in the Chart Grabber CLI guide.
+**Check a source before you copy it.** A `.zmp` folder is plain text: open `params.txt` (the server address, `DefURLBase`, and the headers) and, if present, `GetUrlScript.txt`. Chart Grabber never runs programs from a source. A script only builds the tile address; it cannot read or write your files, and it is stopped after 5 seconds. But that address can point to any server, and with `IsUseDownloaderInScript=1` in `params.txt` the script can also send web requests of its own. If you cannot see where the requests go, do not use the source. More: [what a script may not do](https://github.com/Sea-For-Friends/chart-grabber-cli/blob/main/docs/user/sources-guide.md#what-a-script-may-not-do) in the Chart Grabber CLI guide.
 
 ## Settings reference
 
@@ -181,7 +209,7 @@ OpenCPN, Options, Plugins, Chart Grabber, **Preferences**.
 | Saved tiles, **Clear...** | | Space used; deletes saved tiles |
 | Save charts in (Advanced) | `Charts/ChartGrabber` in your home | Where new charts go |
 | Saved tiles in (Advanced) | OpenCPN's data folder | Where tiles are kept |
-| [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) (Advanced) | the one inside the plugin | The program, if you want another one |
+| Chart Grabber CLI (Advanced) | the one inside the plugin | The program, if you want another one |
 | Add new charts to OpenCPN's chart list | on | Registers new charts |
 | Warn before very large or very small detail choices | on | Asks before extreme detail |
 | Show download progress on the chart | off | Off: progress in its own small window |
@@ -192,20 +220,21 @@ OpenCPN, Options, Plugins, Chart Grabber, **Preferences**.
 
 | Symptom | Fix |
 |---|---|
-| "[Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) was not found" | Import the plugin file of this release again (the CLI is inside it), or choose the CLI under Advanced in Settings. |
-| "[Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) ... is too old" | Import the plugin file of this release (it carries CLI 2026.10.14), or choose a CLI 2026.10.9 or newer under Advanced in Settings. |
+| "Chart Grabber CLI was not found" | Import the plugin file of this release again (the CLI is inside it), or choose the CLI under Advanced in Settings. |
+| "Chart Grabber CLI ... is too old" | Import the plugin file of this release (it carries CLI 2026.10.14), or choose a CLI 2026.10.9 or newer under Advanced in Settings. |
 | Chart added but not visible | Click it in the chart bar; turn on OpenGL (Options > Display > Advanced). |
 | Source greyed in More sources, or Seamarks on top disabled | It cannot be made into an OpenCPN chart; the text beside it says why. |
 | "Area too large for this detail" | Choose a smaller area or less detail. |
 | No Chart Grabber button on the toolbar | OpenCPN 5.10.2 adds it only at startup or on Options **OK**: press OK or restart OpenCPN. Meanwhile right-click the chart: **Chart Grabber: new chart of this view...**. |
-| Import plugin refuses the tarball | Check the [system table](#install) and OpenCPN 5.10.2 or newer. |
-| macOS asks "OpenCPN was prevented from modifying apps" or for local network access | Deny it or ignore it: in our macOS test (OpenCPN 5.12.4) nothing broke. The local network prompt appears when OpenCPN is started from a terminal app. |
+| "OpenCPN from Flathub can only keep charts inside your home folder" | Flatpak OpenCPN cannot write outside your home folder: choose a chart folder inside it under Settings, Advanced, **Save charts in**. |
+| Import plugin refuses the tarball | Check the [system table](#install) and that you have OpenCPN 5.10.2 or newer. |
+| macOS asks "OpenCPN was prevented from modifying apps" or for local network access | Deny or ignore it: in our macOS test (OpenCPN 5.12.4) nothing broke. The local network prompt appears when OpenCPN is started from a terminal app. |
 
 ### Uninstall
 
 Options, Plugins, Chart Grabber, **Uninstall** removes the program only. Your charts and the plugin's data stay on purpose,
-so that nothing is lost. Delete them by hand if you do not want them. The plugin data folder can be large (one macOS test
-had 11 MB); deleting it frees the space, but the next download then fetches all of its data again, which takes time and data.
+so that nothing is lost; delete them by hand if you do not want them. The plugin data folder can be large (11 MB in one
+macOS test). Deleting it frees the space, but the next download then fetches all of that data again, which costs time and data.
 
 | Your system | Plugin data folder to delete |
 |---|---|
@@ -214,7 +243,7 @@ had 11 MB); deleting it frees the space, but the next download then fetches all 
 | macOS | `~/Library/Preferences/opencpn/plugins/chartgrabber/` |
 | Windows | `C:\ProgramData\opencpn\plugins\chartgrabber\` |
 
-Also stays, and can be removed by hand:
+These also stay and can be removed by hand:
 
 - your chart files (`.mbtiles`): the folder `Charts/ChartGrabber` in your home folder, or the folder you chose under Settings, Advanced, **Save charts in**;
 - the chart folder entry in OpenCPN: Options, Charts, **Chart Files**, select the folder, **Remove**;
@@ -223,6 +252,7 @@ Also stays, and can be removed by hand:
 ## Help and licence
 
 - With a problem report, send the log file (Settings, Advanced, **Log file**, **Open**) and the strip's **Details** text.
-- <a id="chart-grabber-cli-documentation"></a>**[Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) documentation**: the [CLI guide](https://github.com/Sea-For-Friends/chart-grabber-cli/tree/main/docs/user), [making your own chart sources](https://github.com/Sea-For-Friends/chart-grabber-cli/blob/main/docs/user/sources-tutorial.md) and [example sources](https://github.com/Sea-For-Friends/chart-grabber-cli/tree/main/docs/user/examples/sources). From the next CLI release, the .deb carries these documents in `/usr/share/doc/chart-grabber-cli/` and the Windows zip in its `docs` folder.
+- <a id="chart-grabber-cli-documentation"></a>**Chart Grabber CLI documentation**: the [CLI guide](https://github.com/Sea-For-Friends/chart-grabber-cli/tree/main/docs/user), [making your own chart sources](https://github.com/Sea-For-Friends/chart-grabber-cli/blob/main/docs/user/sources-tutorial.md) and [example sources](https://github.com/Sea-For-Friends/chart-grabber-cli/tree/main/docs/user/examples/sources). From the next CLI release, the `.deb` carries these documents in `/usr/share/doc/chart-grabber-cli/` and the Windows zip in its `docs` folder.
 - Changes: [CHANGELOG](../CHANGELOG.md).
-- GPL-3.0-or-later ([LICENSE](../LICENSE)); chart source definitions CC0-1.0 ([licence](../data/sources/LICENSE)).
+- Licence: GPL-3.0-or-later ([LICENSE](../LICENSE)); chart source definitions CC0-1.0 ([licence](../data/sources/LICENSE)).
+- Credits: the [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) is an independent port of SAS.Planet ([sasgis/sas.planet.src](https://github.com/sasgis/sas.planet.src)) to C++ and Qt and, like SAS.Planet, is GPL-3.0-or-later. It is not an official SAS.Planet project; thanks to the SAS.Planet authors. Chart Grabber is not affiliated with MOBAC or QGIS.
