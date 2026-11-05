@@ -79,6 +79,7 @@ Use this route on Arch and CachyOS, which are not in the catalog, or if you pref
    | Debian 12, Ubuntu 24.04, Mint 22 (x86-64) | `debian-x86_64-12-x86_64.tar.gz` |
    | Debian 12 arm64, Raspberry Pi OS bookworm 64-bit, Ubuntu 24.04 arm64 | `debian-arm64-12-arm64.tar.gz` |
    | Ubuntu 26.04 x86-64 / arm64 | `ubuntu-x86_64-26.04-x86_64.tar.gz` / `ubuntu-arm64-26.04-arm64.tar.gz` |
+   | Arch / CachyOS | `arch-x86_64-rolling-x86_64.tar.gz` / `cachyos-x86_64-rolling-x86_64.tar.gz` |
    | Windows 10 and newer | `windows-x86.tar.gz` |
    | macOS 12 or newer (Apple and Intel) | `macos-universal.tar.gz` |
    | Debian 12 / Debian 13, 32-bit ARM (armhf) | `debian-armhf-12-armhf.tar.gz` / `debian-armhf-13-armhf.tar.gz` |
