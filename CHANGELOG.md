@@ -4,7 +4,7 @@ Versions are calendar-based: `YYYY.MM.N` (year and month of the release, N = rel
 
 ## 2026.11.1
 
-- 81 chart sources are bundled: Canadian Hydrographic Service charts and NONNA-10 depths, national orthophotos of France (IGN), Spain (PNOA) and the Netherlands (PDOK), Croatia, French and Portuguese coast, depth, seamark, tide, current and satellite layers, and sources for Uruguay, Argentina and other Latin American countries.
+- 81 chart sources are bundled: Canadian Hydrographic Service charts and NONNA-10 depths, national orthophotos of France (IGN), Spain (PNOA) and the Netherlands (PDOK), French and Portuguese coast, depth, seamark, tide, current and satellite layers, and sources for Uruguay, Argentina and other Latin American countries.
 - **More sources** says in a line what each source is for, and the search finds sources by that text.
 - The default **Chart** and **Weather on top** lists come from the file `favourite-sources.conf` in the plugin's data folder. If the file is missing or damaged, the New chart page warns and shows a **Download a fresh copy** link; the Chart list then shows **Choose in More sources...** until you pick a source.
 - **Update all weather charts** (My charts): one click updates every weather chart one after another, then refreshes OpenCPN's chart list once. A reason line says why a batch ended early.
@@ -12,9 +12,8 @@ Versions are calendar-based: `YYYY.MM.N` (year and month of the release, N = rel
 - Windows with OpenCPN 5.10.2: updating a weather chart that OpenCPN has open now works; the new picture is shown and the old file is dropped from the chart list.
 - The New chart window fits an 800 × 480 screen, also with the warning about the favourites file.
 - Needs Chart Grabber CLI 2026.10.9 or newer (2026.11.1 is bundled and recommended). It refuses a second download of the same chart at the same time.
-- The plugin file carries no documentation any more, only the licence, the sources terms and a short README with the GitHub link; the user guide is on GitHub.
+- The plugin file carries no documentation any more, only the licence and a short README with the GitHub link; the source terms and the user guide are on GitHub.
 - Updating from 2026.10.7: Import the new file over the old one.
-- Known issue on OpenCPN 5.14 and newer: after a chart is added, OpenCPN may stop moving own ship and AIS targets until it is restarted; each chart update also re-reads all charts and can pause OpenCPN for several seconds on a large collection.
 
 ## 2026.10.7
 
