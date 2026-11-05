@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "guid": "{07CA509E-7F76-436A-98EF-4248B72A5DE8}",
+  "name": "Copernicus significant wave height (global)",
+  "group": "Ocean",
+  "layer": true,
+  "url": "https://wmts.marine.copernicus.eu/teroWmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&FORMAT=image/png&TILEMATRIXSET=EPSG:3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&TIME={ver}&LAYER=GLOBAL_ANALYSISFORECAST_WAV_001_027/cmems_mod_glo_wav_anfc_0.083deg_PT3H-i_202411/VHM0&STYLE=cmap:amp",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Ocean_Copernicus_Waves_Global",
+  "cacheType": 71,
+  "license": "Generated using E.U. Copernicus Marine Service Information; GLOBAL_ANALYSISFORECAST_WAV_001_027",
+  "maxConnections": 2,
+  "maxZoom": 7,
+  "snapshot": {
+    "index": "https://wmts.marine.copernicus.eu/teroWmts/GLOBAL_ANALYSISFORECAST_WAV_001_027/cmems_mod_glo_wav_anfc_0.083deg_PT3H-i_202411?request=GetCapabilities&service=WMTS",
+    "type": "wmts-default",
+    "item": "GLOBAL_ANALYSISFORECAST_WAV_001_027/cmems_mod_glo_wav_anfc_0.083deg_PT3H-i_202411/VHM0"
+  }
+}

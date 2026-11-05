@@ -145,14 +145,14 @@ const std::string kSourceLine =
 const std::string kSourceLine2 =
     "source\t{BBBB-2}\tlayer\tСпутник Ё\timage/jpeg\t3395\t7\tprojection\tg.zmp\tСпутник";
 
-// done, progress: the number of events seen so far.
+// done(), progress(): the number of events seen so far.
 using Waiter = std::function<bool(const std::function<bool()>&, const std::function<size_t()>&)>;
 
 } // namespace
 
 class CliRunnerTest : public LoopFixture {
 protected:
-    // Progress-based wait: dispatch events until done; fails only when `progress` did
+    // Progress-based wait: dispatch events until done(); fails only when `progress()` did
     // not change for 20 s (a deadlock or a lost event), however slow the machine is; 10 minutes is a hard
     // cap.
     int quietMs = 20000; // the no-progress limit (a test shortens it)
@@ -182,7 +182,7 @@ protected:
     }
 };
 
-// the progress-based wait fails after the quiet limit without progress, passes on done, and keeps
+// the progress-based wait fails after the quiet limit without progress, passes on done(), and keeps
 // waiting while progress goes on.
 TEST_F(CliRunnerTest, QuietWaitFailsWithoutProgressAndKeepsWaitingWithProgress) {
     quietMs = 300;
@@ -257,7 +257,7 @@ TEST_F(CliRunnerTest, SourcesRecordsThenExitLast) {
     EXPECT_EQ(run.events.back(), "exit");
 }
 
-// Exit codes as onExit delivers them (OQ-3): wx 3.2 reports a normal code as signed 8 bits (143 -> -113);
+// Exit codes as onExit delivers them: wx 3.2 reports a normal code as signed 8 bits (143 -> -113);
 // CliRunner restores it. Measured with wx 3.2 GTK3: sh "exit 130" -> -126, 143 -> -113. (Codes 192..255 are
 // not restored and read as a signal; the CLI uses 0-5, 130 and 143, so this is not pinned.)
 TEST_F(CliRunnerTest, NormalExitCodesArriveUnsigned) {
@@ -273,7 +273,7 @@ TEST_F(CliRunnerTest, NormalExitCodesArriveUnsigned) {
     }
 }
 
-// Proof 3: terminate on a child that traps TERM like the CLI (saved-session message, exit 143).
+// Proof 3: terminate() on a child that traps TERM like the CLI (saved-session message, exit 143).
 TEST_F(CliRunnerTest, TerminateGivesTheChildsOwnExit143AndItsMessage) {
     Capture run;
     bool ready = false;
@@ -374,7 +374,7 @@ TEST_F(CliRunnerTest, TheChildGetsTheStopOptionLastAndAPipeAsStdin) {
     EXPECT_TRUE(run.sawStderrText("last:--stop-on-stdin"));
 }
 
-// proofs 2 and 3: the stdin stays open until terminate(); then the child reads exactly `stop` and EOF;
+// the stdin stays open until terminate(); then the child reads exactly `stop` and EOF;
 // it exits 143 itself (its TERM trap would give 99: no signal was sent).
 TEST_F(CliRunnerTest, StdinStaysOpenUntilTerminateThenStopAndEofAndNoSignal) {
     Capture run;
@@ -524,7 +524,7 @@ TEST_F(CliRunnerTest, StopAndWaitFalseForAChildThatIgnoresTermAndTheDestructorDe
     EXPECT_EQ(::kill(static_cast<pid_t>(pid), 0), 0);
 }
 
-// The production wait of the destructor is the spec value (8.3): 15 s.
+// The production wait of the destructor is 15 s.
 TEST_F(CliRunnerTest, DestructorWaitDefaultsToFifteenSeconds) {
     CliRunner runner;
     EXPECT_EQ(runner.destructorWaitMs(), 15000);
@@ -590,7 +590,7 @@ TEST_F(CliRunnerTest, ArgumentsWithSpaceQuoteAndCyrillicArriveUnchanged) {
     EXPECT_TRUE(run.sawStderrText("Карта 'ё' два"));
 }
 
-// resolveCli : the order, one case each, distinct files so a swap is caught.
+// resolveCli: the order, one case each, distinct files so a swap is caught.
 TEST(ResolveCli, DefaultPathWinsOverTheOneOnPath) {
     TempDir tmp;
     const std::string def = tmp.write("installed-cli", "#!/bin/sh\n", true);
@@ -615,8 +615,8 @@ TEST(ResolveCli, MissingOrNonExecutableDefaultFallsToPath) {
 }
 
 TEST(ResolveCli, HostCliPathsIsTheBundledThenTheInstalledOneOnLinux) {
-    ocpn_fake::dataDir = wxString::FromUTF8("/home/u/Иван/plugin dir");
-    EXPECT_EQ(hostCliPaths(), (std::vector<std::string>{"/home/u/Иван/plugin dir/cli/chart-grabber-cli",
+    ocpn_fake::dataDir = wxString::FromUTF8("/home/Иван/plugin dir");
+    EXPECT_EQ(hostCliPaths(), (std::vector<std::string>{"/home/Иван/plugin dir/cli/chart-grabber-cli",
                                                         "/usr/bin/chart-grabber-cli"}));
     EXPECT_EQ(ocpn_fake::dataDirAsked, "chartgrabber_pi");
     ocpn_fake::dataDir.clear();
@@ -795,7 +795,7 @@ TEST(ProbeCli, StopPreludeReactsOnlyToTheOption) {
         << "sh -c, option: EOF stops it";
 }
 
-// : the child gets exactly "--version" and ONE "--datadir=DIR" argument (a directory with a
+// the child gets exactly "--version" and ONE "--datadir=DIR" argument (a directory with a
 // space, a quote and Cyrillic stays one argument); with an empty data dir only "--version".
 TEST(ProbeCli, ArgvIsVersionAndTheDatadir) {
     TempDir tmp;
@@ -818,7 +818,7 @@ TEST(ProbeCli, ArgvIsVersionAndTheDatadir) {
     EXPECT_EQ(argvOf("no-data", ""), (std::vector<std::string>{"--version"}));
 }
 
-// : 200 real probes of the Sources stand-in (a new file each: the probe cache is keyed on the file)
+// 200 real probes of the Sources stand-in (a new file each: the probe cache is keyed on the file)
 // all see the version line, none "no version".
 TEST(ProbeCli, SourcesStandInAnswersEveryProbe) {
     TempDir tmp;
@@ -942,7 +942,7 @@ std::string describe(const StderrLine& l) {
 }
 } // namespace
 
-// finish flushes the stderr splitter through the parser: a last stderr line without a newline
+// finish() flushes the stderr splitter through the parser: a last stderr line without a newline
 // reaches onStderr as the parsed event, after the complete line before it.
 TEST_F(CliRunnerTest, LastStderrLineWithoutNewlineReachesOnStderr) {
     Capture run;

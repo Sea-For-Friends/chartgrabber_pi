@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{094D4409-B58E-424F-ADD0-499AF513ED82}",
+  "name": "PNOA orthophoto (Spain, Balearics, Canaries)",
+  "group": "Satellite",
+  "url": "https://www.ign.es/wmts/pnoa-ma?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=OI.OrthoimageCoverage&STYLE=default&FORMAT=image/jpeg&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_PNOA_Spain_Ortho",
+  "license": "PNOA cedido por © Instituto Geográfico Nacional de España, CC BY 4.0 scne.es",
+  "maxConnections": 2,
+  "maxZoom": 19
+}

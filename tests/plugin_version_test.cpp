@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// the plugin version is calendar-based YYYY.MM.N and is the same in the
-// CMake project version, the plugin class, metadata.xml and the tarball name; CHANGELOG.md has [Unreleased].
+// The plugin version is calendar-based YYYY.MM.N and is the same in the
+// CMake project version, the plugin class, metadata.xml and the tarball name; CHANGELOG.md has a section for
+// the version.
 #include "plugin_version.h"
 
 #include <gtest/gtest.h>

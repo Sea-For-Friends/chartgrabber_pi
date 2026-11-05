@@ -28,7 +28,7 @@
 
 namespace {
 
-// Set first in DeInit, reset in Init : while set, the entry points that OpenCPN may call during the
+// Set first in DeInit, reset in Init: while set, the entry points that OpenCPN may call during the
 // event loop that DeInit pumps return at once.
 bool g_closing = false;
 
@@ -49,7 +49,7 @@ int addContextItem(const wxString& text, opencpn_plugin* owner, std::unique_ptr<
     return AddCanvasContextMenuItem(item.get(), owner);
 }
 
-// Header line 7 of the plugin's log file : the settings the plugin runs with.
+// Header line 7 of the plugin's log file: the settings the plugin runs with.
 void logSettingsLine(const ConfigStore& config, const cg::Settings& settings) {
     std::string why;
     const std::optional<std::string> program = resolveCli(settings, &why);
@@ -101,14 +101,14 @@ int ChartGrabberPi::Init() {
         cg::endPluginLogHeader();
         cg::setPluginLogDebug(settings.debugLog);
         look_ = std::make_unique<Look>();
-        // wxITEM_CHECK: OpenCPN 5.10.2 toggles only tools that CanBeToggled (toolbar.cpp:1947-1954).
+        // wxITEM_CHECK: OpenCPN 5.10.2 toggles only tools that CanBeToggled() (toolbar.cpp:1947-1954).
         toolId_ = InsertPlugInToolSVG(
             _("Chart Grabber"), dataFile("chartgrabber_tool.svg"), dataFile("chartgrabber_tool.svg"),
             dataFile("chartgrabber_tool_toggled.svg"), wxITEM_CHECK, _("Chart Grabber"),
             _("Download a chart of an area for use offline"), nullptr, -1, 0, this);
         areaTool_ = std::make_unique<AreaTool>([l = look_.get()] { return l->outline(); },
                                                [l = look_.get()] { return l->touch(); });
-        if (config_) { // OpenCPN ended during a job last time: never auto-resumed
+        if (config_) { // OpenCPN ended during a job last time: never auto-resumed (ux F4)
             for (cg::ChartRecord r : config_->loadCharts()) {
                 if (r.state != cg::ChartState::Running)
                     continue;
@@ -116,6 +116,7 @@ int ChartGrabberPi::Init() {
                 config_->saveChart(r);
             }
             jobs_ = std::make_unique<JobController>(*config_, *look_, *areaTool_);
+            jobs_->cleanupStaleAtStart();
             jobs_->onBusyChanged = [this](bool busy) {
                 setToolBusy(busy);
                 if (dialog_)
@@ -134,7 +135,7 @@ int ChartGrabberPi::Init() {
                                      wxString(cg::kPluginVersionString)));
         return WANTS_OVERLAY_CALLBACK | WANTS_OPENGL_OVERLAY_CALLBACK | WANTS_MOUSE_EVENTS |
                INSTALLS_TOOLBAR_TOOL | WANTS_TOOLBAR_CALLBACK | INSTALLS_CONTEXTMENU_ITEMS | WANTS_CONFIG |
-               WANTS_PREFERENCES;
+               WANTS_PREFERENCES | WANTS_PLUGIN_MESSAGING;
     });
 }
 
@@ -281,8 +282,8 @@ void ChartGrabberPi::ShowPreferencesDialog(wxWindow* parent) {
         dialog.ShowModal();
     });
 }
-// The strip's "Preferences...": a modeless window one Settings window at a time
-// ): an open one, the page's or this, is raised.
+// The strip's "Preferences...": a modeless window, one Settings window at a time:\n// an open one, the page's
+// or this, is raised.
 void ChartGrabberPi::openSettings() {
     if (g_disabled || g_closing || !config_ ||
         !look_) // g_closing: DeInit pumps events; the others are unreachable
@@ -312,6 +313,22 @@ void ChartGrabberPi::SetColorScheme(PI_ColorScheme cs) {
             look_->setScheme(cs);
     });
 }
+// OpenCPN's version arrives in the "OpenCPN Config" message after all plugins are loaded.
+void ChartGrabberPi::SetPluginMessage(wxString& message_id, wxString& message_body) {
+    if (message_id != "OpenCPN Config")
+        return;
+    cg::guarded("SetPluginMessage", [&] {
+        const auto v = cg::openCpnVersion(cg::toUtf8(message_body));
+        if (!v)
+            return;
+        staleDropAllowed() = cg::chartListRemoveIsSafe(v->first, v->second);
+        if (!versionLogged_) {
+            versionLogged_ = true;
+            cg::logLine(wxString::Format("OpenCPN %d.%d reported", v->first, v->second));
+        }
+    });
+}
+
 bool ChartGrabberPi::MouseEventHook(wxMouseEvent& event) {
     if (g_disabled || g_closing)
         return false;

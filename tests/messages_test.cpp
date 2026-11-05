@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Texts and number formats of src/wx/messages.cpp against literals. Pure functions; no window, no OpenCPN call.
+// Texts and number formats of src/wx/messages.cpp against literals. Pure functions; no window, no OpenCPN
+// call.
 #include "cli_records.h"
 #include "messages.h"
 #include "wx_env.h"
@@ -103,6 +104,14 @@ TEST(MessagesRows, WeatherTexts) {
               "Credit: Weather data by Pr\xC3\xA9"
               "visions");
     EXPECT_EQ(u(updateWeatherMenuText()), "Update to latest weather");
+    EXPECT_EQ(u(updateAllWeatherButtonText()), "Update all weather charts");
+    EXPECT_EQ(u(runLockedText()), "Skipped: another download of this chart is running.");
+    EXPECT_EQ(u(updateAllResultText(3, 0, 0, 0, 0, {})), "Weather charts: 3 updated.");
+    EXPECT_EQ(u(updateAllResultText(1, 2, 2, 4, 5, {"Solent", wxString::FromUTF8("Rh\xC3\xB4ne")})),
+              "Weather charts: 1 updated, 2 unchanged, 2 failed (Solent, Rh\xC3\xB4ne), 4 skipped (busy), "
+              "5 not updated.");
+    EXPECT_EQ(u(updateAllResultText(0, 0, 3, 0, 0, {})), "Weather charts: 3 failed.");
+    EXPECT_EQ(u(updateAllResultText(0, 0, 0, 1, 0, {})), "Weather charts: 1 skipped (busy).");
 }
 
 TEST(MessagesNumbers, FormatBytes) {
@@ -233,7 +242,7 @@ TEST(MessagesOutcome, FixedHeadlinesOfSection93) {
         EXPECT_EQ(u(outcomeHeadline(o, none, {}, "ignored")), text) << static_cast<int>(o);
 }
 
-// : exit 4 whose last error is the CLI's snapshot line (a real line, tests/fixtures/cli-2026.10.14/
+// exit 4 whose last error is the CLI's snapshot line (a real line, tests/fixtures/cli-2026.11.1/
 // run-weather-snapshot-failed.stderr) gives the weather text; any other last error keeps the landed one.
 TEST(MessagesOutcome, ASnapshotFailureHasItsOwnHeadline) {
     EXPECT_EQ(u(outcomeHeadline(cg::Outcome::DownloadIncomplete, {}, {},
@@ -283,8 +292,8 @@ TEST(MessagesOutcome, RefusalTextBranches) {
         EXPECT_EQ(u(refusalText(in)), text) << in;
 }
 
-// : the S-15 and S-16 refusals. The first and third lines are the captured ones (tests/fixtures/
-// cli-2026.10.14/run-cache-refused.stderr, estimate-area-too-large.stderr); the "cannot open the cache"
+// the S-15 and S-16 refusals. The first and third lines are the captured ones (tests/fixtures/
+// cli-2026.11.1/run-cache-refused.stderr, estimate-area-too-large.stderr); the "cannot open the cache"
 // forms are HAND-MADE from core v2026.10.6 src/cg/app/job_checks.cpp (the capture produced the other form).
 TEST(MessagesOutcome, TheCacheAndAreaSizeRefusals) {
     const std::string cache =
@@ -304,9 +313,9 @@ TEST(MessagesOutcome, TheCacheAndAreaSizeRefusals) {
     EXPECT_EQ(u(tooLargeText()), large);
     EXPECT_EQ(u(cacheRefusedText()), cache);
     EXPECT_EQ(u(startViewText()), "This is OpenCPN's starting view. Move the chart to your area first.");
-    // : the captured BerkeleyDB line also holds ": cannot open the cache: ", so its check comes first.
-    // : the line is the captured fixture, made a lastError the way the runner does.
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.14/run-cache-berkeleydb.stderr",
+    // the captured BerkeleyDB line also holds ": cannot open the cache: ", so its check comes first.
+    // the line is the captured fixture, made a lastError the way the runner does.
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.1/run-cache-berkeleydb.stderr",
                      std::ios::binary);
     std::string line;
     ASSERT_TRUE(std::getline(in, line));
@@ -333,7 +342,7 @@ TEST(MessagesCli, FixedTexts) {
               "sources folder.");
 }
 
-// the Windows texts.
+// The Windows texts (the zip comes from the project's Releases page).
 TEST(MessagesCli, WindowsTexts) {
     const cg::Os w = cg::Os::Windows;
     EXPECT_EQ(u(cliNotFoundText(w)),
@@ -495,8 +504,7 @@ TEST(MessagesDownload, TextsOfSection75AndSettings) {
                                    "of use of each chart source.");
     EXPECT_EQ(u(navigationNoteText()),
               "Not for navigation. This source is not an official nautical chart; do "
-              "not use it to navigate."); //
-
+              "not use it to navigate.");
     EXPECT_EQ(u(dontShowAgainText()), "Don't show again");
     EXPECT_EQ(u(replaceQuestion()), "A chart with this name exists. Replace it?");
     EXPECT_EQ(u(savedTilesText(3000000, false)), "3.0 MB of saved tiles");
@@ -532,6 +540,9 @@ TEST(MessagesAscii, EveryFixedTextIsAscii) {
                                        outcomeHeadline(cg::Outcome::Killed, {}, {}, ""),
                                        creditText("x"),
                                        updateWeatherMenuText(),
+                                       updateAllWeatherButtonText(),
+                                       runLockedText(),
+                                       updateAllResultText(1, 2, 3, 4, 5, {}),
                                        snapshotAgeText(60),
                                        startViewText()};
     for (const wxString& t : all) {
@@ -554,11 +565,12 @@ TEST(MessagesUiText, EveryValueIsTheLiteralOfSpecSection42) {
         {UiText::DownloadRunning, "A download is running"},
         {UiText::LoadingSources, "Loading chart sources..."},
         {UiText::NoUsableSource, "No usable chart source. Use More sources... or Preferences."},
+        {UiText::ChooseInMoreSources, "Choose in More sources..."},
         {UiText::SeamarksMissing, "The seamarks source (OpenSeaMap) is not among your chart sources"},
         {UiText::ChooseDetail, "Choose the detail"},
         {UiText::HarbourTooLarge, "Too many tiles for this area - draw a smaller area for harbour detail"},
     };
-    EXPECT_EQ(rows.size(), 11u);
+    EXPECT_EQ(rows.size(), 12u);
     for (const auto& [id, text] : rows)
         EXPECT_EQ(u(uiText(id)), text); // equal to an ASCII literal, so ASCII itself
 }
@@ -581,7 +593,7 @@ TEST(MessagesUiText, CorridorTextHasOneDecimalAndTheUnit) {
 }
 
 TEST(MessagesUiText, BandScaleTextIsTheScaleRangeOfTheBandAtTheLatitude) {
-    // Equator rows: (recomputed from geo_math.cpp 2026-10-15).
+    // Equator rows (recomputed from geo_math.cpp).
     EXPECT_EQ(u(bandScaleText(cg::Band::Passage, 0)), "1:2.3M-1:290k");
     EXPECT_EQ(u(bandScaleText(cg::Band::Coastal, 0)), "1:140k-1:36k");
     EXPECT_EQ(u(bandScaleText(cg::Band::Approach, 0)), "1:18k-1:9.0k");
@@ -590,7 +602,7 @@ TEST(MessagesUiText, BandScaleTextIsTheScaleRangeOfTheBandAtTheLatitude) {
     EXPECT_EQ(u(bandScaleText(cg::Band::Passage, 60)), "1:1.2M-1:140k");
 }
 
-// . Scales by hand: 156543.034 x cos(lat) / 2^z x 96 / 0.0254; lat 0: z10 577.8k,
+// Scales by hand: 156543.034 x cos(lat) / 2^z x 96 / 0.0254; lat 0: z10 577.8k,
 // z13 72.2k, z14 36.1k, z21 282; lat 50.7: z10 366.0k, z14 22.87k, z15 11.44k, z17 2.859k.
 TEST(MessagesDetail, ZoomEntryTextHasTwoSpacesBeforeTheZoom) {
     EXPECT_EQ(u(zoomEntryText(10, 0)), "1:580k  (zoom 10)");
@@ -620,7 +632,7 @@ TEST(MessagesDetail, LevelsTextAndNextLevelText) {
     EXPECT_EQ(u(nextLevelText(13, 0, 7558272)), "One more level (1:36k) would add about 7.6 MB.");
 }
 
-// . Scales at lat 50.7 (156543.034 x cos(lat) / 2^z x 96 / 0.0254, two digits):
+// Scales at lat 50.7 (156543.034 x cos(lat) / 2^z x 96 / 0.0254, two digits):
 // z18 1:1.4k, z16 1:5.7k, z5 1:12M, z2 1:94M.
 TEST(MessagesDetail, DetailWarningTexts) {
     cg::DetailAdvice much;
@@ -654,8 +666,8 @@ TEST(MessagesDetail, DetailWarningTexts) {
     EXPECT_EQ(u(warnDetailCheckText()), "Warn before very large or very small detail choices");
 }
 
-// : the band of the zoom, "zoom <n>" outside every band; the literals are the bands of
-// (Passage 8-11, Coastal 12-14, Approach 15-16, Harbour 17-18).
+// the band of the zoom, "zoom <n>" outside every band; the literals are the bands of
+// the detail bands (Passage 8-11, Coastal 12-14, Approach 15-16, Harbour 17-18).
 TEST(MessagesStrip, ProgressLineNamesTheBandOfTheZoom) {
     const std::vector<std::pair<int, std::string>> rows = {
         {3, "zoom 3"},   {7, "zoom 7"},   {8, "Passage"},   {11, "Passage"},
@@ -677,7 +689,7 @@ TEST(MessagesStrip, ExportAndPhaseLinesKeepCyrillicNames) {
     EXPECT_EQ(u(phaseLine("export", w(kKarta))), std::string(kKarta) + ": building the chart...");
 }
 
-// ---- sweep : no word "map" / "maps", no "tile program", only ASCII ----
+// ---- sweep: no word "map" / "maps", no "tile program", only ASCII ----
 
 bool hasWord(const std::string& text, const std::string& word) {
     const auto lower = [](std::string x) {
@@ -695,6 +707,30 @@ bool hasWord(const std::string& text, const std::string& word) {
             return true;
     }
     return false;
+}
+
+// the reasons of favourite-sources.conf and the warning text.
+TEST(MessagesFavourites, EveryReasonAndTheWarningAreTheDraftLiterals) {
+    using Kind = cg::FavouriteProblem::Kind;
+    const std::vector<std::pair<cg::FavouriteProblem, std::string>> rows = {
+        {{Kind::FileNotFound, 0}, "file not found"},
+        {{Kind::NoFormatLine, 0}, "no format line"},
+        {{Kind::UnknownFormat, 0}, "unknown format"},
+        {{Kind::NoEntries, 0}, "no entries"},
+        {{Kind::TooFewFields, 3}, "line 3: too few fields"},
+        {{Kind::UnknownRole, 12}, "line 12: unknown role"},
+        {{Kind::NotGuid, 4}, "line 4: not a source ID"},
+        {{Kind::Repeated, 5}, "line 5: repeated"},
+        {{Kind::SecondSeamarks, 6}, "line 6: second seamarks line"},
+    };
+    EXPECT_EQ(rows.size(), static_cast<std::size_t>(static_cast<int>(Kind::SecondSeamarks) + 1));
+    for (const auto& [problem, text] : rows)
+        EXPECT_EQ(u(favouriteProblemText(problem)), text);
+    EXPECT_EQ(
+        u(favouritesWarningText("line 3: too few fields", "/d/p d'x/favourite-sources.conf")),
+        "The list of favourite chart sources is missing or damaged (line 3: too few fields). Chart Grabber "
+        "uses the lines it can read. To repair it, save a fresh copy over this file:\n"
+        "/d/p d'x/favourite-sources.conf");
 }
 
 TEST(MessagesSweep, TheWordMatcherFindsWholeWordsOnly) {
@@ -725,7 +761,7 @@ TEST(MessagesSweep, NoTextOfMessagesHSaysMapOrTileProgramAndAllAreAscii) {
     constexpr int kPreflights = static_cast<int>(cg::Preflight::OverBudget) + 1;
     constexpr int kChartStates = static_cast<int>(cg::ChartState::Failed) + 1;
     constexpr int kBands = static_cast<int>(cg::Band::Harbour) + 1;
-    EXPECT_EQ(kUiTexts, 11);
+    EXPECT_EQ(kUiTexts, 12);
     EXPECT_EQ(kOutcomes, 11);
     EXPECT_EQ(kAreaErrors, 4);
     EXPECT_EQ(kCliStatuses, 6);
@@ -774,6 +810,11 @@ TEST(MessagesSweep, NoTextOfMessagesHSaysMapOrTileProgramAndAllAreAscii) {
     for (int i = 0; i < kBands; ++i) {
         add(bandName(static_cast<cg::Band>(i)));
         add(bandScaleText(static_cast<cg::Band>(i), 45));
+    }
+    for (int k = 0; k <= static_cast<int>(cg::FavouriteProblem::Kind::SecondSeamarks); ++k) {
+        add(favouriteProblemText({static_cast<cg::FavouriteProblem::Kind>(k), 7}));
+        add(favouritesWarningText(favouriteProblemText({static_cast<cg::FavouriteProblem::Kind>(k), 7}),
+                                  "/c/f.conf"));
     }
     cg::SourceRefusal projection;
     projection.kind = cg::SourceRefusal::Kind::Projection;
@@ -851,6 +892,9 @@ TEST(MessagesSweep, NoTextOfMessagesHSaysMapOrTileProgramAndAllAreAscii) {
           myChartsButtonText(3),
           creditText("x"),
           updateWeatherMenuText(),
+          updateAllWeatherButtonText(),
+          runLockedText(),
+          updateAllResultText(1, 2, 3, 4, 5, {}),
           snapshotAgeText(60),
           startViewText()})
         add(t);

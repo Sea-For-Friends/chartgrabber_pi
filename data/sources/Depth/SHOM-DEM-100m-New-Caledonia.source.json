@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{9441ED23-4236-4D96-BF7D-FDFB4C8BCF4C}",
+  "name": "SHOM 100 m depth, New Caledonia",
+  "group": "Depth",
+  "layer": true,
+  "url": "https://services.data.shom.fr/INSPIRE/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=MNT_NC100m_PBMA_3857_WMTS&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Depth_SHOM_DEM100_New_Caledonia",
+  "license": "© Shom / IGN — Litto3D® / HOMONIM, Licence Ouverte 2.0. Non certifié pour la navigation",
+  "maxConnections": 2,
+  "maxZoom": 13,
+  "navigationWarning": true
+}

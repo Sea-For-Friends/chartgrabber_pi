@@ -328,7 +328,7 @@ void CliRunner::finish(int exitCode) {
     process_ = nullptr;
     Callbacks cb = std::move(cb_);
     cb_ = Callbacks();
-    if (cb.onExit) { // last: it may call start again
+    if (cb.onExit) { // last: it may call start() again
         cg::guarded("runner exit callback", [&] { cb.onExit(exitCode, false); });
     }
 }

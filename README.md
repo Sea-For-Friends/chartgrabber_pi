@@ -43,7 +43,7 @@ Debian 12 gets OpenCPN from bookworm-backports.
 1. Download the plugin file for your system (the table below).
 2. In OpenCPN: Options > Plugins > **Import plugin...**, pick the plugin file, **Enable** it, then **OK** (or restart OpenCPN).
 
-The [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) 2026.10.14, the program that does the download, is inside the plugin file on every system: there is nothing else to install.
+The [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) 2026.11.1, the program that does the download, is inside the plugin file on every system: there is nothing else to install.
 It is kept in the plugin folder of OpenCPN. A CLI you choose yourself in the plugin's Settings is used instead.
 The Linux file needs the graphics libraries `libopengl0`, `libglx0` and `libegl1`; OpenCPN's own package from Debian 12, Debian 13 or Ubuntu 24.04 installs them, a hand-built OpenCPN may not (Arch and CachyOS: `libglvnd`).
 
@@ -83,14 +83,14 @@ Checksums are on the release page. All releases: [plugin](https://github.com/Sea
 
 ## Chart sources
 
-The plugin ships 28 chart sources in `data/sources/` as `*.source.json` files (the CLI's JSON format), in seven groups that the New chart page shows as menus. Each was
+The plugin ships 81 chart sources in `data/sources/` as `*.source.json` files (the CLI's JSON format), in seven groups that the New chart page shows as menus. Each was
 tried with the tile program and a real small download. Details, terms and credits per source: `data/sources/README.md`.
 
 | Group | What it is for a sailor |
 |---|---|
 | Nautical charts | Official sea charts as tiles: Norway (Kartverket), Finland (Traficom), the US coast (NOAA). Not for navigation. |
 | Seamarks and traffic | OpenSeaMap seamarks (buoys, lights) and EMODnet ship traffic density, as overlays on a chart. |
-| Depth | Depth shading: EMODnet (Europe, world), GEBCO (world), NOAA BlueTopo (US coast). Not for navigation. |
+| Depth | Depth shading: EMODnet (Europe, world), GEBCO (world), NOAA BlueTopo (US coast), CHS NONNA-10 (Canada). Not for navigation. |
 | Satellite | Sentinel-2 (10 m, worldwide), USGS (USA), Esri World Imagery (grey: its terms may forbid offline use). |
 | Coast and land | OpenTopoMap, a land and relief chart (grey: throttled, one connection). |
 | Weather now | One picture of the weather as it is now: rain radar, clouds, precipitation, tropical cyclones, US weather warnings (Europe, US, worldwide). |
@@ -100,7 +100,7 @@ The satellite gap: what sailors ask for most, Google, Bing and Esri high-resolut
 those providers forbid saving their tiles. The imagery that can be shipped, Sentinel-2 at 10 m and USGS, shows reef edges,
 banks and passes, but not single coral heads.
 
-Sources that need a key, and Navionics, are not in this repository. They live in a separate folder outside it, one folder
+Sources that need a key are not in this repository. They live in a separate folder outside it, one folder
 with a short README per source. To add one, put its `.zmp` folder or `.source.json` file (with your own key where the file says `KEY`) into a
 folder of your own (by default `Charts/Chart sources` in your home folder) and, if you use another folder, choose it in
 Preferences, row "Chart sources"; it is read after the bundled sources.

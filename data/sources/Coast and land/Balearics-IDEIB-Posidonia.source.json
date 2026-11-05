@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{0C31D17C-5FAB-4A03-AC03-16BD45326219}",
+  "name": "IDEIB Posidonia and protected seabed (Balearics)",
+  "group": "Coast and land",
+  "layer": true,
+  "url": "https://ideib.caib.es/geoserveis/services/public/GOIB_Posidonia_IB/MapServer/WMSServer?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=2,3,4&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Coast_IDEIB_Posidonia_Balearics",
+  "license": "© Govern de les Illes Balears — IDEIB, CC BY-SA. Informative, not for navigation",
+  "maxConnections": 1,
+  "maxZoom": 17,
+  "navigationWarning": true
+}

@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{FA4270B3-BFD8-483A-8ED7-6D3C6DEE1080}",
+  "name": "SHOM tide zones (France)",
+  "group": "Ocean",
+  "layer": true,
+  "url": "https://services.data.shom.fr/INSPIRE/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ZONES_MAREE_PYR_PNG_3857_WMTS&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Ocean_SHOM_Tide_Zones",
+  "license": "© Shom — Licence Ouverte 2.0. Non certifié pour la navigation",
+  "maxConnections": 2,
+  "maxZoom": 10,
+  "navigationWarning": true
+}

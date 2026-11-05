@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{DCF3A72B-CE26-40A1-9A9B-00D20A7219F1}",
+  "name": "PDOK aerial photo (Netherlands)",
+  "group": "Satellite",
+  "url": "https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0/Actueel_orthoHR/EPSG:3857/{z}/{x}/{y}.jpeg",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_PDOK_Luchtfoto_NL",
+  "license": "Luchtfoto: Beeldmateriaal Nederland / PDOK, CC BY 4.0",
+  "maxConnections": 2,
+  "maxZoom": 19
+}

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The plugin version, calendar-based YYYY.MM.N taken from the CMake project
+// The plugin version, calendar-based YYYY.MM.N, taken from the CMake project
 // version. OpenCPN 5.10.2 parses it with sscanf("%d.%d.%d.%d") (semantic_vers.cpp:51) and reads major / minor
-// / patch through the plugin class.
+// / patch through the plugin class (plugin_loader.cpp:172-178).
 #pragma once
 
 namespace cg {

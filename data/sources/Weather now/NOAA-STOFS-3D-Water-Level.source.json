@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "guid": "{984FD6D2-DB46-41AC-8E54-4F39E6A1239D}",
+  "name": "NOAA STOFS-3D surge water level (US coasts)",
+  "group": "Weather now",
+  "layer": true,
+  "url": "https://nowcoast.noaa.gov/geoserver/stofs3d/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=stofs3d_atlc_water_disturbance,stofs3d_pac_water_disturbance&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE&TIME={ver}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Weather_NOAA_STOFS_3D_Water_Level",
+  "cacheType": 71,
+  "license": "NOAA NOS STOFS via nowCOAST (public domain). Guidance only, not for navigation",
+  "maxConnections": 1,
+  "maxZoom": 10,
+  "navigationWarning": true,
+  "snapshot": {
+    "index": "https://nowcoast.noaa.gov/geoserver/stofs3d/stofs3d_atlc_water_disturbance/ows?service=WMS&version=1.3.0&request=GetCapabilities",
+    "type": "wms-default",
+    "item": "stofs3d_atlc_water_disturbance",
+    "pick": "nearest-now"
+  }
+}

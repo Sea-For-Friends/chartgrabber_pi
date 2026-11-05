@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Tests of geo_math. Expected values are literals from the geo_math definitions, or computed
+// Tests of geo_math. Expected values are literals from the design notes, or computed
 // by hand from the Web Mercator formulas (see the comments).
 #include "geo_math.h"
 
@@ -152,7 +152,7 @@ TEST(BboxTileCount, WholeWorld) {
 TEST(BboxTileCount, SmallBoxAtZoom17) {
     // Box lon 10.0..10.02, lat 50.0..50.01. Hand-computed: x = floor((lon+180)/360 * 2^17)
     // gives 69176..69184 (9 columns); y = floor((1 - asinh(tan(lat))/pi)/2 * 2^17) gives
-    // 44446 (north).. 44452 (south) (7 rows). 9 * 7 = 63.
+    // 44446 (north) .. 44452 (south) (7 rows). 9 * 7 = 63.
     EXPECT_EQ(bboxTileCount(BBox{10.0, 50.0, 10.02, 50.01}, 17), 63);
 }
 
@@ -162,7 +162,7 @@ TEST(BboxTileCount, EdgeOnTileBoundaryCountsExtra) {
     EXPECT_EQ(bboxTileCount(BBox{0.0, 0.0, 90.0, 45.0}, 1), 2);
 }
 
-// ---- scaleDenominator / formatScale ----
+// ---- scaleDenominator / formatScale (ux section 4) ----
 
 TEST(FormatScale, EquatorLabels) {
     EXPECT_EQ(formatScale(scaleDenominator(8, 0)), "1:2.3M");
@@ -416,14 +416,14 @@ TEST(DetailRange, RangeFromTextAndRangeZooms) {
 // the tile ranges below were worked out with an independent Web Mercator script (x =
 // floor((lon
 // + 180) / 360 x 2^z), y = floor((1 - asinh(tan(lat)) / pi) / 2 x 2^z)); counts are columns x rows per level.
-// kTiny (west 10, south 50, east 10.0001, north 50.0001): 1 tile at z0-19 (x 276707, y 177809 at z19), 2
-// at z20, 21. kSmall (10, 50, 10.05, 50.05): z0-10 1 each, z11 2, z12 4, z13 6, z14 12, z15 40, z16 150,
-// z17 580. kMed (10, 50, 10.4, 50.2): z0-9 1 each; z10 4, z11 12, z12 30, z13 80, z14 285, z15 1110, z16
-// 4292,
-// z17 16905 (x 69176-69322, y 44338-44452), z18 66804, z19 265720.
-// kBig (0, 40, 20, 60): z0-2 1 each, z3 2, z4 3, z5 8, z6 28, z7 96, z8 345, z9 1334, z10 5187, z11
-// 20748;
-// T(0,10) = 7006, T(0,11) = 27754, T(0,16) = 28067231, T(0,17) = 112239869.
+//   kTiny  (west 10, south 50, east 10.0001, north 50.0001): 1 tile at z0-19 (x 276707, y 177809 at z19), 2
+//   at z20, 21. kSmall (10, 50, 10.05, 50.05): z0-10 1 each, z11 2, z12 4, z13 6, z14 12, z15 40, z16 150,
+//   z17 580. kMed   (10, 50, 10.4, 50.2): z0-9 1 each; z10 4, z11 12, z12 30, z13 80, z14 285, z15 1110, z16
+//   4292,
+//          z17 16905 (x 69176-69322, y 44338-44452), z18 66804, z19 265720.
+//   kBig   (0, 40, 20, 60): z0-2 1 each, z3 2, z4 3, z5 8, z6 28, z7 96, z8 345, z9 1334, z10 5187, z11
+//   20748;
+//          T(0,10) = 7006, T(0,11) = 27754, T(0,16) = 28067231, T(0,17) = 112239869.
 const BBox kTiny{10.0, 50.0, 10.0001, 50.0001};
 const BBox kSmall{10.0, 50.0, 10.05, 50.05};
 const BBox kMed{10.0, 50.0, 10.4, 50.2};

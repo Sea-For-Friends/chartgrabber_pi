@@ -10,6 +10,7 @@
 #include "look.h"
 #include "messages.h"
 #include "plugin_log.h"
+#include "plugin_version.h"
 #include "portable.h"
 #include "settings_dialog.h"
 #include "sources_dialog.h"
@@ -20,6 +21,10 @@
 #include <wx/dir.h>
 #include <wx/file.h>
 #include <wx/filename.h>
+// clang-format off
+#include <wx/hyperlink.h> // before the generic header, which does not include its base class
+#include <wx/generic/hyperlink.h>
+// clang-format on
 #include <wx/intl.h>
 #include <wx/log.h>
 #include <wx/msgdlg.h>
@@ -46,89 +51,41 @@
 
 namespace {
 
-constexpr double kCorridorMin = 0.5, kCorridorMax = 20, kCorridorStep = 0.5; // NM,
-constexpr std::int64_t kHarbourMaxTiles = 20000; // z17 + z18 tiles of the area
-constexpr int kEstimateDebounceMs = 400;         //
+constexpr double kCorridorMin = 0.5, kCorridorMax = 20, kCorridorStep = 0.5; // NM
+constexpr std::int64_t kHarbourMaxTiles = 20000;                             // z17 + z18 tiles of the area
+constexpr int kEstimateDebounceMs = 400;
+constexpr int kPageWidth = 800;       // DIP: the page's width on the 800 x 480 screen
+constexpr int kMinScrollHeight = 100; // DIP: the rows keep at least this height beside the footer
+constexpr int kRowMargins = 60;       // px: borders and the scroll bar around the rows
+constexpr int kThreadsMax = 4;        // Advanced threads 1-4
 
-constexpr int kPageWidth = 800;                  // DIP: the page's width on the 800 x 480 screen of
-constexpr int kMinScrollHeight = 100;            // DIP: the rows keep at least this height beside the footer
-constexpr int kRowMargins = 60;                  // px: borders and the scroll bar around the rows
-constexpr int kThreadsMax = 4;                   // Advanced threads 1-4
-
-// curated table, in the order of the choice. The first five GUIDs were found in the Chart Grabber
-// CLI's `sources` output of the user's chart-source set (a ZMP chart-source folder) on 2026-10-15; the five
-// rows are the CLI package's own sources (core master 10440c1d, data/map-sources/<file>/params.txt).
-// Each GUID is in the table once.
-struct Curated {
-    std::string_view guid;
-    bool satellite; // in the curated satellite set: imagery line, seamarks default on
-    bool terms;     // the terms-of-use note shows for it
-};
-constexpr Curated kCurated[] = {
-    {"{7B743985-BC5F-4AB6-8915-AC5DBBB8F552}", true, true},   // Esri World Imagery: ESRI/ArcGIS.Imagery.zmp:3
-    {"{F6574B06-E632-4D5F-BC75-C8FA658B57DF}", true, false},  // Google Satellite: Google/GoogleSat.zmp:4
-    {"{9A360A54-7A70-402D-8A11-D570BD759B5B}", true, false},  // Bing Aerial: Bing/Bing_Sat.zmp:4
-    {"{92122135-6B15-4800-AA9E-3E48C556DA17}", true, false},  // Satellite/Sentinel2-Cloudless-2025.zmp
-    {"{E05EDD5E-C6C3-483C-8BA7-8DE1D9892ED8}", true, false},  // Satellite/USGS-Imagery-USA.zmp
-    {"{A830C100-49C8-4623-957A-60B85C39FBE0}", false, false}, // Navionics: Navionics/navionics.zmp:2
-    {"{D643C5A1-4331-4387-9BE2-DDDF185C117E}", false, false}, // OSM Mapnik: _osm/Mapnik.zmp:4
-    {"{51C1079B-B55D-4DF7-A410-ADC118F53AB1}", false, true},  // Coast and land/OpenTopoMap.zmp
-    {"{C44877A0-D455-4238-B5E2-C8BFF25FC0D4}", false, false}, // Depth/EMODnet-Bathymetry-World.zmp
-    {"{91D4F1B4-A7CD-4FC8-95F1-637609068FB2}", false, false}, // Depth/EMODnet-Bathymetry-Europe.zmp
-    // the two weather pictures are bases, core 9b2ef52c, line 2 of params.txt
-    {"{FE84A175-2C0F-420F-86DF-5900DE16A33C}", false, false}, // Weather now/EUMETView-GeoColour.zmp:2
-    {"{8B9C244E-E978-4267-8FE4-D703534C0789}", false, false}, // Weather now/NASA-GIBS-VIIRS-TrueColor.zmp:2
-    // the two EMODnet vessel-density layers (kind layer, group Seamarks and traffic):
-    // GUIDs from the CLI 2026.10.14 `sources` records,
-    // tests/fixtures/cli-2026.10.14/sources-bundled-all.stdout
-    {"{99D06D6A-F7FA-4F06-8C00-D9F96307C0F3}", false,
-     false}, // Seamarks and traffic/EMODnet-Vessel-Density.zmp
-    {"{478CBB2F-70D1-4573-8C50-B5361CE2AA46}", false,
-     false}, // Seamarks and traffic/EMODnet-Vessel-Density-Sailing.zmp
-};
-// order of the weather choice (the first present is the default), core 9b2ef52c,
-// data/sources/Weather now/<file>.zmp/params.txt:2
-constexpr std::string_view kWeatherOrder[] = {
-    "{1A696D82-F258-41A4-BCD6-7648D9E08DE2}", // RainViewer-Radar.zmp
-    "{25E4232E-08A5-47C5-8D97-E38B5F418A2D}", // DWD-Radar-Germany.zmp
-    "{076D1F9A-DC94-4184-B785-77362CD01B5B}", // NOAA-nowCOAST-Radar-CONUS.zmp
-    "{BC2EA862-0F3D-4933-8F71-00AFA0BAD114}", // EUMETView-H60B-Precipitation.zmp
-    "{92E40853-04A2-46B7-8A5B-3665FCDDFDBE}", // NASA-GIBS-IMERG-Precipitation.zmp
-};
-// Seamark layer (asLayer=1, EPSG 3785 -> 3857): __anygis_filegenerator/Osm_OpenSeaMap_Layer_Seamark.zmp/
-// params.txt:3
-constexpr std::string_view kSeamarkGuid = "{AB8A8685-AEC6-4E16-80DA-DC4AC37E4777}";
+// The two bundled sources whose files carry termsOfUseWarning (OpenTopoMap, Esri): a fact of the source, not
+// a favourite, so it is not in favourite-sources.conf.
+constexpr std::string_view kTermsGuids[] = {"{7B743985-BC5F-4AB6-8915-AC5DBBB8F552}",  // Esri World Imagery
+                                            "{51C1079B-B55D-4DF7-A410-ADC118F53AB1}"}; // OpenTopoMap
 
 constexpr cg::Band kBandOrder[] = {cg::Band::Passage, cg::Band::Coastal, cg::Band::Approach,
                                    cg::Band::Harbour};
 
-bool sameGuid(std::string_view a, std::string_view b) { // ASCII case-insensitive (CR 2)
+bool sameGuid(std::string_view a, std::string_view b) { // ASCII case-insensitive
     return std::equal(a.begin(), a.end(), b.begin(), b.end(), [](char x, char y) {
         return std::tolower(static_cast<unsigned char>(x)) == std::tolower(static_cast<unsigned char>(y));
     });
 }
 
-bool isCurated(std::string_view guid) {
-    return std::any_of(std::begin(kCurated), std::end(kCurated),
-                       [&](const Curated& c) { return sameGuid(c.guid, guid); });
-}
-
 bool needsTermsNote(const cg::SourceRecord& r) {
-    for (const Curated& c : kCurated)
-        if (c.terms && sameGuid(c.guid, r.guid))
-            return true;
-    return false;
+    return std::any_of(std::begin(kTermsGuids), std::end(kTermsGuids),
+                       [&](std::string_view g) { return sameGuid(g, r.guid); });
 }
 
 bool needsNavigationNote(const cg::SourceRecord& r) {
     return r.navigationWarning;
 }
 
-bool isSatellite(const cg::SourceRecord& r) {
-    for (const Curated& c : kCurated)
-        if (c.satellite && sameGuid(c.guid, r.guid))
-            return true;
-    return false;
+// Imagery: the bundled group Satellite, or a sailor's own map whose name says so;
+// kind map keeps the bundled depth layer "Satellite-derived depth" (group Depth) out.
+bool isImagery(const cg::SourceRecord& r) {
+    return r.group == "Satellite" || (r.kind == "map" && cg::nameLooksLikeImagery(r.name));
 }
 
 // `text` in lines of at most `width` px in the font of `w`: broken at spaces, and inside a word that alone is
@@ -169,7 +126,7 @@ bool showWindow(wxWindow* w, bool on) {
     return true;
 }
 
-// The nearest EXISTING ancestor of a folder;
+// The nearest EXISTING ancestor of a folder (walk up wxFileName::GetPath() until wxDirExists);
 // empty when none exists.
 wxString existingAncestor(wxString dir) {
     while (!dir.empty() && !wxDirExists(dir)) {
@@ -181,7 +138,7 @@ wxString existingAncestor(wxString dir) {
     return dir;
 }
 
-// Free bytes on the file system of `dir`; nullopt = unknown (the folder's check is skipped, ).
+// Free bytes on the file system of `dir`; nullopt = unknown (the folder's check is skipped).
 std::optional<std::uint64_t> freeBytes(const wxString& dir) {
     const wxString at = existingAncestor(dir);
     wxDiskspaceSize_t free = 0;
@@ -230,7 +187,7 @@ NewChartPanel::NewChartPanel(wxWindow* parent, ConfigStore& config, const Look& 
     corridorNm_ = std::clamp(std::round(config.loadSettings().corridorNm / kCorridorStep) * kCorridorStep,
                              kCorridorMin, kCorridorMax);
 
-    captionWidth_ = GetTextExtent(_("Detail")).x + 24; // one width for every row caption (adds rows)
+    captionWidth_ = GetTextExtent(_("Detail")).x + 24; // one width for every row caption
     // The rows scroll (vertical only) when they do not fit 800 x 480; the status line and Close / Download
     // below them stay in view.
     body_ = new wxScrolledWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL, "pageBody");
@@ -272,6 +229,22 @@ NewChartPanel::NewChartPanel(wxWindow* parent, ConfigStore& config, const Look& 
     chartRow->Add(sourceChoice_, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
     chartRow->Add(moreSources_, 0, wxALIGN_CENTER_VERTICAL);
     column_->Add(chartRow, 0, wxEXPAND | wxALL, 6);
+    // the favourites file is missing or damaged: first note under the Chart row.
+    favWarning_ = new wxStaticText(body_, wxID_ANY, wxString());
+    const wxString favUrl = cg::fromUtf8(cg::favouriteSourcesUrl(cg::kPluginVersionString));
+    // Generic link: the native GTK link hides the "_" of chartgrabber_pi under its underline. No tooltip.
+    favLink_ = new wxGenericHyperlinkCtrl(body_, wxID_ANY, _("Download a fresh copy"), favUrl,
+                                          wxDefaultPosition, wxDefaultSize, wxHL_ALIGN_LEFT);
+    favLink_->SetToolTip(nullptr);
+    auto* favColumn = new wxBoxSizer(wxVERTICAL);
+    favColumn->Add(favWarning_, 0, wxEXPAND);
+    favColumn->Add(favLink_, 0, wxBOTTOM, 6);
+    auto* favRow = new wxBoxSizer(wxHORIZONTAL);
+    favRow->AddSpacer(captionWidth_);
+    favRow->Add(favColumn, 1, wxALIGN_CENTER_VERTICAL);
+    column_->Add(favRow, 0, wxEXPAND | wxLEFT | wxRIGHT, 6);
+    favWarning_->Hide();
+    favLink_->Hide();
     imagery_ = new wxStaticText(body_, wxID_ANY, imageryWarningText());
     auto* imageryRow = new wxBoxSizer(wxHORIZONTAL);
     imageryRow->AddSpacer(captionWidth_);
@@ -300,7 +273,7 @@ NewChartPanel::NewChartPanel(wxWindow* parent, ConfigStore& config, const Look& 
     seamarksRow->Add(seamarks_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 10);
     seamarksRow->Add(seamarksNote_, 1, wxALIGN_CENTER_VERTICAL);
     column_->Add(seamarksRow, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 6);
-    // Weather on top [ ]: its own row under the seamarks row, then two lines while ticked.
+    // Weather on top : its own row under the seamarks row, then two lines while ticked.
     weather_ = new wxCheckBox(body_, wxID_ANY, _("Weather on top"));
     weatherChoice_ = new wxChoice(body_, wxID_ANY);
     weatherChoice_->SetName("weatherLayer");
@@ -357,8 +330,7 @@ NewChartPanel::NewChartPanel(wxWindow* parent, ConfigStore& config, const Look& 
     nameRow->Add(caption(_("Name")), 0, wxALIGN_CENTER_VERTICAL);
     nameRow->Add(name_, 1, wxALIGN_CENTER_VERTICAL);
     column_->Add(nameRow, 0, wxEXPAND | wxALL, 6);
-    // Advanced fold (collapsed): the detail range as two drop-downs threads and the output folder
-    // .
+    // Advanced fold (collapsed): the detail range as two drop-downs, threads and the output folder.
     advanced_ = new wxCollapsiblePane(body_, wxID_ANY, _("Advanced"));
     const int detailCaptionWidth =
         std::max(GetTextExtent(_("Least detail")).x, GetTextExtent(_("Most detail")).x) + 6;
@@ -425,7 +397,7 @@ NewChartPanel::NewChartPanel(wxWindow* parent, ConfigStore& config, const Look& 
     page->Add(footer_, 0, wxEXPAND);
     SetSizer(page);
 
-    // Touch: every control at least minControlHeight high. Zero outside touch mode.
+    // Touch: every control at least minControlHeight() high. Zero outside touch mode.
     if (const int minHeight = look.minControlHeight(); minHeight > 0)
         for (wxWindow* w : std::initializer_list<wxWindow*>{
                  view_, draw_, route_, routeChoice_, narrower_, wider_, name_, close, download_,
@@ -595,7 +567,7 @@ NewChartPanel::NewChartPanel(wxWindow* parent, ConfigStore& config, const Look& 
 NewChartPanel::~NewChartPanel() {
     closing_ = true;
     delete detailQuestion_.get();
-    delete question_.get(); // its callback holds this panel; immediate, not Destroy
+    delete question_.get(); // its callback holds this panel; immediate, not Destroy()
     delete sourcesDialog_.get();
     delete settingsDialog_.get();
     estimateTimer_.Stop();
@@ -621,7 +593,7 @@ wxStaticText* NewChartPanel::caption(const wxString& text) {
     return t;
 }
 
-// Layout and Fit of the dialog after any change of what is visible; the best size of every ancestor is
+// Layout() and Fit() of the dialog after any change of what is visible; the best size of every ancestor is
 // invalidated first (a hidden line gives its space back).
 void NewChartPanel::fitDialog() {
     for (wxWindow* w = this; w; w = w->GetParent())
@@ -636,7 +608,7 @@ void NewChartPanel::fitDialog() {
     Layout();
     if (wxWindow* top = wxGetTopLevelParent(this)) {
         top->SetMinSize(
-            wxDefaultSize); // Fit pinned the last size as the minimum: a narrower page must shrink it
+            wxDefaultSize); // Fit() pinned the last size as the minimum: a narrower page must shrink it
         top->Layout();
         top->Fit();
     }
@@ -780,7 +752,7 @@ void NewChartPanel::openMoreSources() {
         return;
     }
     Enable(false);
-    auto* dlg = new SourcesDialog(wxGetTopLevelParent(this), sources_, look_);
+    auto* dlg = new SourcesDialog(wxGetTopLevelParent(this), sources_, look_, descriptions_);
     dlg->onDone = [this](int result, std::string guid) {
         if (closing_)
             return;
@@ -807,7 +779,8 @@ void NewChartPanel::pickSource(const std::string& guid) {
         if (sameGuid(choiceGuids_[i], pick->guid))
             at = int(i);
     if (at < 0) {
-        if (!choiceGuids_.empty() && !isCurated(choiceGuids_.back())) { // the previous LastSource / pick slot
+        if (!choiceGuids_.empty() &&
+            !inChartList(choiceGuids_.back())) { // the previous LastSource / pick slot
             choiceGuids_.pop_back();
             sourceChoice_->Delete(sourceChoice_->GetCount() - 1);
         }
@@ -823,13 +796,55 @@ void NewChartPanel::pickSource(const std::string& guid) {
 
 // ---- Sources ----
 
+// what each source is for: a missing or bad file is logged, never shown.
+void NewChartPanel::loadDescriptions() {
+    descriptions_.clear();
+    const std::string path = cg::confBesideSources(config_.bundledSourcesDir(), "source-descriptions.conf");
+    const cg::ConfFile file = cg::readConf(path);
+    if (!file.found) {
+        cg::logLine("descriptions: " + cg::fromUtf8(path) + ": not found");
+        return;
+    }
+    std::vector<std::string> problems;
+    descriptions_ = cg::descriptionsFrom(file, problems);
+    for (const std::string& p : problems)
+        cg::logLine("descriptions: " + cg::fromUtf8(path) + ": " + cg::fromUtf8(p));
+}
+
+// favourite-sources.conf: every problem is logged; the warning shows the first one.
+void NewChartPanel::loadFavourites() {
+    const std::string path = cg::confBesideSources(config_.bundledSourcesDir(), "favourite-sources.conf");
+    std::vector<cg::FavouriteProblem> problems;
+    favourites_ = cg::favouriteSourcesFrom(cg::readConf(path), problems);
+    for (const cg::FavouriteProblem& p : problems)
+        cg::logLine("favourite sources: " + cg::fromUtf8(path) + ": " + favouriteProblemText(p));
+    const bool bad = !problems.empty();
+    if (bad) {
+        const int width = FromDIP(kPageWidth) - captionWidth_ - kRowMargins;
+        wxString text; // each line of the text (the path is one) broken to the page width
+        for (const wxString& l : wxSplit(
+                 favouritesWarningText(favouriteProblemText(problems[0]), cg::fromUtf8(path)), '\n', '\0'))
+            text += (text.empty() ? wxString() : wxString("\n")) + wrapped(favWarning_, l, width);
+        favWarning_->SetLabelText(text);
+    }
+    showWindow(favWarning_, bad);
+    showWindow(favLink_, bad);
+}
+
+bool NewChartPanel::inChartList(std::string_view guid) const {
+    return std::any_of(favourites_.chart.begin(), favourites_.chart.end(),
+                       [&](const std::string& g) { return sameGuid(g, guid); });
+}
+
 void NewChartPanel::reloadSources() {
     settings_ = config_.loadSettings();
     if (sourcesRunner_ && sourcesRunner_->running()) {
         sourcesRunner_->terminate();
-        pendingReload_ = true; // onExit discards this run's result and calls reloadSources again
+        pendingReload_ = true; // onExit discards this run's result and calls reloadSources() again
         return;
     }
+    loadDescriptions();
+    loadFavourites();
     sources_.clear();
     lastError_.clear();
     choiceGuids_.clear();
@@ -927,27 +942,30 @@ const cg::SourceRecord* NewChartPanel::selectedSource() const {
     return findSource(choiceGuids_[i]);
 }
 
-// chart choice: curated chart sources present and usable, then LastSource, else the first usable
-// base source.
+// chart choice: curated chart sources present and usable, then LastSource, else one empty entry
+// "Choose in More sources..." (no source is chosen for the sailor) when some usable map exists.
 void NewChartPanel::fillSources() {
     sourcesRunning_ = false;
     std::vector<const cg::SourceRecord*> entries;
     auto add = [&](const cg::SourceRecord* r) {
-        if (r && (r->kind == "map" || (r->isLayer() && isCurated(r->guid))) && r->usable() && //
-
+        if (r && (r->kind == "map" || (r->isLayer() && inChartList(r->guid))) && r->usable() &&
             std::none_of(entries.begin(), entries.end(),
                          [&](const cg::SourceRecord* e) { return sameGuid(e->guid, r->guid); }))
             entries.push_back(r);
     };
-    for (const Curated& c : kCurated)
-        add(findSource(c.guid));
+    for (const std::string& g : favourites_.chart)
+        add(findSource(g));
     if (!lastSource_.empty())
         add(findSource(lastSource_));
+    bool placeholder = false; // a usable map exists but nothing is favourite or last used
     if (entries.empty()) {
         for (const std::size_t i : cg::sourcesDialogOrder(sources_)) {
             add(&sources_[i]);
-            if (!entries.empty())
+            if (!entries.empty()) {
+                entries.clear();
+                placeholder = true;
                 break;
+            }
         }
     }
     sourceChoice_->Clear();
@@ -959,18 +977,23 @@ void NewChartPanel::fillSources() {
         sourceChoice_->Append(cg::fromUtf8(cg::choiceLabel(r->name)));
         choiceGuids_.push_back(r->guid);
     }
+    if (placeholder) {
+        sourceChoice_->Append(uiText(UiText::ChooseInMoreSources));
+        choiceGuids_.push_back(std::string()); // no record: selectedSource() is null, Download stays off
+        sourceChoice_->SetSelection(0);
+    }
     sourceFailure_ = false;
-    sourceReason_ = entries.empty() ? uiText(UiText::NoUsableSource) : wxString();
-    sourceChoice_->Enable(!entries.empty());
+    sourceReason_ = entries.empty() && !placeholder ? uiText(UiText::NoUsableSource) : wxString();
+    sourceChoice_->Enable(!entries.empty() || placeholder);
     moreSources_->Enable(true);
     if (!entries.empty()) {
         sourceChoice_->SetSelection(selected);
         const cg::SourceRecord* base = entries[selected];
         const bool changed = firstFill_ || !sameGuid(base->guid, baseGuid_);
         baseGuid_ = base->guid; // a preselection is not a pick: lastSource_ stays
-        const cg::SourceRecord* layer = findSource(kSeamarkGuid);
+        const cg::SourceRecord* layer = findSource(favourites_.seamarks);
         if (layer && layer->usable() && changed)
-            seamarks_->SetValue(firstFill_ ? lastSeamarks_ : isSatellite(*base));
+            seamarks_->SetValue(firstFill_ ? lastSeamarks_ : isImagery(*base));
         firstFill_ = false;
     }
     updateSeamarks();
@@ -989,7 +1012,7 @@ void NewChartPanel::chartChosen() {
         return;
     baseGuid_ = lastSource_ = choiceGuids_[i];
     if (const cg::SourceRecord* base = selectedSource(); base && seamarks_->IsEnabled())
-        seamarks_->SetValue(isSatellite(*base));
+        seamarks_->SetValue(isImagery(*base));
     updateImagery();
     showRange(); // the source-limit note follows the base
     updateDefaultName();
@@ -1006,7 +1029,7 @@ void NewChartPanel::updateSeamarks() {
         return;
     }
     wxString note;
-    if (const cg::SourceRecord* layer = findSource(kSeamarkGuid); !layer)
+    if (const cg::SourceRecord* layer = findSource(favourites_.seamarks); !layer)
         note = uiText(UiText::SeamarksMissing);
     else if (const cg::SourceRefusal r = cg::sourceRefusal(*layer); r.kind != cg::SourceRefusal::Kind::None)
         note = sourceRefusalText(r);
@@ -1014,12 +1037,13 @@ void NewChartPanel::updateSeamarks() {
     if (!note.empty())
         seamarks_->SetValue(false);
     seamarksNote_->SetLabelText(note);
+    seamarksNote_->Wrap(FromDIP(kPageWidth) - captionWidth_ - kRowMargins - seamarks_->GetBestSize().x - 10);
     showWindow(seamarksNote_, !note.empty());
 }
 
 void NewChartPanel::updateImagery() {
     const cg::SourceRecord* base = selectedSource();
-    showWindow(imagery_, base && (isSatellite(*base) || cg::nameLooksLikeImagery(base->name)));
+    showWindow(imagery_, base && isImagery(*base));
     showWindow(termsNote_, base && needsTermsNote(*base));
     showWindow(navNote_, base && needsNavigationNote(*base));
     sourceChoice_->SetToolTip(base ? cg::fromUtf8(base->name) : wxString()); // the full name
@@ -1036,10 +1060,10 @@ void NewChartPanel::fillWeather() {
             if (r.isWeather() && r.isLayer() && r.usable())
                 layers.push_back(&r);
         // the table first, in its order, then the others in CLI order
-        const auto rank = [](const cg::SourceRecord* r) {
-            return std::find_if(std::begin(kWeatherOrder), std::end(kWeatherOrder),
-                                [&](std::string_view g) { return sameGuid(g, r->guid); }) -
-                   std::begin(kWeatherOrder); // not listed: after the table
+        const auto rank = [this](const cg::SourceRecord* r) {
+            return std::find_if(favourites_.weather.begin(), favourites_.weather.end(),
+                                [&](const std::string& g) { return sameGuid(g, r->guid); }) -
+                   favourites_.weather.begin(); // not listed: after the file's rows
         };
         std::stable_sort(
             layers.begin(), layers.end(),
@@ -1174,8 +1198,7 @@ void NewChartPanel::bandToggled(std::size_t i) {
 }
 
 void NewChartPanel::openPreferences() {
-    if (SettingsDialog* open =
-            SettingsDialog::shown()) { // one Settings window at a time: raise it
+    if (SettingsDialog* open = SettingsDialog::shown()) { // one Settings window at a time: raise it
         open->Raise();
         return;
     }
@@ -1197,7 +1220,7 @@ void NewChartPanel::openPreferences() {
 // ---- Estimate ----
 
 // The first failing input reason (area, source, zooms, then the refusal of a chosen source or
-// layer: unreachable through the choice; kept for the 7.5 order); empty = the inputs are valid.
+// layer: unreachable through the choice; kept for the enable order); empty = the inputs are valid.
 wxString NewChartPanel::inputReason() const {
     if (!areaReason_.empty())
         return areaReason_;
@@ -1219,7 +1242,7 @@ wxString NewChartPanel::inputReason() const {
 }
 
 const cg::SourceRecord* NewChartPanel::overlayRecord() const {
-    return seamarks_->IsEnabled() && seamarks_->GetValue() ? findSource(kSeamarkGuid) : nullptr;
+    return seamarks_->IsEnabled() && seamarks_->GetValue() ? findSource(favourites_.seamarks) : nullptr;
 }
 
 const cg::SourceRecord* NewChartPanel::weatherRecord() const {
@@ -1245,7 +1268,7 @@ cg::JobSpec NewChartPanel::jobSpec() const {
     if (areaBox_)
         spec.bbox = *areaBox_;
     spec.corridorNm = corridorNm_;
-    // the sources' highest zooms : the estimate, job.ini and the record follow
+    // the sources' highest zooms: the estimate, job.ini and the record follow
     spec.zooms = cg::jobZooms(zoomList(), base ? cg::zoomLimit(*base) : std::nullopt,
                               layer ? cg::zoomLimit(*layer) : std::nullopt);
     return spec;
@@ -1448,7 +1471,7 @@ cg::Preflight NewChartPanel::preflight(const cg::Settings& settings, cg::Preflig
     return cg::checkPreflight(*in);
 }
 
-// The enable order of; the first failing reason is the status text. Nothing failing -> empty and
+// The enable order; the first failing reason is the status text. Nothing failing -> empty and
 // Download enabled (unless a job runs: the button is then replaced by "A download is running").
 void NewChartPanel::updateDownloadState() {
     wxString reason = inputReason();
@@ -1461,10 +1484,16 @@ void NewChartPanel::updateDownloadState() {
         cg::PreflightInput in;
         const cg::Preflight p = preflight(settings, &in);
         reason = preflightText(p, in, outputFolder(), cg::fromUtf8(config_.cliCacheRoot(settings)));
+        if (reason.empty()) // last: a folder of unknown free space is judged by the disk rule first
+            reason = chartFolderRefusal(outputFolder(), outputDir_.empty() && settings.chartDir.empty());
     }
     bool changed = showWindow(preferences_, sourceFailure_ && !reason.empty() && reason == sourceReason_);
-    if (statusText_ != reason) {
-        showStatus(reason);
+    // the empty entry says what to do itself: Download stays off, the status line stays empty.
+    const int at = sourceChoice_->GetSelection();
+    const bool emptyEntry = at >= 0 && std::size_t(at) < choiceGuids_.size() && choiceGuids_[at].empty();
+    const wxString shown = emptyEntry ? wxString() : reason;
+    if (statusText_ != shown) {
+        showStatus(shown);
         changed = true;
     }
     if (folder_->GetLabel() != outputFolder()) {
@@ -1509,7 +1538,7 @@ void NewChartPanel::startDownload() {
     continueDownload(1);
 }
 
-// steps 1-3. Each question is modeless: the page waits, OpenCPN keeps running.
+// Each question is modeless: the page waits, OpenCPN keeps running.
 void NewChartPanel::continueDownload(int step) {
     const cg::Settings settings = config_.loadSettings();
     cg::PreflightInput in;
@@ -1597,7 +1626,7 @@ void NewChartPanel::beginDownload(bool overwrite) {
         showStatus(cannotWriteText(path));
         fitDialog();
     };
-    // 5: a job directory with the next free id; 6: its route.gpx and job.ini. False: cannotWrite ran.
+    // 5: a job directory with the next free id; 6: its route.gpx and job.ini. False: cannotWrite() ran.
     auto makeJob = [&](cg::JobSpec spec, wxString* id) {
         const wxString stamp = wxDateTime::Now().Format("%Y%m%d-%H%M%S");
         *id = stamp;

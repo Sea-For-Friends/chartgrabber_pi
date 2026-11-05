@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// : Question is a modeless dialog; every way of answering delivers
+// Question is a modeless dialog; every way of answering delivers
 // exactly one call with the right values, the window is gone afterwards, and a question destroyed with its
 // parent calls nothing. A window test (cg_gui_tests).
 #include "log_capture.h"

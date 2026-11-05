@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// the one logging path of src/wx : OpenCPN's log and the file.
+// The one logging path of src/wx: OpenCPN's log and the file.
 #include "log_capture.h"
 #include "ocpn_fakes.h"
 #include "plugin_log.h"

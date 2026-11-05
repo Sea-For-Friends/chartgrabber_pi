@@ -11,6 +11,7 @@
 #include <wx/listctrl.h>
 #include <wx/sizer.h>
 #include <wx/srchctrl.h>
+#include <wx/stattext.h>
 
 #include <algorithm>
 #include <cctype>
@@ -27,7 +28,7 @@ std::string asciiLower(std::string s) {
     return s;
 }
 
-// Header text: `\` shown as " / ", the empty group "Other" .
+// Header text: `\` shown as " / ", the empty group "Other".
 wxString groupTitle(const std::string& group) {
     if (group.empty())
         return _("Other");
@@ -38,8 +39,9 @@ wxString groupTitle(const std::string& group) {
 
 } // namespace
 
-SourcesDialog::SourcesDialog(wxWindow* parent, const std::vector<cg::SourceRecord>& sources, const Look& look)
-    : wxDialog(parent, wxID_ANY, _("More sources")), sources_(sources),
+SourcesDialog::SourcesDialog(wxWindow* parent, const std::vector<cg::SourceRecord>& sources, const Look& look,
+                             const cg::SourceDescriptions& descriptions)
+    : wxDialog(parent, wxID_ANY, _("More sources")), sources_(sources), descriptions_(descriptions),
       order_(cg::sourcesDialogOrder(sources)) {
     grouped_ = std::any_of(sources.begin(), sources.end(),
                            [](const cg::SourceRecord& r) { return !r.group.empty(); });
@@ -48,6 +50,8 @@ SourcesDialog::SourcesDialog(wxWindow* parent, const std::vector<cg::SourceRecor
         new wxListCtrl(this, wxID_ANY, wxDefaultPosition, wxSize(690, 230), wxLC_REPORT | wxLC_SINGLE_SEL);
     list_->InsertColumn(0, _("Source"), wxLIST_FORMAT_LEFT, 270);
     list_->InsertColumn(1, _("Note"), wxLIST_FORMAT_LEFT, 400);
+    detail_ = new wxStaticText(this, wxID_ANY, wxEmptyString);
+    detail_->SetMinSize(wxSize(1, detail_->GetCharHeight() * 3)); // three lines: the dialog does not jump
     auto* reload = new wxButton(this, wxID_ANY, _("Reload"));
     auto* cancel = new wxButton(this, wxID_CANCEL, _("Cancel"));
     ok_ = new wxButton(this, wxID_OK, _("OK"));
@@ -65,13 +69,17 @@ SourcesDialog::SourcesDialog(wxWindow* parent, const std::vector<cg::SourceRecor
     auto* column = new wxBoxSizer(wxVERTICAL);
     column->Add(filter_, 0, wxEXPAND | wxALL, 8);
     column->Add(list_, 1, wxEXPAND | wxLEFT | wxRIGHT, 8);
+    column->Add(detail_, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, 8);
     column->Add(buttons, 0, wxEXPAND | wxALL, 8);
     SetSizerAndFit(column);
 
     filter_->Bind(wxEVT_TEXT,
                   [this](wxCommandEvent&) { cg::guarded("sources filter", [&] { fillList(); }); });
     auto changed = [this](wxListEvent&) {
-        cg::guarded("sources selection", [&] { ok_->Enable(selectedUsable() != nullptr); });
+        cg::guarded("sources selection", [&] {
+            ok_->Enable(selectedUsable() != nullptr);
+            updateDetail();
+        });
     };
     list_->Bind(wxEVT_LIST_ITEM_SELECTED, changed);
     list_->Bind(wxEVT_LIST_ITEM_DESELECTED, changed);
@@ -100,8 +108,36 @@ SourcesDialog::SourcesDialog(wxWindow* parent, const std::vector<cg::SourceRecor
     fillList(); // after apply: the greyed colour is taken from the list's own colours
 }
 
-// ASCII case-insensitive substring of name or group; rows in sourcesDialogOrder order; header rows
-// only when some record has a group, before each group that has a matching row.
+std::string SourcesDialog::purposeOf(const cg::SourceRecord& r) const {
+    std::string key = r.guid;
+    for (char& c : key)
+        c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+    const auto it = descriptions_.find(key);
+    return it == descriptions_.end() ? std::string() : it->second;
+}
+
+// The detail line: a usable row's purpose; a refused row's refusal, " — " and the purpose; else empty.
+void SourcesDialog::updateDetail() {
+    wxString text;
+    const long item = list_->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+    const long data = item < 0 ? kHeaderRow : list_->GetItemData(item);
+    if (data != kHeaderRow && std::size_t(data) < sources_.size()) {
+        const cg::SourceRecord& r = sources_[data];
+        const cg::SourceRefusal refusal = cg::sourceRefusal(r);
+        const wxString purpose = cg::fromUtf8(purposeOf(r));
+        if (refusal.kind == cg::SourceRefusal::Kind::None)
+            text = purpose;
+        else
+            text = purpose.empty()
+                       ? sourceRefusalText(refusal)
+                       : sourceRefusalText(refusal) + wxString::FromUTF8(" \xE2\x80\x94 ") + purpose;
+    }
+    detail_->SetLabel(text);
+    detail_->Wrap(690); // the list's width
+}
+
+// ASCII case-insensitive substring of name, group or purpose; rows in sourcesDialogOrder order;
+// header rows only when some record has a group, before each group that has a matching row.
 void SourcesDialog::fillList() {
     list_->DeleteAllItems();
     const std::string needle = asciiLower(cg::toUtf8(filter_->GetValue()));
@@ -115,7 +151,8 @@ void SourcesDialog::fillList() {
     for (const std::size_t i : order_) {
         const cg::SourceRecord& r = sources_[i];
         if (!needle.empty() && asciiLower(r.name).find(needle) == std::string::npos &&
-            asciiLower(r.group).find(needle) == std::string::npos)
+            asciiLower(r.group).find(needle) == std::string::npos &&
+            asciiLower(purposeOf(r)).find(needle) == std::string::npos)
             continue;
         if (grouped_ && (first || r.group != group)) {
             const long h = list_->InsertItem(list_->GetItemCount(), groupTitle(r.group));
@@ -130,9 +167,12 @@ void SourcesDialog::fillList() {
         if (refusal.kind != cg::SourceRefusal::Kind::None) {
             list_->SetItem(row, 1, sourceRefusalText(refusal));
             list_->SetItemTextColour(row, grey);
+        } else {
+            list_->SetItem(row, 1, cg::fromUtf8(purposeOf(r)));
         }
     }
     ok_->Enable(selectedUsable() != nullptr);
+    updateDetail();
 }
 
 const cg::SourceRecord* SourcesDialog::selectedUsable() const {

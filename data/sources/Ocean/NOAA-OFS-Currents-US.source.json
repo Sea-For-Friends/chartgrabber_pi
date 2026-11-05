@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "guid": "{B7B26ADE-22F8-4CD3-9389-3B289BB04D6F}",
+  "name": "NOAA OFS surface currents (US bays and coasts)",
+  "group": "Ocean",
+  "layer": true,
+  "url": "https://nowcoast.noaa.gov/geoserver/ows?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=cbofs:cbofs_sfc_currents,dbofs:dbofs_sfc_currents,gomofs:gomofs_sfc_currents,ngofs:ngofs_sfc_currents,tbofs:tbofs_sfc_currents,sfbofs:sfbofs_sfc_currents,wcofs:wcofs_sfc_currents&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE&TIME={ver}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Ocean_NOAA_OFS_Currents_US",
+  "cacheType": 71,
+  "license": "NOAA NOS CO-OPS OFS via nowCOAST (public domain). Not for navigation",
+  "maxConnections": 1,
+  "maxZoom": 12,
+  "navigationWarning": true,
+  "snapshot": {
+    "index": "https://nowcoast.noaa.gov/geoserver/cbofs/cbofs_sfc_currents/ows?service=WMS&version=1.3.0&request=GetCapabilities",
+    "type": "wms-default",
+    "item": "cbofs_sfc_currents",
+    "pick": "nearest-now"
+  }
+}

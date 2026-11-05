@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // JobController: the one running job (download or build from saved tiles), its progress strip, stall
-// retries, data budget, chart registration and the OpenCPN shutdown rule.
-// GUI thread only; needs a display and OpenCPN, so it is proven by the window tests
-// (tests/job_controller_test.cpp).
+// retries, data budget, chart registration and the OpenCPN shutdown rule. GUI thread only; needs a display
+// and OpenCPN, so it is proven by the window tests (tests/job_controller_test.cpp).
 #pragma once
 
 #include "cli_runner.h"
@@ -11,6 +10,7 @@
 #include "progress_strip.h"
 #include "settings.h"
 
+#include <wx/arrstr.h>
 #include <wx/event.h>
 #include <wx/timer.h>
 #include <wx/weakref.h>
@@ -29,32 +29,45 @@ class AreaTool;
 class ConfigStore;
 class Look;
 
+// The OS whose weather-update rule applies (the swap runs only for Windows); the default
+// is the host. A test seam.
+cg::Os& weatherSwapOs();
+// True once OpenCPN reported 5.x with x < 14 (RemoveChartFromDBInPlace is safe then); default false.
+bool& staleDropAllowed();
+
 class JobController : private wxEvtHandler {
 public:
     JobController(ConfigStore& config, const Look& look, AreaTool& area); // creates no window
-    // What start passes to resolveCli; production keeps the defaults, tests set a temp path and
+    // What start() passes to resolveCli; production keeps the defaults, tests set a temp path and
     // PATH.
     std::vector<std::string> cliDefaultPaths = hostCliPaths();
     std::optional<std::string> cliPathEnv; // nullopt = the PATH variable
-    ~JobController(); //: closing_, timers, hooks cleared, runner reset, record saved, strip deleted
+    ~JobController(); // closing_, timers, hooks cleared, runner reset, record saved, strip deleted
 
-    bool busy() const { return phase_ != Phase::Idle; } // from start until the result is shown
-    // Precondition !busy (else logged and ignored). Reads the settings fresh; the job file is
-    // jobsDir/record.id/job.ini. Sets record.state = Running, saves it, then starts the child.
+    bool busy() const { return phase_ != Phase::Idle; } // from start() until the result is shown
+    // Precondition !busy() (else logged and ignored). Reads the settings fresh; the job file is
+    // jobsDir()/record.id/job.ini. Sets record.state = Running, saves it, then starts the child.
     void start(cg::ChartRecord record, cg::RunKind kind, bool overwrite);
     // Download, or Update with the saved date when the record has an unfinished update: what every Resume
     // starts.
     static cg::RunKind resumeKind(const cg::ChartRecord& r);
     // The live row of My charts; nullopt when not busy. Polled once a second by MyChartsPanel.
     std::optional<cg::LiveProgress> live() const;
-    // Decision 0007: when the running job ends (not by Stop, budget stop, force stop or closing) `next`
+    // when the running job ends (not by Stop, budget stop, force stop or closing) `next`
     // starts as a Download with overwrite and the two results show as one. Ignored when not busy; a second
     // call replaces it.
     void queueAfter(cg::ChartRecord next);
+    // Plugin start: removes the stale files of Windows weather updates; one rescan 120 s
+    // later when something was removed.
+    void cleanupStaleAtStart();
+    // "Update all weather charts": each chart as start(r, Download, true), one after
+    // another; one rescan after the last and one result. Precondition !busy() (else logged and ignored);
+    // empty is ignored.
+    void startBatch(std::vector<cg::ChartRecord> charts);
     void stop(); // user Stop; also cancels a retry countdown and, once offered, forces the stop
 
     std::function<void()> onChartsChanged;        // after every saveChart of the job
-    std::function<void(bool busy)> onBusyChanged; // on every busy change
+    std::function<void(bool busy)> onBusyChanged; // on every busy() change
     std::function<void()> onPreferences;          // the strip's "Preferences..." button (StartFailed)
 
 private:
@@ -66,8 +79,17 @@ private:
     void onStderr(const cg::StderrLine& l);
     void onExit(int exitCode);
     void onTick(wxTimerEvent&);
+    void onStaleTimer(wxTimerEvent&);
+    std::vector<std::string> dropStale(std::vector<std::string> stale);
+    void swapWeatherOutput(const std::string& iniPath);
     void requestTerminate();
     void finishJob(cg::Outcome outcome);
+    enum class BatchEnd { Updated, Unchanged, Failed, Busy, NotStarted };
+    bool
+    batchNext(BatchEnd how, bool stop, const wxString& reason = {},
+              const Buttons& buttons = {}); // true = the batch took over (next chart started or result shown)
+    void finishBatch(const wxString& reason, const Buttons& buttons);
+    wxArrayString rescanChartList(const std::vector<std::string>& files);
     void startFailed(const std::string& why, const wxString& headline = wxString());
     void saveRecord();
     void addMessage(std::string line); // one Details line (the last 200 are kept)
@@ -87,7 +109,12 @@ private:
     AreaTool& area_;
     std::unique_ptr<CliRunner> runner_;
     wxWeakRef<ProgressStrip> strip_; // a child of the canvas: null once OpenCPN deleted it
-    wxTimer tick_;
+    wxTimer tick_, staleTimer_;
+    bool staleRemoved_ = false; // a stale file was removed at start or by the timer
+    bool rescanned_ = false;    // a job rescan ran (the start-up rescan is then skipped)
+    std::string prevSnapshot_, prevModelRun_,
+        newModelRun_;      // the picture at start; the run's model run
+    std::string swapFrom_; // the file this run's job.ini no longer writes; empty = no swap
     Phase phase_ = Phase::Idle;
     bool closing_ = false;
 
@@ -96,8 +123,8 @@ private:
     cg::RunKind kind_ = cg::RunKind::Download;
     cg::Settings settings_;
     std::vector<std::string> argv_;
-    bool newChart_ = false;                                     // the record was Running when start got it
-    cg::ChartState restoreState_ = cg::ChartState::Interrupted; // the state start got
+    bool newChart_ = false;                                     // the record was Running when start() got it
+    cg::ChartState restoreState_ = cg::ChartState::Interrupted; // the state start() got
     cg::RetryState retry_;
     int countdown_ = 0; // seconds left of a retry wait
     bool userStopped_ = false, budgetStopped_ = false;
@@ -109,7 +136,7 @@ private:
     std::deque<std::string> messages_;                // last 200 message lines, prefixed
     std::map<std::string, std::string> pictureLines_; // GUID -> its "Weather picture:" line in messages_
     std::string lastError_;
-    // The bar of the job : never down within a job.
+    // The bar of the job: never down within a job.
     int done_ = 0;
     cg::LiveStage stage_ = cg::LiveStage::Sizing;
     int exportPermille_ = 0;
@@ -121,8 +148,15 @@ private:
     std::optional<cg::ChartRecord> next_;
     wxString keptHeadline_, keptDetails_;
     bool keptFirstSuccess_ = false;
+    // The batch of "Update all weather charts": charts not started yet, the files and ids of the
+    // changed ones, the counters of the result.
+    std::deque<cg::ChartRecord> batch_;
+    bool inBatch_ = false;
+    std::vector<std::string> batchFiles_, batchIds_;
+    int nUpdated_ = 0, nUnchanged_ = 0, nFailed_ = 0, nBusy_ = 0, nNotStarted_ = 0;
+    std::vector<wxString> failedNames_;
 };
 
-// Show on chart shared by the strip and My charts: JumpToPosition to the centre of the box with
+// Show on chart, shared by the strip and My charts: JumpToPosition to the centre of the box with
 // the scale that fits it into the focus canvas viewport, else into the client size of the canvas window.
 void showOnChart(const cg::BBox& box, const AreaTool& area);

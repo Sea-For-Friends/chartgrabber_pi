@@ -125,10 +125,20 @@ MyChartsPanel::MyChartsPanel(wxWindow* parent, ConfigStore& config, const Look& 
     auto* close = new wxButton(this, wxID_CLOSE, _("Close"));
     if (const int minHeight = look.minControlHeight(); minHeight > 0)
         close->SetMinSize(wxSize(-1, minHeight));
+    updateAll_ = new wxButton(this, wxID_ANY, updateAllWeatherButtonText());
+    if (const int minHeight = look.minControlHeight(); minHeight > 0)
+        updateAll_->SetMinSize(wxSize(-1, minHeight));
+    updateAll_->Hide();
+    updateAll_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        cg::guarded("update all weather", [&] { updateAllWeather(); });
+    });
+    auto* bottom = new wxBoxSizer(wxHORIZONTAL);
+    bottom->Add(updateAll_, 0, wxRIGHT, 6);
+    bottom->Add(close, 0);
     auto* column = new wxBoxSizer(wxVERTICAL);
     column->Add(oneJob_, 0, wxLEFT | wxRIGHT | wxTOP, 6);
     column->Add(list_, 1, wxEXPAND | wxALL, 6);
-    column->Add(close, 0, wxALL, 6);
+    column->Add(bottom, 0, wxALL, 6);
     SetSizer(column);
 
     // The page is shown by the dialog's page switch: read the directory again then.
@@ -157,12 +167,12 @@ MyChartsPanel::MyChartsPanel(wxWindow* parent, ConfigStore& config, const Look& 
 MyChartsPanel::~MyChartsPanel() {
     closing_ = true;
     live_.Stop();
-    delete question_.get(); // its callback holds this panel; immediate, not Destroy
+    delete question_.get(); // its callback holds this panel; immediate, not Destroy()
     look_.unsubscribe(lookToken_);
 }
 
 void MyChartsPanel::refresh() {
-    // A refresh may run inside the handler of a button of the old rows: Destroy defers the deletion.
+    // A refresh may run inside the handler of a button of the old rows: Destroy() defers the deletion.
     rowsSizer_->Clear(false);
     liveGauge_ = nullptr; // the old rows are destroyed below
     liveWords_ = nullptr;
@@ -187,6 +197,8 @@ void MyChartsPanel::refresh() {
     else if (!busy)
         live_.Stop();
     oneJob_->Show(busy);
+    updateAll_->Show(!cg::weatherBatch(charts_).empty());
+    updateAll_->Enable(!busy);
     list_->FitInside();
     list_->Layout();
     Layout();
@@ -263,9 +275,15 @@ void MyChartsPanel::addRow(const cg::ChartRecord* chart, const std::string& id) 
         left->Add(details, 0);
     }
     const auto live = chart && chart->state == cg::ChartState::Running ? liveOf(id) : std::nullopt;
-    // Unfinished rows have a third line (gauge + words, ); Complete and unreadable rows keep
+    // Unfinished rows have a third line (gauge + words); Complete and unreadable rows keep
     // their state text right of the details.
-    const bool unfinished = chart && chart->state != cg::ChartState::Complete;
+    // A Complete or Missing chart whose file is gone (a Flatpak sandbox folder, a deleted file) shows only
+    // that.
+    const bool fileGone =
+        chart && (chart->state == cg::ChartState::Complete || chart->state == cg::ChartState::Missing) &&
+        std::ranges::any_of(chart->files,
+                            [](const std::string& f) { return !wxFileExists(cg::fromUtf8(f)); });
+    const bool unfinished = chart && chart->state != cg::ChartState::Complete && !fileGone;
     auto* line = new wxBoxSizer(wxHORIZONTAL);
     if (unfinished) {
         auto* third = new wxBoxSizer(wxHORIZONTAL);
@@ -301,8 +319,11 @@ void MyChartsPanel::addRow(const cg::ChartRecord* chart, const std::string& id) 
     }
     line->Add(left, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 8);
     if (!unfinished)
-        line->Add(new wxStaticText(row, wxID_ANY, chart ? chartStateText(*chart) : unreadableStateText()), 0,
-                  wxALIGN_CENTER_VERTICAL | wxRIGHT, 8);
+        line->Add(new wxStaticText(row, wxID_ANY,
+                                   fileGone ? _("Chart file missing")
+                                   : chart  ? chartStateText(*chart)
+                                            : unreadableStateText()),
+                  0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 8);
 
     // The primary button: Show (Complete, Missing), Resume (Interrupted), Delete (unreadable); then
     // "More...".
@@ -423,7 +444,7 @@ void MyChartsPanel::act(Action action, const std::string& id) {
         }
         return;
     }
-    const cg::ChartRecord chart = *it; // refresh below replaces charts_
+    const cg::ChartRecord chart = *it; // refresh() below replaces charts_
     if (action == Action::Show) {
         showOnChart(chart.bbox, area_);
         return;
@@ -432,7 +453,7 @@ void MyChartsPanel::act(Action action, const std::string& id) {
         showFile(chart);
         return;
     }
-    if (action == Action::Stop) { // the running row's button (the job of jobs.live only)
+    if (action == Action::Stop) { // the running row's button (the job of jobs.live() only)
         if (liveOf(chart.id)) {
             jobs_.stop();
             updateLiveRow();
@@ -475,7 +496,7 @@ void MyChartsPanel::act(Action action, const std::string& id) {
     }
 }
 
-// The questions below capture the chart ID, never a reference into charts_ (it is replaced by refresh).
+// The questions below capture the chart ID, never a reference into charts_ (it is replaced by refresh()).
 void MyChartsPanel::updateChart(const std::string& id) {
     if (raiseOpenQuestion())
         return;
@@ -542,6 +563,32 @@ void MyChartsPanel::updateWeather(const std::string& id) {
     start();
 }
 
+// Every weather chart, one after another; slow mode asks once with the summed size.
+void MyChartsPanel::updateAllWeather() {
+    if (jobs_.busy() || raiseOpenQuestion())
+        return;
+    const std::vector<cg::ChartRecord> batch = cg::weatherBatch(charts_);
+    if (batch.empty())
+        return;
+    const auto start = [this, batch] {
+        if (!jobs_.busy())
+            jobs_.startBatch(batch);
+    };
+    const cg::Settings settings = config_.loadSettings();
+    std::int64_t sum = 0;
+    for (const cg::ChartRecord& c : batch)
+        sum += c.bytes;
+    if (settings.slowConnection && sum > static_cast<std::int64_t>(settings.dataBudgetMb) * 1'000'000) {
+        Enable(false);
+        confirmBudget(overBudgetQuestion(sum, settings.dataBudgetMb), [this, start](bool yes) {
+            if (answered() && yes)
+                start();
+        });
+        return;
+    }
+    start();
+}
+
 void MyChartsPanel::showFile(const cg::ChartRecord& chart) {
     const wxString folder = chart.files.empty() ? cg::fromUtf8(config_.chartDir(config_.loadSettings()))
                                                 : wxFileName(cg::fromUtf8(chart.files.front())).GetPath();
@@ -562,14 +609,16 @@ void MyChartsPanel::deleteChart(const std::string& id) {
         const auto at = std::ranges::find(charts_, id, &cg::ChartRecord::id);
         if (at == charts_.end())
             return;
-        const cg::ChartRecord chart = *at; // refresh below replaces charts_
-        for (const std::string& f : chart.files) {
-            const wxString p = cg::fromUtf8(f);
-            if (wxFileExists(p))
-                wxRemoveFile(p);
+        const cg::ChartRecord chart = *at; // refresh() below replaces charts_
+        for (const std::vector<std::string>* list : {&chart.files, &chart.stale}) {
+            for (const std::string& f : *list) {
+                const wxString p = cg::fromUtf8(f);
+                if (wxFileExists(p))
+                    wxRemoveFile(p);
+            }
         }
         config_.deleteChartDir(chart.id);
-        // OpenCPN's per-file remove call hangs 5.14+ : one rescan drops the gone files instead.
+        // OpenCPN's per-file remove call hangs 5.14+: one rescan drops the gone files instead.
         UpdateChartDBInplace(GetChartDBDirArrayString(), false, false);
         refresh();
         if (onDeleted)

@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "guid": "{AE5863F3-1D34-4B66-8BD4-41630DF8B940}",
+  "name": "NASA GOES-West infrared (Pacific, Americas)",
+  "group": "Weather now",
+  "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/GOES-West_ABI_Band13_Clean_Infrared/default/{ver}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Weather_GIBS_GOES_West_Infrared",
+  "cacheType": 71,
+  "license": "Imagery: NASA GIBS (ESDIS); GOES ABI — NOAA",
+  "maxConnections": 2,
+  "maxZoom": 6,
+  "snapshot": {
+    "index": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/GOES-West_ABI_Band13_Clean_Infrared/default/GoogleMapsCompatible_Level6/all/2026-11-01--2100-01-01.xml",
+    "type": "wmts-domain"
+  }
+}

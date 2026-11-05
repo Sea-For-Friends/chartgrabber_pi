@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// A stand-in for `chart-grabber-cli sources --format=tsv` for the window tests (has not
-// landed, so the real tsv cannot be used): a shell script in its own folder that prints the `source` records
-// of records.tsv (the format of: type, guid, kind, name,
-// contentType, epsg, cacheType, verdict, zmpFile, group, tab separated), then stderr.txt to stderr, appends
-// its argument list to argv.log, waits while the file `hold` exists, and exits with the number in `exit` (0
-// when absent). `--version` (run by probeCli before every first use of the file) prints the line in the file
-// `version` ("chart-grabber-cli 2026.10.9 (test)" when absent) and appends a line to probes.log; it touches
-// nothing else. `estimate` and `run` / `export` do the same with their own files: estimate.out
-// (stdout), estimate.err (stderr), estimate.exit, estimate.log (the argument list), hold-estimate, and the
-// same with `run`; the sources files above are not used for them. rawRecords holds the tsv
-// records of the CLI. A test steers the next run by rewriting these files. The folder name has a space and a
-// quote on purpose.
+// A stand-in for `chart-grabber-cli sources --format=tsv` for the window tests: a shell script in its own
+// folder that prints the `source` records of records.tsv (type, guid, kind, name, contentType, epsg,
+// cacheType, verdict, zmpFile, group, tab separated), then stderr.txt to stderr, appends its argument list to
+// argv.log, waits while the file `hold` exists, and exits with the number in `exit` (0 when absent).
+// `--version` (run by probeCli before every first use of the file) prints the line in the file `version`
+// ("chart-grabber-cli 2026.10.9 (test)" when absent) and appends a line to probes.log; it touches nothing
+// else. `estimate` and `run` / `export` do the same with their own files: estimate.out (stdout), estimate.err
+// (stderr), estimate.exit, estimate.log (the argument list), hold-estimate, and the same with `run`; the
+// sources files above are not used for them. rawRecords() holds the tsv records of the CLI. A test steers the
+// next run by rewriting these files. The folder name has a space and a quote on purpose.
 #pragma once
 
 #include <cstdlib>
@@ -22,6 +20,30 @@
 #include <vector>
 
 namespace stub {
+
+// The earlier curated tables as a favourite-sources.conf, so a window test that is not about the
+// file keeps its lists and shows no warning: written to <root>/data/, the bundled sources folder returned
+// (<root>/data/sources-x; the caller sets it with ConfigStore::setBundledSourcesDir). Tests of the file
+// itself write their own.
+inline std::string installFavourites(const std::filesystem::path& root) {
+    std::string t = "format\t1\n";
+    for (const char* g : {"{7B743985-BC5F-4AB6-8915-AC5DBBB8F552}", "{F6574B06-E632-4D5F-BC75-C8FA658B57DF}",
+                          "{9A360A54-7A70-402D-8A11-D570BD759B5B}", "{92122135-6B15-4800-AA9E-3E48C556DA17}",
+                          "{E05EDD5E-C6C3-483C-8BA7-8DE1D9892ED8}", "{D643C5A1-4331-4387-9BE2-DDDF185C117E}",
+                          "{51C1079B-B55D-4DF7-A410-ADC118F53AB1}", "{C44877A0-D455-4238-B5E2-C8BFF25FC0D4}",
+                          "{91D4F1B4-A7CD-4FC8-95F1-637609068FB2}", "{FE84A175-2C0F-420F-86DF-5900DE16A33C}",
+                          "{8B9C244E-E978-4267-8FE4-D703534C0789}", "{99D06D6A-F7FA-4F06-8C00-D9F96307C0F3}",
+                          "{478CBB2F-70D1-4573-8C50-B5361CE2AA46}"})
+        t += std::string("chart\t") + g + "\n";
+    for (const char* g : {"{1A696D82-F258-41A4-BCD6-7648D9E08DE2}", "{25E4232E-08A5-47C5-8D97-E38B5F418A2D}",
+                          "{076D1F9A-DC94-4184-B785-77362CD01B5B}", "{BC2EA862-0F3D-4933-8F71-00AFA0BAD114}",
+                          "{92E40853-04A2-46B7-8A5B-3665FCDDFDBE}"})
+        t += std::string("weather\t") + g + "\n";
+    t += "seamarks\t{AB8A8685-AEC6-4E16-80DA-DC4AC37E4777}\n";
+    std::filesystem::create_directories(root / "data");
+    std::ofstream(root / "data" / "favourite-sources.conf", std::ios::binary | std::ios::trunc) << t;
+    return (root / "data" / "sources-x").string();
+}
 
 // Right after `#!/bin/sh` in every stand-in that a test stops: the CLI's `--stop-on-stdin`, as a
 // shell does it. Only when the option is among the arguments (like the real CLI: `--version` reads
@@ -39,8 +61,7 @@ struct Rec {
     std::string guid, kind, name;
     int epsg = 3857;
     std::string verdict = "ok", group;
-    std::string navigationWarning =
-        {}; // empty = a 10-column line, else a 15-column line ending in this
+    std::string navigationWarning = {}; // empty = a 10-column line, else a 15-column line ending in this
 };
 
 class Sources {

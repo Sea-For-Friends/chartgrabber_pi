@@ -2,6 +2,20 @@
 
 Versions are calendar-based: `YYYY.MM.N` (year and month of the release, N = release count within that month, from 0).
 
+## 2026.11.1
+
+- 81 chart sources are bundled: Canadian Hydrographic Service charts and NONNA-10 depths, national orthophotos of France (IGN), Spain (PNOA) and the Netherlands (PDOK), Croatia, French and Portuguese coast, depth, seamark, tide, current and satellite layers, and sources for Uruguay, Argentina and other Latin American countries.
+- **More sources** says in a line what each source is for, and the search finds sources by that text.
+- The default **Chart** and **Weather on top** lists come from the file `favourite-sources.conf` in the plugin's data folder. If the file is missing or damaged, the New chart page warns and shows a **Download a fresh copy** link; the Chart list then shows **Choose in More sources...** until you pick a source.
+- **Update all weather charts** (My charts): one click updates every weather chart one after another, then refreshes OpenCPN's chart list once. A reason line says why a batch ended early.
+- After a weather update OpenCPN's chart list is rescanned only when the picture changed.
+- Windows with OpenCPN 5.10.2: updating a weather chart that OpenCPN has open now works; the new picture is shown and the old file is dropped from the chart list.
+- The New chart window fits an 800 × 480 screen, also with the warning about the favourites file.
+- Needs Chart Grabber CLI 2026.10.9 or newer (2026.11.1 is bundled and recommended). It refuses a second download of the same chart at the same time.
+- The plugin file carries no documentation any more, only the licence, the sources terms and a short README with the GitHub link; the user guide is on GitHub.
+- Updating from 2026.10.7: Import the new file over the old one.
+- Known issue on OpenCPN 5.14 and newer: after a chart is added, OpenCPN may stop moving own ship and AIS targets until it is restarted; each chart update also re-reads all charts and can pause OpenCPN for several seconds on a large collection.
+
 ## 2026.10.7
 
 - New systems: macOS 12 or newer (Apple and Intel Macs, one file); OpenCPN from Flathub (Flatpak) versions 5.12 and 5.14 on 64-bit PC and ARM 64-bit; Raspberry Pi OS 32-bit (Trixie) and Debian 12 and 13 on 32-bit ARM (armhf). OpenCPN 5.10.2 on Flatpak is not served: Flathub no longer has it.
@@ -48,7 +62,7 @@ Versions are calendar-based: `YYYY.MM.N` (year and month of the release, N = rel
 - Stop now asks the CLI to stop and save, and ends it after 10 seconds if it does not; the Force stop button is gone.
 - Each weather Update gets its own chart name with the time of the picture.
 - The chart sources are regrouped into seven groups (Nautical charts, Seamarks and traffic, Depth, Satellite, Coast and
-  land, Weather now, Ocean), with eight new sources (24 in all). Sources that need a key, and Navionics, are not bundled.
+  land, Weather now, Ocean), with eight new sources (24 in all). Sources that need a key are not bundled.
 - Chart Grabber CLI 2026.10.8 no longer supports BerkeleyDB tile caches; the default SQLite cache is unchanged.
 
 ## 2026.10.1

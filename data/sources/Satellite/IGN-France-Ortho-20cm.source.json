@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{5BFDF522-5EC4-4C7C-A7DB-BB1B827C2622}",
+  "name": "IGN orthophoto 20 cm (France and overseas)",
+  "group": "Satellite",
+  "url": "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=HR.ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM_6_19&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_IGN_France_Ortho_20cm",
+  "license": "IGN France, BD ORTHO 20 cm, https://data.geopf.fr (Licence Ouverte Etalab 2.0)",
+  "maxConnections": 2,
+  "maxZoom": 19
+}

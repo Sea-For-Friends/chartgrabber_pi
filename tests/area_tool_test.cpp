@@ -90,7 +90,7 @@ void glVertex2i(GLint x, GLint y) {
 
 namespace {
 
-// A wxDC that records what AreaTool draws as text lines: "pen R,G,B,W", "poly x,y x,y...", "line x1,y1
+// A wxDC that records what AreaTool draws as text lines: "pen R,G,B,W", "poly x,y x,y ...", "line x1,y1
 // x2,y2".
 class RecordingImpl : public wxDCImpl {
 public:

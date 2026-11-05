@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{51385452-EFA1-4B30-8D8A-606F7F35DF54}",
+  "name": "EMODnet seagrass and Caribbean seabed",
+  "group": "Coast and land",
+  "layer": true,
+  "url": "https://ows.emodnet-seabedhabitats.eu/geoserver/emodnet_view/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=seagrass_eov_poly_2025,greek_seagrass_meadows_v0906,carib_eusm2025_subs_full&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Coast_EMODnet_Seagrass_Substrate",
+  "license": "Licensed under CC-BY 4.0 from EMODnet Seabed Habitats; Caribbean seagrass subset CC BY-NC 4.0. Not for navigation",
+  "maxConnections": 2,
+  "maxZoom": 14,
+  "navigationWarning": true
+}

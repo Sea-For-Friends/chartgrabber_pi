@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "guid": "{A3A40A49-FF43-4FA5-A74C-036454BE8DEF}",
+  "name": "Copernicus currents (North-West European shelf)",
+  "group": "Ocean",
+  "layer": true,
+  "url": "https://wmts.marine.copernicus.eu/teroWmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&FORMAT=image/png&TILEMATRIXSET=EPSG:3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&TIME={ver}&LAYER=NWSHELF_ANALYSISFORECAST_PHY_004_013/cmems_mod_nws_phy-cur_anfc_1.5km-2D_PT1H-i_202511/sea_water_velocity&STYLE=cmap:speed,vectorStyle:solidAndVector",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Ocean_Copernicus_Currents_NWS",
+  "cacheType": 71,
+  "license": "Generated using E.U. Copernicus Marine Service Information; NWSHELF_ANALYSISFORECAST_PHY_004_013",
+  "maxConnections": 2,
+  "maxZoom": 9,
+  "snapshot": {
+    "index": "https://wmts.marine.copernicus.eu/teroWmts/NWSHELF_ANALYSISFORECAST_PHY_004_013/cmems_mod_nws_phy-cur_anfc_1.5km-2D_PT1H-i_202511?request=GetCapabilities&service=WMTS",
+    "type": "wmts-default",
+    "item": "NWSHELF_ANALYSISFORECAST_PHY_004_013/cmems_mod_nws_phy-cur_anfc_1.5km-2D_PT1H-i_202511/sea_water_velocity"
+  }
+}

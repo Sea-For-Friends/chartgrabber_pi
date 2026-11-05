@@ -26,7 +26,7 @@ protected:
         activator_.reset();
         loop_.reset();
     }
-    // Dispatches events until done or the timeout; true when done became true.
+    // Dispatches events until done() or the timeout; true when done() became true.
     bool runUntil(const std::function<bool()>& done, int timeoutMs) {
         const auto deadline = Clock::now() + std::chrono::milliseconds(timeoutMs);
         while (!done()) {

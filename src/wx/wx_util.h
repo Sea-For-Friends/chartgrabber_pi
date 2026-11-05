@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// wxString <-> UTF-8 std::string, for the boundary between src/wx and src/core.
+// WxString <-> UTF-8 std::string, for the boundary between src/wx and src/core.
 #pragma once
 
 #include <wx/string.h>

@@ -7,7 +7,7 @@
   "contentType": "image/png",
   "ext": ".png",
   "nameInCache": "EMODnet_Bathymetry_World",
-  "license": "EMODnet Bathymetry Consortium",
+  "license": "EMODnet Bathymetry Consortium, CC BY 4.0; includes GEBCO 2019",
   "maxConnections": 2,
   "navigationWarning": true
 }

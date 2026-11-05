@@ -22,6 +22,8 @@ set(CG_TEST_SOURCES
     job_progress_test.cpp
     portable_test.cpp
     float_text_test.cpp
+    chart_folder_test.cpp
+    plugin_conf_test.cpp
 )
 
 # Window tests (see the rule in wx_env.h): a second binary with a GUI wxApp, ctest label "gui".

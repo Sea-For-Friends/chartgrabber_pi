@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{00B62B3C-C5E1-4F2D-BB60-78B330D9C4AF}",
+  "name": "SHOM coastal depth model, Moorea",
+  "group": "Depth",
+  "layer": true,
+  "url": "https://services.data.shom.fr/INSPIRE/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=MNT_COTIER_MOOREA_PBMA_3857_WMTS&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Depth_SHOM_DEM_Moorea",
+  "license": "© Shom / IGN — Litto3D® / HOMONIM, Licence Ouverte 2.0. Non certifié pour la navigation",
+  "maxConnections": 2,
+  "maxZoom": 17,
+  "navigationWarning": true
+}

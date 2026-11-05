@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// / the three toolbar icons. OpenCPN renders them with
+// The three toolbar icons. OpenCPN renders them with
 // nanosvg: plain svg / g / path / rect, fill and stroke attributes, no CSS, filter, mask or text. The colours
-// are the literals of the spec: MUI_flat glyph #b4b4b4, idle square #282828, toggled square #898989.
+// are literals: MUI_flat glyph #b4b4b4, idle square #282828, toggled square #898989.
 #include <gtest/gtest.h>
 
 #include <wx/xml/xml.h>
 
 #include <filesystem>
-#include <fstream>
 #include <set>
-#include <sstream>
 #include <string>
 
 namespace {
@@ -86,8 +84,8 @@ TEST(ToolbarIcons, NanosvgSubsetAndTheMuiFlatColours) {
     }
 }
 
-// the four names are gone (OpenCPN's icon cache keys on the file name, ).
-TEST(ToolbarIcons, TheP0035FileNamesAreGone) {
+// the four old names are gone (OpenCPN's icon cache keys on the file name).
+TEST(ToolbarIcons, TheOldFileNamesAreGone) {
     for (const char* n : {"chartgrabber.svg", "chartgrabber_rollover.svg", "chartgrabber_toggled.svg",
                           "chartgrabber_rollover_toggled.svg"}) {
         EXPECT_FALSE(std::filesystem::exists(dataPath(n))) << n;

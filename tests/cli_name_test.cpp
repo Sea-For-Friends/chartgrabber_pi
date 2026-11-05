@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The CLI's default executable name is chart-grabber-cli. The names are literals here, never kDefaultCliName itself.
+// The CLI's default executable name is chart-grabber-cli. The names are literals here, never kDefaultCliName
+// itself.
 #include "cli_runner.h"
 #include "settings.h"
 #include "wx_env.h"
@@ -64,7 +65,7 @@ TEST_F(CliNameTest, PathSearchFindsChartGrabberCliAndNotTheOldName) {
     (void)oldOnly;
 }
 
-TEST_F(CliNameTest, ExplicitPathToAnOldOldTilesStillWorks) {
+TEST_F(CliNameTest, ExplicitPathToAnOldSasTilesStillWorks) {
     const std::string oldCli = makeExecutable("old-tiles");
     makeExecutable("chart-grabber-cli");
     setenv("PATH", dir_.string().c_str(), 1);

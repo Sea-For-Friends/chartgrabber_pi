@@ -419,6 +419,20 @@ std::optional<std::string> findOnPath(std::string_view name, std::string_view pa
     return std::nullopt;
 }
 
+bool pictureChanged(std::string_view prevSnapshot, std::string_view prevModelRun,
+                    std::string_view newSnapshot, std::string_view newModelRun) {
+    return prevSnapshot.empty() || newSnapshot != prevSnapshot ||
+           (!newModelRun.empty() && newModelRun != prevModelRun);
+}
+
+std::vector<ChartRecord> weatherBatch(const std::vector<ChartRecord>& charts) {
+    std::vector<ChartRecord> out;
+    for (const ChartRecord& c : charts)
+        if (c.weather && c.state != ChartState::Running)
+            out.push_back(c);
+    return out;
+}
+
 std::string chartIni(const ChartRecord& r) {
     std::string t;
     const auto line = [&t](const std::string& key, const std::string& value) {
@@ -434,6 +448,9 @@ std::string chartIni(const ChartRecord& r) {
     for (std::size_t i = 0; i < r.files.size(); ++i) {
         line(std::string("File") + std::to_string(i), r.files[i]);
     }
+    for (std::size_t i = 0; i < r.stale.size(); ++i) {
+        line(std::string("Stale") + std::to_string(i), r.stale[i]);
+    }
     line("State", kStateNames[static_cast<int>(r.state)]);
     line("Tiles", std::to_string(r.tiles));
     line("Missing", std::to_string(r.missing));
@@ -443,6 +460,7 @@ std::string chartIni(const ChartRecord& r) {
     line("UpdateBefore", r.updateBefore);
     line("Weather", r.weather ? "1" : "0");
     line("Snapshot", r.snapshot);
+    line("ModelRun", r.modelRun);
     line("Credit", r.credit);
     return t;
 }
@@ -451,7 +469,7 @@ std::optional<ChartRecord> parseChartIni(std::string_view text, std::string id) 
     ChartRecord r;
     r.id = std::move(id);
     bool haveName = false;
-    std::map<int, std::string> files;
+    std::map<int, std::string> files, stale;
     const auto number = [](std::string_view v, std::int64_t& out) {
         std::from_chars(v.data(), v.data() + v.size(), out);
     };
@@ -510,11 +528,17 @@ std::optional<ChartRecord> parseChartIni(std::string_view text, std::string id) 
             r.weather = value == "1";
         } else if (key == "Snapshot") {
             r.snapshot = value;
+        } else if (key == "ModelRun") {
+            r.modelRun = value;
         } else if (key == "Credit") {
             r.credit = value;
         } else if (key.starts_with("File")) {
             if (const auto n = parseInt(key.substr(4))) {
                 files[*n] = value;
+            }
+        } else if (key.starts_with("Stale")) {
+            if (const auto n = parseInt(key.substr(5))) {
+                stale[*n] = value;
             }
         }
     }
@@ -524,7 +548,137 @@ std::optional<ChartRecord> parseChartIni(std::string_view text, std::string id) 
     for (auto& [n, path] : files) {
         r.files.push_back(std::move(path));
     }
+    for (auto& [n, path] : stale) {
+        r.stale.push_back(std::move(path));
+    }
     return r;
+}
+
+namespace {
+std::string foldedWindows(const std::string& path) {
+    std::string s = nativeSeparators(path, Os::Windows);
+    for (char& ch : s) {
+        if (ch >= 'A' && ch <= 'Z') {
+            ch = static_cast<char>(ch - 'A' + 'a');
+        }
+    }
+    return s;
+}
+} // namespace
+
+std::optional<std::string> alternateWeatherFile(const std::string& current,
+                                                const std::function<bool(const std::string&)>& exists,
+                                                Os os) {
+    constexpr std::string_view kExt = ".mbtiles";
+    const std::size_t sep = current.find_last_of(os == Os::Windows ? "/\\" : "/");
+    const std::string dir = sep == std::string::npos ? "" : nativeSeparators(current.substr(0, sep + 1), os);
+    std::string stem = current.substr(sep == std::string::npos ? 0 : sep + 1);
+    if (stem.size() < kExt.size() || foldedWindows(stem.substr(stem.size() - kExt.size())) != kExt) {
+        return std::nullopt;
+    }
+    stem.resize(stem.size() - kExt.size());
+    const std::size_t n = stem.size();
+    if (n >= 4 && stem.compare(n - 4, 2, " (") == 0 && stem[n - 2] >= '2' && stem[n - 2] <= '9' &&
+        stem[n - 1] == ')') {
+        stem.resize(n - 4);
+    }
+    const std::string self = foldedWindows(current);
+    for (int k = 1; k <= 9; ++k) {
+        const std::string name =
+            stem + (k == 1 ? std::string() : " (" + std::to_string(k) + ")") + std::string(kExt);
+        const std::string path = dir + name;
+        if (foldedWindows(path) != self && !exists(path)) {
+            return path;
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> rewriteJobOutputs(std::string_view text, std::string_view out,
+                                             std::string_view overlayOut) {
+    const auto replace = [](std::string_view t, std::string_view key,
+                            std::string_view value) -> std::optional<std::string> {
+        for (std::size_t at = 0;;) {
+            if (t.substr(at).starts_with(key)) {
+                const std::size_t from = at + key.size();
+                const std::size_t to = std::min(t.find_first_of("\r\n", from), t.size());
+                return std::string(t.substr(0, from)) + oneLine(std::string(value)) +
+                       std::string(t.substr(to));
+            }
+            const std::size_t nl = t.find('\n', at);
+            if (nl == std::string_view::npos) {
+                return std::nullopt;
+            }
+            at = nl + 1;
+        }
+    };
+    auto r = replace(text, "Out=", out);
+    if (r && !overlayOut.empty()) {
+        r = replace(*r, "OverlayOut=", overlayOut);
+    }
+    return r;
+}
+
+std::vector<std::string> removeStale(const std::vector<std::string>& stale,
+                                     const std::function<bool(const std::string&)>& exists,
+                                     const std::function<bool(const std::string&)>& remove) {
+    std::vector<std::string> left;
+    for (const std::string& p : stale) {
+        if (exists(p) && !remove(p)) {
+            left.push_back(p);
+        }
+    }
+    return left;
+}
+
+namespace {
+// The integer after `"key"` ws ':' ws; nullopt when the quoted key or its digits are missing.
+std::optional<int> intAfterKey(std::string_view text, std::string_view key) {
+    // Built by appends: `"\"" + std::string(key)` trips GCC 12.2's -Werror=restrict false positive.
+    std::string quoted;
+    quoted.reserve(key.size() + 2);
+    quoted += '"';
+    quoted.append(key);
+    quoted += '"';
+    const std::size_t at = text.find(quoted);
+    if (at == std::string_view::npos)
+        return std::nullopt;
+    std::size_t i = at + quoted.size();
+    const auto skip = [&] {
+        while (i < text.size() && std::isspace(static_cast<unsigned char>(text[i])))
+            ++i;
+    };
+    skip();
+    if (i >= text.size() || text[i] != ':')
+        return std::nullopt;
+    ++i;
+    skip();
+    int v = 0;
+    const auto r = std::from_chars(text.data() + i, text.data() + text.size(), v);
+    if (r.ec != std::errc() || r.ptr == text.data() + i)
+        return std::nullopt;
+    return v;
+}
+} // namespace
+
+std::optional<std::pair<int, int>> openCpnVersion(std::string_view m) {
+    const auto major = intAfterKey(m, "OpenCPN Version Major"),
+               minor = intAfterKey(m, "OpenCPN Version Minor");
+    if (!major || !minor)
+        return std::nullopt;
+    return std::make_pair(*major, *minor);
+}
+
+bool chartListRemoveIsSafe(int major, int minor) {
+    return major == 5 && minor < 14;
+}
+
+std::string chartListPath(const std::string& listedDir, const std::string& file, Os os) {
+    std::string dir = listedDir;
+    while (!dir.empty() && (dir.back() == '/' || dir.back() == '\\'))
+        dir.pop_back();
+    const auto at = file.find_last_of(os == Os::Windows ? "/\\" : "/");
+    return dir + (os == Os::Windows ? '\\' : '/') + (at == std::string::npos ? file : file.substr(at + 1));
 }
 
 } // namespace cg

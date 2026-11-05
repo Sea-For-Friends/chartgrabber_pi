@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{DAA88925-58F8-4B43-BEE3-A9434C1CA070}",
+  "name": "IGN Argentina aerial photo (Buenos Aires, Paraná, towns)",
+  "group": "Satellite",
+  "url": "https://imagenes.ign.gob.ar/geoserver/gwc/service/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=mosaicos_vuelos&STYLE=&FORMAT=image/png&TILEMATRIXSET=EPSG:3857&TILEMATRIX=EPSG:3857:{z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Satellite_Argentina_IGN_Aerial_Mosaics",
+  "license": "FUENTE: Instituto Geográfico Nacional de la República Argentina — mosaicos de vuelos 2011–2022",
+  "maxConnections": 2,
+  "maxZoom": 19
+}

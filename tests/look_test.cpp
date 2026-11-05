@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Look::apply : nothing by day, DimeWindow only at dusk / night.
+// Look::apply: nothing by day, DimeWindow only at dusk / night.
 #include "look.h"
 #include "ocpn_fakes.h"
 #include "wx_env.h"
@@ -45,7 +45,7 @@ Tree makeTree() {
     return t;
 }
 
-// The colours of the fresh controls (the system theme), in all order.
+// The colours of the fresh controls (the system theme), in all() order.
 std::vector<wxColour> themeColours(const Tree& t) {
     std::vector<wxColour> v;
     for (wxWindow* w : t.all()) {

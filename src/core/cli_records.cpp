@@ -224,7 +224,8 @@ std::optional<StdoutRecord> parseStdoutLine(std::string_view line) {
         if (f.size() < 4) {
             return std::nullopt;
         }
-        return SnapshotRecord{std::string(f[1]), std::string(f[2]), std::string(f[3])};
+        return SnapshotRecord{std::string(f[1]), std::string(f[2]), std::string(f[3]),
+                              f.size() > 4 ? std::string(f[4]) : std::string()};
     }
     return std::nullopt;
 }
@@ -444,6 +445,10 @@ Outcome classifyExit(int exitCode, std::string_view lastError, bool startFailed)
     default:
         return exitCode < 0 ? Outcome::Killed : Outcome::InternalError; // 1 and unknown codes: InternalError
     }
+}
+
+bool runLocked(Outcome o, std::string_view lastError) {
+    return o == Outcome::Refused && lastError.starts_with("another run of this job is in progress");
 }
 
 int normalizeExit(int wxCode, Os os, bool killedByUs) {

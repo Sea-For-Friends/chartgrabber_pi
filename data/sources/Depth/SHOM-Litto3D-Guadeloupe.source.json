@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{426323EC-65E1-493F-A2FA-DAB5D02E0D62}",
+  "name": "SHOM Litto3D lidar depth, Guadeloupe 2016",
+  "group": "Depth",
+  "layer": true,
+  "url": "https://services.data.shom.fr/INSPIRE/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=LITTO3D_GUAD_2016_PYR_3857_WMTS&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Depth_SHOM_Litto3D_Guadeloupe",
+  "license": "© Shom / IGN — Litto3D® / HOMONIM, Licence Ouverte 2.0. Non certifié pour la navigation",
+  "maxConnections": 2,
+  "maxZoom": 17,
+  "navigationWarning": true
+}

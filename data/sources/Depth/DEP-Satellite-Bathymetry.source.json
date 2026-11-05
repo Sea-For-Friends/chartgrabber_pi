@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{F12728E1-8C83-4B3C-9763-E0651ED9371C}",
+  "name": "Satellite-derived depth (Pacific islands, DEP)",
+  "group": "Depth",
+  "layer": true,
+  "url": "https://ows.prod.digitalearthpacific.io/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=sdb&STYLE=blues_depth&FORMAT=image/png&TILEMATRIXSET=WholeWorld_WebMercator&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Depth_DEP_Satellite_Bathymetry",
+  "license": "Digital Earth Pacific (SPC), CC BY 4.0; contains modified Copernicus Sentinel data. Not for navigation",
+  "maxConnections": 2,
+  "maxZoom": 14,
+  "navigationWarning": true
+}

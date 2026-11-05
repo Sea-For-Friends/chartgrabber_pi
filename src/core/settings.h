@@ -12,7 +12,7 @@ namespace cg {
 inline constexpr std::string_view kDefaultCliName = "chart-grabber-cli";
 // Where the package installs the CLI.
 inline constexpr std::string_view kCliInstallDir = "/usr/bin/";
-// The folder of the CLI in Program Files on Windows.
+// The folder of the CLI in Program Files on Windows (the folder name of the later installer).
 inline constexpr std::string_view kCliWindowsFolder = "Chart Grabber CLI";
 
 struct Settings {
@@ -26,13 +26,12 @@ struct Settings {
     std::string cliDataDir;  // only in the cliSettings copy: --datadir=DIR for every run; empty: not passed
     std::string chartDir;    // empty: <home>/Charts/ChartGrabber
     std::string proxy;       // empty: not passed
-    int threads = 2;         // 1 in slow mode
+    int threads = 2;         // 1 in slow mode (ux section 5)
     double corridorNm = 2.0; // total width (app-cli Q-5)
-    bool slowConnection = false; //: 1 thread, no auto-retry, budget on
+    bool slowConnection = false; // ux F2: 1 thread, no auto-retry, budget on
     int dataBudgetMb = 100;      // applies only when slowConnection
     bool registerCharts = true;
-    bool stripOnChart =
-        false; // key StripOnChart: the progress strip is a child of the chart canvas
+    bool stripOnChart = false;    // key StripOnChart: the progress strip is a child of the chart canvas
     bool debugLog = false;        // key DebugLog: debug lines in the plugin's log file
     bool warnDetailLevels = true; // key WarnDetailLevels: the extreme-level warning
 };

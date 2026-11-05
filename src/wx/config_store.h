@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// OpenCPN's config as the plugin's settings, last choices and My charts records.
-// Group /PlugIns/ChartGrabber. Values are core types; no user-visible text.
+// OpenCPN's config as the plugin's settings, last choices and My charts records. Group /PlugIns/ChartGrabber.
+// Values are core types; no user-visible text.
 #pragma once
 
 #include "job_files.h"
@@ -38,11 +38,11 @@ public:
 
     bool disclaimerShown() const;
     void setDisclaimerShown();
-    void setWarnDetailLevels(bool on); // key WarnDetailLevels only, then Flush
+    void setWarnDetailLevels(bool on); // key WarnDetailLevels only, then Flush()
     bool firstSuccessShown() const;    // key FirstSuccessShown
     void setFirstSuccessShown();
 
-    // The job strip's place : nullopt when a
+    // The job strip's place: nullopt when a
     // key is missing or invalid (an invalid one is logged once per session); nullopt to set deletes the keys.
     std::optional<cg::StripAnchor> stripAnchor() const;
     void setStripAnchor(std::optional<cg::StripAnchor> a);

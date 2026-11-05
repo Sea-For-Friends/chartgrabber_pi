@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{9C9D5257-EC7A-4B63-B163-2537CBA2AA07}",
+  "name": "SHOM surface currents, 3D model (Channel)",
+  "group": "Ocean",
+  "layer": true,
+  "url": "https://services.data.shom.fr/INSPIRE/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=COURANTS_3D_MANCHE_SURF_WMTS_3857&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Ocean_SHOM_Currents_3D_Channel",
+  "license": "© Shom — Licence Ouverte 2.0. Non certifié pour la navigation",
+  "maxConnections": 2,
+  "maxZoom": 14,
+  "navigationWarning": true
+}

@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{6CEDB50E-F401-4653-A69C-D9C402886D0B}",
+  "name": "SHOM tidal stream, maximum speed (French coasts)",
+  "group": "Ocean",
+  "layer": true,
+  "url": "https://services.data.shom.fr/INSPIRE/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=COURANTS2D_WMTS_VMAX_3857&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Ocean_SHOM_Tidal_Stream_Max",
+  "license": "© Shom — Licence Ouverte 2.0. Non certifié pour la navigation",
+  "maxConnections": 2,
+  "maxZoom": 13,
+  "navigationWarning": true
+}

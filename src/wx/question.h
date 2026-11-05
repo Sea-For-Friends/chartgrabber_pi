@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// A question that does not run a nested modal loop : a plain dialog shown
-// with Show, so OpenCPN keeps running (and may close and unload the plugin) while it is open. GUI thread.
+// A question that does not run a nested modal loop: a plain dialog shown
+// with Show(), so OpenCPN keeps running (and may close and unload the plugin) while it is open. GUI thread.
 #pragma once
 
 #include <wx/arrstr.h>
@@ -27,7 +27,7 @@ public:
                                    const wxString& text, Buttons buttons, const wxString& checkBoxLabel,
                                    std::function<void(bool yes, bool ticked)> onAnswer);
     // The Yes / No pair with the caller's labels; default button = yes (Enter), Escape and the close
-    // box answer no. `onAnswer(yes, ticked)` as ask.
+    // box answer no. `onAnswer(yes, ticked)` as ask().
     static wxWeakRef<Question> askCustom(wxWindow* parent, const Look& look, const wxString& title,
                                          const wxString& text, const wxString& yesLabel,
                                          const wxString& noLabel, const wxString& checkBoxLabel,

@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{04C99FA6-041B-4E56-A154-0464F26F3620}",
+  "name": "SHOM 100 m depth, Corsica",
+  "group": "Depth",
+  "layer": true,
+  "url": "https://services.data.shom.fr/INSPIRE/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=MNT_MED100m_CORSE_HOMONIM_PBMA_3857_WMTS&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Depth_SHOM_DEM100_Corsica",
+  "license": "© Shom / IGN — Litto3D® / HOMONIM, Licence Ouverte 2.0. Non certifié pour la navigation",
+  "maxConnections": 2,
+  "maxZoom": 13,
+  "navigationWarning": true
+}

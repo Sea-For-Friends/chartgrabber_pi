@@ -57,7 +57,7 @@ public:
 } // namespace
 
 namespace {
-// The window host's frame (as before): floats over the main window, no taskbar entry, no border.
+// The window host's frame: floats over the main window, no taskbar entry, no border.
 wxWindow* hostParent(wxWindow* canvas, ProgressStrip::Host host) {
     if (host == ProgressStrip::Host::Canvas)
         return canvas;
@@ -95,12 +95,11 @@ ProgressStrip::ProgressStrip(wxWindow* canvas, const Look& look, Role role, Conf
     if (role_ == Role::Hint)
         anchor_ = {cg::StripCorner::TopLeft, cg::kStripMargin, cg::kStripMargin};
     else
-        anchor_ =
-            (store_                      ? store_->stripAnchor()
-             : winStore_ && !onWayland() ? winStore_->stripAnchor() // Wayland: nothing is read
-                                         : std::nullopt)
-                .value_or(
-                    cg::StripAnchor{cg::StripCorner::BottomLeft, cg::kStripDefaultDx, cg::kStripDefaultDy});
+        anchor_ = (store_                      ? store_->stripAnchor()
+                   : winStore_ && !onWayland() ? winStore_->stripAnchor() // Wayland: nothing is read
+                                               : std::nullopt)
+                      .value_or(cg::StripAnchor{cg::StripCorner::BottomLeft, cg::kStripDefaultDx,
+                                                cg::kStripDefaultDy});
     column_ = new wxBoxSizer(wxVERTICAL);
     detailsText_ = new wxTextCtrl(this, wxID_ANY, wxString(), wxDefaultPosition, wxDefaultSize,
                                   wxTE_MULTILINE | wxTE_READONLY);
@@ -359,7 +358,7 @@ cg::StripRect ProgressStrip::safe() const {
     return cg::safeArea(cs.x, cs.y, GetChartbarHeight());
 }
 
-// The headline's floor : the row's fixed parts plus kStripMinTextWidth, at least
+// The headline's floor: the row's fixed parts plus kStripMinTextWidth, at least
 // kStripMinWidth.
 int ProgressStrip::minStripWidth() const {
     int fixed = (GetSize() - GetClientSize()).x + 2 * 4; // panel border + the column's border
@@ -448,7 +447,7 @@ void ProgressStrip::place() {
 // The first placement after each show goes to the log; with Debug on, so does every later one whose numbers
 // differ from the last line written (the 500 ms timer would otherwise write two lines a second).
 void ProgressStrip::logPlaced() {
-    if (!IsShown() || (frame_ && !frame_->IsShown())) // the window host's frame is not up yet: Show logs
+    if (!IsShown() || (frame_ && !frame_->IsShown())) // the window host's frame is not up yet: Show() logs
         return;
     if (placedSinceShow_ && !cg::pluginLogDebug()) // hot path (500 ms timer): nothing to write, do not format
         return;
@@ -484,7 +483,7 @@ bool ProgressStrip::onWayland() const {
 }
 
 // Window host. A left press, then motion beyond the drag threshold: the toolkit's compositor-driven move
-// starts once (Move/SetSize is ignored by a Wayland compositor) and the strip leaves the mouse to it until
+// starts once (Move()/SetSize is ignored by a Wayland compositor) and the strip leaves the mouse to it until
 // the next press; no capture, the window manager owns the pointer and the release.
 void ProgressStrip::onWindowMouse(wxMouseEvent& e) {
     auto* from = wxDynamicCast(e.GetEventObject(), wxWindow);

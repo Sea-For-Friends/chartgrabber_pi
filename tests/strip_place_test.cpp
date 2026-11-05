@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Tests of strip_place. Expected values are literals worked out by hand from / 9.1.
+// Tests of strip_place. Expected values are literals worked out by hand from.
 #include "strip_place.h"
 
 #include <gtest/gtest.h>

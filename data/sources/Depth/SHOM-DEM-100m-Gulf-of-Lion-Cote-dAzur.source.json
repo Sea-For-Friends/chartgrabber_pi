@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{EC8D7131-80C6-4B43-B77D-2B585B3772CE}",
+  "name": "SHOM 100 m depth, Gulf of Lion and Côte d'Azur",
+  "group": "Depth",
+  "layer": true,
+  "url": "https://services.data.shom.fr/INSPIRE/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=MNT_MED100m_GDL_CA_HOMONIM_PBMA_3857_WMTS&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Depth_SHOM_DEM100_Gulf_of_Lion",
+  "license": "© Shom / IGN — Litto3D® / HOMONIM, Licence Ouverte 2.0. Non certifié pour la navigation",
+  "maxConnections": 2,
+  "maxZoom": 13,
+  "navigationWarning": true
+}

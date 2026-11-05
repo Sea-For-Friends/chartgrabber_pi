@@ -147,7 +147,7 @@ const char* areaKindName(cg::AreaKind k) {
     return "view";
 }
 
-// LastRect : "W,S,E,N", exactly four non-empty parts (a trailing empty part counts), each a
+// LastRect: "W,S,E,N", exactly four non-empty parts (a trailing empty part counts), each a
 // whole-string C-locale number (a leading blank is refused too: wx would skip it), finite, inside the box
 // normalizeBox can give, west < east, south < north. Anything else: no rectangle.
 std::optional<cg::BBox> parseRect(const std::string& text) {
@@ -208,7 +208,7 @@ void ConfigStore::saveSettings(const cg::Settings& s) {
     writeText(config_, "ChartDir", s.chartDir);
     writeText(config_, "Proxy", s.proxy);
     writeLong(config_, "Threads", s.threads);
-    // Format not fixed by the spec (section 11 says "numbers via formatNumber"): 2 decimals, open question.
+    // Two decimals.
     writeText(config_, "CorridorNm", cg::formatNumber(s.corridorNm, 2));
     writeFlag(config_, "SlowConnection", s.slowConnection);
     writeLong(config_, "DataBudgetMb", s.dataBudgetMb);
@@ -375,7 +375,7 @@ std::string ConfigStore::jobsDir() const {
     return cg::toUtf8(*location) + "/plugins/chartgrabber/jobs";
 }
 
-// Decision 0003: the plugin's own tile cache, beside the jobs folder; never derived from the CLI's name.
+// the plugin's own tile cache, beside the jobs folder; never derived from the CLI's name.
 std::string ConfigStore::cliCacheRoot(const cg::Settings& s) const {
     if (!s.cacheDir.empty())
         return s.cacheDir;
@@ -386,7 +386,7 @@ std::string ConfigStore::cliDataDir() const {
     return privateDataBase() + "/plugins/chartgrabber/cli-data";
 }
 
-// Decision 0004: the user's own chart sources, outside the folder OpenCPN scans.
+// the user's own chart sources, outside the folder OpenCPN scans.
 std::string ConfigStore::sourcesDir(const cg::Settings& s) const {
     if (!s.mapsDir.empty())
         return s.mapsDir;
@@ -477,7 +477,7 @@ void ConfigStore::deleteChartDir(const std::string& id) {
     wxFileName::Rmdir(cg::fromUtf8(jobsDir() + "/" + id), wxPATH_RMDIR_RECURSIVE);
 }
 
-// Deletes only the sub-directories of the cache root whose name starts with "cache" .
+// Deletes only the sub-directories of the cache root whose name starts with "cache".
 // A symbolic link is never followed or removed.
 void ConfigStore::clearCacheDirs(const std::string& root) {
     const wxString wxRoot = cg::fromUtf8(root);

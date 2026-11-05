@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{F8D0CFB0-4844-4A0D-A87E-3D9FBA78FFB8}",
+  "name": "SHOM 100 m depth, Saint-Martin, Saint-Barthélemy",
+  "group": "Depth",
+  "layer": true,
+  "url": "https://services.data.shom.fr/INSPIRE/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=MNT_ANTN100m_HOMONIM_PBMA_3857_WMTS&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Depth_SHOM_DEM100_Antilles_North",
+  "license": "© Shom / IGN — Litto3D® / HOMONIM, Licence Ouverte 2.0. Non certifié pour la navigation",
+  "maxConnections": 2,
+  "maxZoom": 13,
+  "navigationWarning": true
+}

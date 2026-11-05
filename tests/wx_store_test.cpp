@@ -125,7 +125,7 @@ TEST_F(Store, SaveWritesSpecKeysToDiskUnderGroupAndLoadsBack) {
     s.debugLog = true;
     store_->saveSettings(s);
 
-    // Flush after save: the file already holds the keys, with the config still open.
+    // Flush() after save: the file already holds the keys, with the config still open.
     const std::string file = slurp(conf_);
     EXPECT_NE(file.find("[PlugIns/ChartGrabber]"), std::string::npos) << file;
     EXPECT_NE(file.find("CliPath=/opt/my tools/tiles-\xC3\xA9"), std::string::npos) << file;
@@ -178,7 +178,7 @@ TEST_F(Store, NumbersAreReadWithADotAndBadTextFallsBack) {
     EXPECT_DOUBLE_EQ(store_->loadSettings().corridorNm, 2.0);
 }
 
-// : an invalid value gives the default and exactly one log line
+// an invalid value gives the default and exactly one log line
 // naming the key and the value; a valid value is kept silently.
 TEST_F(Store, InvalidValuesGiveTheDefaultAndOneLogLineEach) {
     struct Case {
@@ -262,7 +262,7 @@ TEST_F(Store, WarnDetailLevelsIsNotWrittenBackByLoadingAndSetWritesOnlyItsKey) {
     config_->Write("/PlugIns/ChartGrabber/SlowConnection", wxString("x")); // a save would rewrite it as 0
     config_->Write("/PlugIns/ChartGrabber/WarnDetailLevels", wxString("1"));
     store_->setWarnDetailLevels(false);
-    const std::string file = slurp(conf_); // Flush already happened
+    const std::string file = slurp(conf_); // Flush() already happened
     EXPECT_NE(file.find("WarnDetailLevels=0"), std::string::npos) << file;
     EXPECT_NE(file.find("SlowConnection=x"), std::string::npos) << "no other key is touched";
 }
@@ -362,7 +362,7 @@ TEST_F(Store, ChartDirDefaultAndOverride) {
     EXPECT_EQ(store_->chartDir(s), "/my charts");
 }
 
-// Decision 0003: the plugin's own cache, not the CLI's; it does not depend on cliPath.
+// the plugin's own cache, not the CLI's; it does not depend on cliPath.
 TEST_F(Store, CliCacheRootRules) {
     cg::Settings s;
     const std::string def = (root_ / "private").string() + "/plugins/chartgrabber/cache";
@@ -391,7 +391,7 @@ TEST_F(Store, CliCacheRootWithAnEmptyPrivateDataLocationIsUnderHomeOpencpn) {
     EXPECT_EQ(data, (root_ / "home").string() + "/.opencpn/plugins/chartgrabber/cli-data");
 }
 
-// : --datadir of every CLI run, whatever CacheDir the sailor chose.
+// --datadir of every CLI run, whatever CacheDir the sailor chose.
 TEST_F(Store, CliDataDirIsPrivateDataCliDataAndNotTheCacheDir) {
     const std::string want = (root_ / "private").string() + "/plugins/chartgrabber/cli-data";
     EXPECT_EQ(store_->cliDataDir(), want);
@@ -776,23 +776,20 @@ TEST_F(Store, ARectangleIsLoadedWhateverTheKindSays) {
 
 TEST_F(Store, EveryRefusedLastRectFormGivesNoRectangle) {
     const std::vector<std::string> refused = {
-        "",              // empty
-        "1,2,3",         // 3 parts
-        "1,2,3,4,5",     // 5 parts
-        "1,2,3,4,",      // a trailing empty part counts
-        "1,,3,4",        // an empty part
-        "1,2,3,",        // an empty last part
-        ",1,2,3",        // an empty first part
-        "x,2,3,4",       // not a number
-        "1,2,3,4x",      // trailing garbage in a part
-        "nan,1,2,3",     // not finite
-        "1,2,inf,4",     //
-
-        "-inf,1,2,3",    //
-
-        " 1,2,3,4",      // no trimming
-        "1,2,3,4 ",      //
-
+        "",          // empty
+        "1,2,3",     // 3 parts
+        "1,2,3,4,5", // 5 parts
+        "1,2,3,4,",  // a trailing empty part counts
+        "1,,3,4",    // an empty part
+        "1,2,3,",    // an empty last part
+        ",1,2,3",    // an empty first part
+        "x,2,3,4",   // not a number
+        "1,2,3,4x",  // trailing garbage in a part
+        "nan,1,2,3", // not finite
+        "1,2,inf,4",
+        "-inf,1,2,3",
+        " 1,2,3,4", // no trimming
+        "1,2,3,4 ",
         "3,1,3,2",       // W = E
         "4,1,3,2",       // W > E
         "1,2,3,2",       // S = N
@@ -810,7 +807,7 @@ TEST_F(Store, EveryRefusedLastRectFormGivesNoRectangle) {
     }
 }
 
-// : the job directories loadCharts cannot use, newest first; readable ones, stray files
+// the job directories loadCharts() cannot use, newest first; readable ones, stray files
 // and a missing jobs folder give none.
 TEST_F(Store, UnreadableChartIdsAreTheDirectoriesWithoutAUsableChartIniNewestFirst) {
     EXPECT_TRUE(store_->unreadableChartIds().empty()) << "no jobs folder";

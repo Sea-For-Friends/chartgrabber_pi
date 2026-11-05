@@ -252,7 +252,7 @@ TEST_F(StripWrapTest, ExplicitNewlinesOfAHeadlineStay) {
 
 TEST_F(StripWrapTest, RunningRowWithGaugeAndButtonsStaysInsideTheCanvas) {
     setCanvasWidth(480);
-    // the running line of
+    // the running line
     strip_->showProgress("Grabber: Google - Satellite z13 412/1 300 (31 %) 9.4 MB ~4 min", 314, "Stop");
     EXPECT_LE(strip_->GetSize().x, room());
     EXPECT_LE(lines().size(), 3u);
@@ -797,7 +797,7 @@ protected:
     }
     wxFrame* frame() const { return wxDynamicCast(strip_->GetParent(), wxFrame); }
     // The size the chart host gives the same content (a Hint strip: the job role has no grip in the window),
-    // the place from the spec's numbers: Job {BottomLeft 8, 32}, Hint {TopLeft 8, 8}, the chart bar 40, in
+    // the place from fixed numbers: Job {BottomLeft 8, 32}, Hint {TopLeft 8, 8}, the chart bar 40, in
     // screen pixels.
     wxRect expected(ProgressStrip::Role role) {
         ProgressStrip onChart(canvas_, look_, ProgressStrip::Role::Hint, nullptr,
@@ -1061,7 +1061,7 @@ TEST_F(StripWindowDragTest, AThrowingMouseHandlerIsLoggedAndTheStripStaysUsable)
     EXPECT_NO_THROW(strip_->showResult("again", "", {}));
 }
 
-// ---- : the window host stays inside the display's work area; Escape ----
+// ---- the window host stays inside the display's work area; Escape ----
 
 class StripWorkAreaTest : public StripWindowDragTest {
 protected:
@@ -1213,7 +1213,7 @@ TEST_F(StripWorkAreaTest, EscapeStopsTheRunClosesTheResultAndLeavesOtherKeysAlon
 }
 
 // OpenCPN's canvas sits inside the main frame; a canvas that is itself a top-level window (the other
-// fixtures) hides every "top-level parent of the canvas" rule. An intermediate panel catches GetParent.
+// fixtures) hides every "top-level parent of the canvas" rule. An intermediate panel catches GetParent().
 TEST_F(StripWindowHostTest, TheFramesParentIsTheTopLevelWindowOfTheCanvasNotTheCanvasNorItsParent) {
     auto* top = new wxFrame(nullptr, wxID_ANY, "main", wxPoint(30, 30), wxSize(900, 700));
     auto* middle = new wxPanel(top, wxID_ANY);

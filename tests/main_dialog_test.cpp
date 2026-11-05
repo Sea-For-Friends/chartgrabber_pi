@@ -3,9 +3,9 @@
 // cg_gui_tests. The OpenCPN API is the shared fakes of ocpn_fakes.cpp: one canvas window, a linear viewport
 // (10 px per degree, centre (100,100) = lat 50 / lon 10) and routes steered through ocpn_fake::routes. The
 // area tool is the real one; its outline is read back by drawing it into a bitmap. Expected texts are the
-// literals of the spec (sections 4.2, 6, 7.6), not the functions that produce them. The entry points of
-// chartgrabber_pi.cpp (toolbar / context menu bodies, g_closing) need the plugin object and are NOT covered
-// here.
+// literals, not the functions that produce them. The entry points of
+// chartgrabber_pi.cpp (toolbar / context menu bodies, g_closing) need the plugin object and are NOT
+// covered\n// here.
 #include "area_tool.h"
 #include "config_store.h"
 #include "job_controller.h"
@@ -25,10 +25,12 @@
 #include <wx/choice.h>
 #include <wx/collpane.h>
 #include <wx/dcmemory.h>
+#include <wx/display.h>
 #include <wx/evtloop.h>
 #include <wx/fileconf.h>
 #include <wx/frame.h>
 #include <wx/image.h>
+#include <wx/scrolwin.h>
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
 #include <wx/tglbtn.h>
@@ -106,6 +108,7 @@ protected:
                                                  w((root_ / "opencpn.conf").string()), wxEmptyString,
                                                  wxCONFIG_USE_LOCAL_FILE);
         store_ = std::make_unique<ConfigStore>(config_.get());
+        store_->setBundledSourcesDir(stub::installFavourites(root_)); // the earlier lists
         // the page runs the tile program for its sources. A stand-in script (not the real CLI)
         // answers with one usable map, so the status line shows the area and name reasons these tests are
         // about.
@@ -221,7 +224,7 @@ protected:
     wxToggleButton* newChartTab() { return labelled<wxToggleButton>("New chart"); }
     wxToggleButton* myChartsTab() {
         return labelled<wxToggleButton>("My charts (0)");
-    } // "My charts (<rows>)",
+    } // "My charts (<rows>)"
     wxButton* download() { return labelled<wxButton>("Download"); }
     wxButton* narrower() { return labelled<wxButton>("-"); }
     wxButton* wider() { return labelled<wxButton>("+"); }
@@ -403,7 +406,7 @@ TEST_F(DialogTest, TouchMakesEveryControlAtLeast48PixelsHigh) {
 
 // touch mode caps the New chart body by the window manager's decoration, so dialog + decoration fits
 // 480; the allowance (40 DIP) holds where the toolkit reports none (no window manager under Xvfb, or GTK
-// before the window is mapped); non-touch has no cap.
+// before the window is mapped); non-touch is capped by the screen it is given.
 TEST_F(DialogTest, TouchCapCountsTheDecorationAndAllowsFortyWhereNoneIsReported) {
     ocpn_fake::touch = true;
     ocpn_fake::scale = 1.0;
@@ -419,11 +422,64 @@ TEST_F(DialogTest, TouchCapCountsTheDecorationAndAllowsFortyWhereNoneIsReported)
     panes[0]->GetEventHandler()->ProcessEvent(changed);
     ASSERT_EQ(dialog_->GetSize().y - dialog_->GetClientSize().y, 0) << "no window manager here";
     EXPECT_LE(dialog_->GetSize().y, 440) << "no decoration reported: the 40 DIP allowance";
-    dialog_->capHeight(90);
+    dialog_->fitScreen(90, wxRect(0, 0, 800, 480));
     EXPECT_LE(dialog_->GetSize().y, 390);
-    dialog_->capHeight(0);
+    dialog_->fitScreen(0, wxRect(0, 0, 800, 480));
     EXPECT_GT(dialog_->GetSize().y, 440) << "the cap, not the page, held the size";
     EXPECT_LE(dialog_->GetSize().y, 480);
+}
+
+// the whole frame (decoration included) is moved inside the work area; the cap changing is not
+// needed.
+TEST_F(DialogTest, FitScreenMovesTheFrameInsideTheWorkAreaWhateverTheCap) {
+    ocpn_fake::scale = 1.0;
+    makeDialog();
+    const wxRect work(100, 60, 800, 480);
+    const int deco = 34;
+    dialog_->Move(1500, 900);
+    dialog_->fitScreen(deco, work);
+    EXPECT_GE(dialog_->GetPosition().x, 100);
+    EXPECT_GE(dialog_->GetPosition().y, 60);
+    EXPECT_LE(dialog_->GetPosition().x + dialog_->GetSize().x, 900);
+    EXPECT_LE(dialog_->GetPosition().y + dialog_->GetSize().y + deco, 540);
+    dialog_->Move(0, 0);
+    dialog_->fitScreen(deco, work);
+    EXPECT_EQ(dialog_->GetPosition(), wxPoint(100, 60));
+    dialog_->Move(130, 70);
+    dialog_->fitScreen(deco, work);
+    EXPECT_EQ(dialog_->GetPosition(), wxPoint(130, 70)) << "inside: not moved";
+    dialog_->Move(1500, 900); // the same cap again
+    dialog_->fitScreen(deco, work);
+    EXPECT_LE(dialog_->GetPosition().x + dialog_->GetSize().x, 900);
+    EXPECT_LE(dialog_->GetPosition().y + dialog_->GetSize().y + deco, 540);
+    dialog_->Move(1500, 900);
+    dialog_->fitScreen(deco, wxRect());
+    EXPECT_EQ(dialog_->GetPosition(), wxPoint(1500, 900)) << "empty work area: no move";
+}
+
+TEST_F(DialogTest, FitScreenInTouchModeYieldsToASmallerWorkArea) {
+    ocpn_fake::touch = true;
+    ocpn_fake::scale = 1.0;
+    threeRoutes();
+    makeDialog();
+    dialog_->showNewChart(cg::AreaKind::Route, std::nullopt);
+    std::vector<wxCollapsiblePane*> panes;
+    collect(dialog_, panes);
+    ASSERT_FALSE(panes.empty());
+    panes[0]->Collapse(false);
+    wxCommandEvent changed(wxEVT_COLLAPSIBLEPANE_CHANGED, panes[0]->GetId());
+    changed.SetEventObject(panes[0]);
+    panes[0]->GetEventHandler()->ProcessEvent(changed);
+    dialog_->fitScreen(30, wxRect(10, 20, 700, 400));
+    EXPECT_LE(dialog_->GetSize().y + 30, 400);
+}
+
+// a new dialog lies inside its display's client area before it is shown.
+TEST_F(DialogTest, ANewDialogLiesInsideTheDisplaysClientArea) {
+    frame_->SetSize(600, 900, 200, 150); // centring on this parent would put the dialog below the screen
+    makeDialog();
+    ASSERT_GT(wxDisplay::GetCount(), 0u);
+    EXPECT_TRUE(wxDisplay(0u).GetClientArea().Contains(dialog_->GetRect()));
 }
 
 // ---- Current view ----
@@ -825,7 +881,7 @@ TEST_F(DialogTest, EscapeHidesButAnotherKeyIsSkipped) {
 TEST_F(DialogTest, TheCloseBoxHidesEvenWhenForcedAndTheDialogLivesOn) {
     makeDialog();
     dialog_->showNewChart(cg::AreaKind::Rectangle, kBox);
-    EXPECT_TRUE(dialog_->Close(true)); // force: CanVeto is false, the handler still only hides
+    EXPECT_TRUE(dialog_->Close(true)); // force: CanVeto() is false, the handler still only hides
     EXPECT_FALSE(dialog_->IsShown());
     EXPECT_FALSE(outlined());
     EXPECT_FALSE(wxPendingDelete.Find(dialog_)) << "the plugin owns the dialog; nothing may destroy it";
@@ -867,7 +923,7 @@ TEST_F(DialogTest, ShowMyChartsShowsThatPageAndPresentKeepsItWithoutTheOutline) 
     EXPECT_FALSE(outlined());
 }
 
-// ---- present ----
+// ---- present() ----
 
 TEST_F(DialogTest, PresentOnAShownDialogDoesNotRecaptureAHiddenOneDoes) {
     makeDialog();
@@ -925,7 +981,7 @@ TEST_F(DialogTest, AnAreaAcrossTheAntimeridianShowsItsTextAboveTheHintAndDrawing
     makeDialog();
     dialog_->showNewChart(cg::AreaKind::View, std::nullopt);
     dialog_->drawArea();
-    dragBox(100, 100, 1900, 60); // lon 10.. 190
+    dragBox(100, 100, 1900, 60); // lon 10 .. 190
     EXPECT_TRUE(area_->drawing());
     EXPECT_FALSE(dialog_->IsShown());
     EXPECT_EQ(hintText(), std::string(kAntimeridian) + "\n" + kHint);
@@ -1010,7 +1066,7 @@ TEST_F(DialogTest, PresentWhileDrawingCancelsItAndItsDoneShowsTheDialog) {
     EXPECT_TRUE(draw()->GetValue());
     expectBoxOutline(outline());
 
-    int calls = 0; // a drawing that is not the dialog's: present still cancels it, done(nullopt) once
+    int calls = 0; // a drawing that is not the dialog's: present() still cancels it, done(nullopt) once
     area_->startDrawing([&](std::optional<cg::BBox> b) { calls += b ? 100 : 1; });
     dialog_->present();
     EXPECT_EQ(calls, 1);
@@ -1100,6 +1156,38 @@ TEST_F(DialogTest, TheCanvasDeletedBeforeTheDialogTakesTheHintStripWithIt) {
     dialog_ = nullptr;
     jobs_.reset();
     ocpn_fake::canvasWindow = frame_;
+}
+
+// outside touch mode the cap comes from the display's work area; the test seam gives the screen.
+TEST_F(DialogTest, NonTouchCapKeepsTheDialogOnTheScreenAndAllowsAScrollAndDoesNotBindOnATallScreen) {
+    threeRoutes();
+    makeDialog();
+    dialog_->showNewChart(cg::AreaKind::Route, std::nullopt);
+    std::vector<wxCollapsiblePane*> panes;
+    collect(dialog_, panes);
+    ASSERT_FALSE(panes.empty());
+    panes[0]->Collapse(false);
+    wxCommandEvent changed(wxEVT_COLLAPSIBLEPANE_CHANGED, panes[0]->GetId());
+    changed.SetEventObject(panes[0]);
+    panes[0]->GetEventHandler()->ProcessEvent(changed);
+    dialog_->fitScreen(0, wxRect(0, 0, 3000, 2000));
+    const wxSize tall = dialog_->GetSize();
+    ASSERT_GT(tall.y, 480) << "the page is taller than an 800 x 480 screen";
+    dialog_->fitScreen(0, wxRect(0, 0, 800, 480));
+    EXPECT_LE(dialog_->GetSize().y, 480);
+    wxWindow* body = wxWindow::FindWindowByName("pageBody");
+    auto* rows = dynamic_cast<wxScrolledWindow*>(body);
+    ASSERT_NE(rows, nullptr);
+    EXPECT_GT(rows->GetVirtualSize().y, rows->GetClientSize().y) << "the rows scroll";
+    const wxRect inside(wxPoint(0, 0), dialog_->GetClientSize());
+    for (const char* label : {"Close", "Download"}) {
+        wxWindow* b = labelled<wxButton>(label);
+        ASSERT_NE(b, nullptr) << label;
+        EXPECT_TRUE(inside.Contains(dialog_->ScreenToClient(b->GetScreenRect().GetTopLeft()))) << label;
+        EXPECT_TRUE(inside.Contains(dialog_->ScreenToClient(b->GetScreenRect().GetBottomRight()))) << label;
+    }
+    dialog_->fitScreen(0, wxRect(0, 0, 3000, 2000));
+    EXPECT_EQ(dialog_->GetSize(), tall) << "a tall screen: the cap does not bind";
 }
 
 } // namespace

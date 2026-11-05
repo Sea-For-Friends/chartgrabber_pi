@@ -58,6 +58,7 @@ struct WrittenRecord {
 };
 struct SnapshotRecord {
     std::string guid, time, version; // the picture a run took (CR section 2)
+    std::string modelRun;            // field 4: ISO UTC run of the model; empty when absent
 };
 using StdoutRecord =
     std::variant<SourceRecord, EstimateRecord, FillRecord, SessionRecord, WrittenRecord, SnapshotRecord>;
@@ -162,6 +163,8 @@ enum class Outcome {
 };
 // exitCode as wx reports it (>= 0 normal, < 0 = -signal). lastError: last MessageLine Error text.
 Outcome classifyExit(int exitCode, std::string_view lastError, bool startFailed);
+// Core exit 3 because another run of the same job holds its session lock.
+bool runLocked(Outcome o, std::string_view lastError);
 // The wx exit code as the exit code of the CLI. Posix: a code below -64 is 256 + code (a normal
 // exit seen as a signed byte). Windows: killedByUs with -1 is our TerminateProcess(-1) -> -9 (Killed, as on
 // Linux); any other negative code (an NTSTATUS crash) -> 1 (InternalError); else unchanged.

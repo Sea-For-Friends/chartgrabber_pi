@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// One-row panel on the primary chart canvas: job progress, results and hints.
-// A child of the canvas window, draggable by its body; GUI thread only.
+// One-row panel on the primary chart canvas: job progress, results and hints. A child of the canvas window,
+// draggable by its body; GUI thread only.
 #pragma once
 
 #include "strip_place.h"
@@ -25,11 +25,11 @@ class Look;
 class ProgressStrip : public wxPanel {
 public:
     enum class Role { Job, Hint }; // Job: draggable, remembered in `store`; Hint: top-left, fixed
-    // `canvas` = GetOCPNCanvasWindow. Created hidden; Look::apply and subscribe here, unsubscribe in the
+    // `canvas` = GetOCPNCanvasWindow(). Created hidden; Look::apply and subscribe here, unsubscribe in the
     // destructor. `store` may be null (Hint, tests): then the default place is used and nothing is saved.
     // Owners hold the strip as wxWeakRef<ProgressStrip> (the canvas deletes it when OpenCPN closes first) and
-    // end it with `if (strip_) strip_->Destroy;`.
-    // Host : Window = the panel is the only child of a top-level frame the strip creates
+    // end it with `if (strip_) strip_->Destroy();`.
+    // Host: Window = the panel is the only child of a top-level frame the strip creates
     // (no grip; drag by the body through the compositor); Canvas = a child of `canvas`. Fixed at
     // creation. The default is the chart host.
     enum class Host { Window, Canvas };
@@ -48,7 +48,7 @@ public:
     // The Details fold's text is: the drag line (Job with a store, until the first drop), the headline when
     // it was cut to three lines, then `details`.
     void setDetails(const wxString& details);
-    void openDetails(bool open); // the fold opened or closed by code (first success, )
+    void openDetails(bool open); // the fold opened or closed by code (first success)
     std::function<void()> onStop;
     std::function<void()> mouseHookForTest; // run inside the guarded mouse handler (tests make it throw)
     // Window host test seams: null = the real GTK call / the real display check.
@@ -62,7 +62,7 @@ public:
 
 private:
     void place();
-    void logPlaced(); // the `placed` line of
+    void logPlaced(); // the `placed` line
     wxString logName() const { return role_ == Role::Job ? "job" : "hint"; }
     int minStripWidth() const;
     void relayout();
@@ -86,7 +86,7 @@ private:
     ConfigStore* store_;
     ConfigStore* winStore_ =
         nullptr;                 // window host, Job: the remembered place (X11 only; store_ stays null there)
-    wxWeakRef<wxWindow> canvas_; // GetOCPNCanvasWindow: the area the strip is placed in; null once deleted
+    wxWeakRef<wxWindow> canvas_; // GetOCPNCanvasWindow(): the area the strip is placed in; null once deleted
                                  // (the window host's frame outlives the canvas at OpenCPN shutdown)
     wxFrame* frame_ = nullptr;   // Window host: the panel's parent
     cg::StripAnchor anchor_;     // DIP
@@ -107,7 +107,7 @@ private:
     bool running_ = true;
     bool detailsOpen_ = false;
     bool pressed_ = false, dragging_ = false;
-    bool moved_ = false;  // window host: a begin-move happened, place no longer sets the position
+    bool moved_ = false;  // window host: a begin-move happened, place() no longer sets the position
     wxPoint pressScreen_; // window host: the press point in screen pixels
     wxPoint lastTick_,
         storedAt_; // window host (X11): the frame's position at the last tick / last stored drop

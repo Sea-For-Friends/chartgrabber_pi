@@ -237,7 +237,7 @@ TEST(ArgumentsNativePath, PosixKeepsEveryByte) {
                     "--cache", "/c\\d", "--proxy", "http://h:3128/"}));
 }
 
-// : ONE `--datadir=DIR` element right after the --cache pair on sources, estimate, run,
+// ONE `--datadir=DIR` element right after the --cache pair on sources, estimate, run,
 // export; never the two-element form; none when cliDataDir is empty.
 TEST(Arguments, DatadirIsOneEqualsElementAfterCacheOnEveryCommand) {
     struct Case {
@@ -283,7 +283,7 @@ TEST(Arguments, DatadirIsOneEqualsElementAfterCacheOnEveryCommand) {
     }
 }
 
-// : the `--version` probe argv is "--version" and ONE `--datadir=DIR` element (the
+// the `--version` probe argv is "--version" and ONE `--datadir=DIR` element (the
 // '=' form, native separators of `os`); only "--version" when cliDataDir is empty.
 TEST(Arguments, VersionProbeCarriesTheDatadir) {
     Settings s = fullSettings();
@@ -615,7 +615,184 @@ TEST(ChartIni, ExactText) {
                                       "UpdateBefore=2026-09-16T10:00:00\n"
                                       "Weather=0\n"
                                       "Snapshot=\n"
+                                      "ModelRun=\n"
                                       "Credit=\n");
+}
+
+// Stale<i> lines follow the File<i> lines; none when empty; a file without them parses with stale
+// empty.
+TEST(ChartIni, StaleLinesFollowTheFilesAndRoundTrip) {
+    ChartRecord r = fullRecord();
+    r.stale = {"C:\\Charts\\\xD0\x9A\xD0\xB0 d'x (2).mbtiles", "/c/old.mbtiles"};
+    const std::string t = chartIni(r);
+    EXPECT_NE(t.find("File2=/c/c.mbtiles\n"
+                     "Stale0=C:\\Charts\\\xD0\x9A\xD0\xB0 d'x (2).mbtiles\n"
+                     "Stale1=/c/old.mbtiles\n"
+                     "State=interrupted\n"),
+              std::string::npos)
+        << t;
+    const auto back = parseChartIni(t, r.id);
+    ASSERT_TRUE(back.has_value());
+    EXPECT_EQ(back->stale, r.stale);
+    EXPECT_EQ(back->files, r.files);
+    EXPECT_EQ(chartIni(fullRecord()).find("Stale"), std::string::npos);
+    const auto none = parseChartIni(chartIni(fullRecord()), "x");
+    ASSERT_TRUE(none.has_value());
+    EXPECT_TRUE(none->stale.empty());
+    // index order, not file order
+    const auto shuffled = parseChartIni("Name=n\nStale1=/b\nStale0=/a\n", "x");
+    ASSERT_TRUE(shuffled.has_value());
+    EXPECT_EQ(shuffled->stale, (std::vector<std::string>{"/a", "/b"}));
+}
+
+// alternateWeatherFile.
+TEST(AlternateWeatherFile, TableOfNames) {
+    struct Row {
+        const char* what;
+        std::string current;
+        std::vector<std::string> taken; // existing files
+        Os os;
+        std::optional<std::string> expect;
+    };
+    const std::string cyr = "C:\\\xD0\x9A\xD0\xB0\xD1\x80\xD1\x82\xD0\xB0 d'x\\";
+    const std::vector<Row> rows = {
+        {"first swap", "/c/X.mbtiles", {"/c/X.mbtiles"}, Os::Posix, "/c/X (2).mbtiles"},
+        {"cycle back", "/c/X (2).mbtiles", {"/c/X (2).mbtiles"}, Os::Posix, "/c/X.mbtiles"},
+        {"taken name skipped",
+         "/c/X.mbtiles",
+         {"/c/X.mbtiles", "/c/X (2).mbtiles"},
+         Os::Posix,
+         "/c/X (3).mbtiles"},
+        {"cycle back skips a leftover X",
+         "/c/X (2).mbtiles",
+         {"/c/X (2).mbtiles", "/c/X.mbtiles"},
+         Os::Posix,
+         "/c/X (3).mbtiles"},
+        {"ninth",
+         "/c/X (8).mbtiles",
+         {"/c/X.mbtiles", "/c/X (2).mbtiles", "/c/X (3).mbtiles", "/c/X (4).mbtiles", "/c/X (5).mbtiles",
+          "/c/X (6).mbtiles", "/c/X (7).mbtiles"},
+         Os::Posix,
+         "/c/X (9).mbtiles"},
+        {"all ten taken",
+         "/c/X (4).mbtiles",
+         {"/c/X.mbtiles", "/c/X (2).mbtiles", "/c/X (3).mbtiles", "/c/X (5).mbtiles", "/c/X (6).mbtiles",
+          "/c/X (7).mbtiles", "/c/X (8).mbtiles", "/c/X (9).mbtiles"},
+         Os::Posix,
+         std::nullopt},
+        {"two digits stay in the base", "/c/X (12).mbtiles", {}, Os::Posix, "/c/X (12) (2).mbtiles"},
+        {"(1) stays in the base", "/c/X (1).mbtiles", {}, Os::Posix, "/c/X (1) (2).mbtiles"},
+        {"not mbtiles", "/c/X.png", {}, Os::Posix, std::nullopt},
+        {"no extension", "", {}, Os::Posix, std::nullopt},
+        {"windows upper case, mixed separators",
+         "C:/Ch/X.MBTILES",
+         {"C:\\Ch\\X.MBTILES"},
+         Os::Windows,
+         "C:\\Ch\\X (2).mbtiles"},
+        {"windows case-folded current is skipped",
+         "C:\\Ch\\x (2).MbTiles",
+         {},
+         Os::Windows,
+         "C:\\Ch\\x.mbtiles"},
+        {"windows cyrillic with space and quote",
+         cyr + "\xD0\x9A d'x.mbtiles",
+         {},
+         Os::Windows,
+         cyr + "\xD0\x9A d'x (2).mbtiles"},
+    };
+    for (const Row& row : rows) {
+        SCOPED_TRACE(row.what);
+        const auto got = alternateWeatherFile(
+            row.current,
+            [&](const std::string& p) {
+                return std::find(row.taken.begin(), row.taken.end(), p) != row.taken.end();
+            },
+            row.os);
+        EXPECT_EQ(got, row.expect);
+    }
+}
+
+// rewriteJobOutputs.
+TEST(RewriteJobOutputs, ReplacesOnlyTheValues) {
+    const std::string base =
+        "[Job]\nSource=S\nOverlay=O\nZooms=8\nOut=/old/a.mbtiles\nOverlayOut=/old/b.mbtiles\n"
+        "Name=n\n[Download]\nThreads=2\n";
+    EXPECT_EQ(rewriteJobOutputs(base, "/new/a \xD0\x9A'.mbtiles", "/new/b.mbtiles"),
+              "[Job]\nSource=S\nOverlay=O\nZooms=8\nOut=/new/a \xD0\x9A'.mbtiles\nOverlayOut=/new/b.mbtiles\n"
+              "Name=n\n[Download]\nThreads=2\n");
+    EXPECT_EQ(rewriteJobOutputs(base, "/new/a.mbtiles", ""),
+              "[Job]\nSource=S\nOverlay=O\nZooms=8\nOut=/new/a.mbtiles\nOverlayOut=/old/b.mbtiles\n"
+              "Name=n\n[Download]\nThreads=2\n");
+    // a weather job: Out only, CRLF kept, a CR/LF inside the value becomes a space
+    EXPECT_EQ(rewriteJobOutputs("[Job]\r\nOut=/o\r\nZooms=1", "/n\r\nx", ""),
+              "[Job]\r\nOut=/n  x\r\nZooms=1");
+    // only a line start counts; the first Out= wins
+    EXPECT_EQ(rewriteJobOutputs("X Out=1\nOut=2\nOut=3", "N", ""), "X Out=1\nOut=N\nOut=3");
+    EXPECT_EQ(rewriteJobOutputs("[Job]\nOverlayOut=/x\n", "N", ""), std::nullopt);
+    EXPECT_EQ(rewriteJobOutputs("[Job]\nOut=/x\n", "N", "M"), std::nullopt);
+    EXPECT_EQ(rewriteJobOutputs("", "N", ""), std::nullopt);
+}
+
+// removeStale: a missing file counts as removed; a failed removal stays, in order.
+TEST(RemoveStale, KeepsOnlyWhatCannotBeRemoved) {
+    std::vector<std::string> tried;
+    const auto left = removeStale(
+        {"/c/gone", "/c/held", "/c/ok", "/c/held2"}, [](const std::string& p) { return p != "/c/gone"; },
+        [&](const std::string& p) {
+            tried.push_back(p);
+            return p == "/c/ok";
+        });
+    EXPECT_EQ(left, (std::vector<std::string>{"/c/held", "/c/held2"}));
+    EXPECT_EQ(tried, (std::vector<std::string>{"/c/held", "/c/ok", "/c/held2"}));
+}
+
+// openCpnVersion. Hand-made input (OpenCPN cannot run in a unit test): the layout of wxJSONWriter
+// text as pluginmanager.cpp:2087-2091 fills it, indented, other keys before and after.
+TEST(OpenCpnVersion, ReadsBothIntegersOrNothing) {
+    const std::string real =
+        "{\n  \"OpenCPN Version Date\" : \"2024-1-2\",\n  \"OpenCPN Version Major\" : 5,\n"
+        "  \"OpenCPN Version Minor\"\t:\n 10,\n  \"OpenCPN Version Patch\" : 2,\n  \"OpenCPN Platform\": "
+        "\"x\"\n}";
+    EXPECT_EQ(openCpnVersion(real), (std::pair<int, int>{5, 10}));
+    EXPECT_EQ(openCpnVersion("{\"OpenCPN Version Major\":5,\"OpenCPN Version Minor\":14}"),
+              (std::pair<int, int>{5, 14}));
+    EXPECT_EQ(openCpnVersion("{\"OpenCPN Version Major\": 5}"), std::nullopt);
+    EXPECT_EQ(openCpnVersion("{\"OpenCPN Version Major\": \"5\", \"OpenCPN Version Minor\": 10}"),
+              std::nullopt);
+    EXPECT_EQ(openCpnVersion("{\"OpenCPN Version MajorX\": 5, \"OpenCPN Version Minor\": 10}"), std::nullopt);
+    EXPECT_EQ(openCpnVersion(""), std::nullopt);
+}
+
+TEST(OpenCpnVersion, RemoveIsSafeOnlyOnFiveBelowFourteen) {
+    EXPECT_TRUE(chartListRemoveIsSafe(5, 10));
+    EXPECT_TRUE(chartListRemoveIsSafe(5, 12));
+    EXPECT_TRUE(chartListRemoveIsSafe(5, 13));
+    EXPECT_FALSE(chartListRemoveIsSafe(5, 14));
+    EXPECT_FALSE(chartListRemoveIsSafe(5, 15));
+    EXPECT_FALSE(chartListRemoveIsSafe(6, 0));
+}
+
+TEST(ChartListPath, ListedDirAsGivenPlusSeparatorPlusName) {
+    const std::string cyr = "\xD0\x9F\xD0\xBE\xD0\xB3\xD0\xBE\xD0\xB4\xD0\xB0 'x'.mbtiles"; // a space and a '
+    struct Row {
+        const char* dir;
+        std::string file;
+        Os os;
+        std::string want;
+    };
+    const std::vector<Row> rows = {
+        {"C:\\Charts\\", "C:\\Charts\\W.mbtiles", Os::Windows, "C:\\Charts\\W.mbtiles"},
+        {"C:\\Charts", "C:/Charts/W.mbtiles", Os::Windows, "C:\\Charts\\W.mbtiles"},
+        {"C:/Users/a\\Charts/", "C:\\Users\\a\\Charts\\W (2).mbtiles", Os::Windows,
+         "C:/Users/a\\Charts\\W (2).mbtiles"},
+        {"/home/a/Charts/", "/home/a/Charts/W.mbtiles", Os::Posix, "/home/a/Charts/W.mbtiles"},
+        {"/home/a/Charts", "/home/a/Charts/" + cyr, Os::Posix, "/home/a/Charts/" + cyr},
+        {"D:\\Карты", "D:\\Карты\\" + cyr, Os::Windows, "D:\\Карты\\" + cyr},
+    };
+    for (const Row& r : rows) {
+        SCOPED_TRACE(r.dir);
+        EXPECT_EQ(chartListPath(r.dir, r.file, r.os), r.want);
+    }
 }
 
 TEST(ChartIni, RoundTripEveryField) {
@@ -719,6 +896,7 @@ TEST(ChartIni, WeatherKeysRoundTrip) {
     ChartRecord r = fullRecord();
     r.weather = true;
     r.snapshot = "2026-10-15T20:10:00Z";
+    r.modelRun = "2026-10-15T18:00:00Z";
     r.credit = "Weather data by RainViewer (https://www.rainviewer.com)";
     const std::string t = chartIni(r);
     EXPECT_NE(t.find("\nWeather=1\n"), std::string::npos);
@@ -729,12 +907,13 @@ TEST(ChartIni, WeatherKeysRoundTrip) {
     ASSERT_TRUE(out.has_value());
     EXPECT_TRUE(out->weather);
     EXPECT_EQ(out->snapshot, r.snapshot);
+    EXPECT_EQ(out->modelRun, r.modelRun);
     EXPECT_EQ(out->credit, r.credit);
 }
 
 TEST(ChartIni, NoWeatherWritesZeroAndEmpty) {
     const std::string t = chartIni(fullRecord());
-    EXPECT_NE(t.find("\nWeather=0\nSnapshot=\nCredit=\n"), std::string::npos);
+    EXPECT_NE(t.find("\nWeather=0\nSnapshot=\nModelRun=\nCredit=\n"), std::string::npos);
 }
 
 TEST(ChartIni, MissingOrOddWeatherKeysParseAsNone) {
@@ -742,6 +921,7 @@ TEST(ChartIni, MissingOrOddWeatherKeysParseAsNone) {
     ASSERT_TRUE(old.has_value());
     EXPECT_FALSE(old->weather);
     EXPECT_TRUE(old->snapshot.empty());
+    EXPECT_TRUE(old->modelRun.empty());
     EXPECT_TRUE(old->credit.empty());
     EXPECT_FALSE(parseChartIni("Name=N\nWeather=yes\n", "x")->weather);
     EXPECT_FALSE(parseChartIni("Name=N\nWeather=\n", "x")->weather);
@@ -776,3 +956,48 @@ TEST(ChartIni, UnknownKeyIgnoredAndMissingNameRejected) {
 
 } // namespace
 } // namespace cg
+
+// the rule that decides whether OpenCPN's chart list is rescanned after a weather update.
+TEST(PictureChanged, Table) {
+    const std::string t1 = "2026-10-23T08:20:00Z", t2 = "2026-10-23T08:30:00Z";
+    const std::string r1 = "2026-10-23T06:00:00Z", r2 = "2026-10-23T12:00:00Z";
+    struct Row {
+        const char *prevT, *prevR, *newT, *newR;
+        bool changed;
+    };
+    const Row rows[] = {
+        {t1.c_str(), r1.c_str(), t1.c_str(), r1.c_str(), false}, // same time and run
+        {t1.c_str(), "", t1.c_str(), "", false},                 // same time, no run known
+        {t1.c_str(), r1.c_str(), t2.c_str(), r1.c_str(), true},  // other time
+        {"", "", t1.c_str(), "", true},                          // nothing known before
+        {"", "", "", "", true},                                  // nothing known before or after
+        {t1.c_str(), "", t1.c_str(), r1.c_str(), true},          // same time, a run now
+        {t1.c_str(), r1.c_str(), t1.c_str(), r2.c_str(), true},  // same time, another run
+        {t1.c_str(), r1.c_str(), t1.c_str(), "", false},         // same time, new run empty
+        {t1.c_str(), "", "", "", true},                          // the new file reports no time
+    };
+    int i = 0;
+    for (const Row& r : rows)
+        EXPECT_EQ(cg::pictureChanged(r.prevT, r.prevR, r.newT, r.newR), r.changed) << "row " << i++;
+}
+
+// weather records that are not Running, in the order given.
+TEST(WeatherBatch, KeepsWeatherRecordsThatAreNotRunningInOrder) {
+    const auto rec = [](const char* id, bool weather, cg::ChartState state) {
+        cg::ChartRecord r;
+        r.id = id;
+        r.weather = weather;
+        r.state = state;
+        return r;
+    };
+    const std::vector<cg::ChartRecord> in = {
+        rec("e", true, cg::ChartState::Interrupted), rec("b", false, cg::ChartState::Complete),
+        rec("c", true, cg::ChartState::Running),     rec("a", true, cg::ChartState::Missing),
+        rec("d", true, cg::ChartState::Failed),      rec("f", false, cg::ChartState::Failed),
+        rec("g", true, cg::ChartState::Complete)};
+    std::string ids;
+    for (const auto& r : cg::weatherBatch(in))
+        ids += r.id;
+    EXPECT_EQ(ids, "eadg");
+    EXPECT_TRUE(cg::weatherBatch({}).empty());
+}

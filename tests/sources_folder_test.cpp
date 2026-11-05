@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// countSourceEntries: the CLI's own walk of a chart-sources folder. Names only, no
+// CountSourceEntries: the CLI's own walk of a chart-sources folder. Names only, no
 // wx.
 #include "sources_folder.h"
 
@@ -48,7 +48,7 @@ TEST_F(SourcesFolder, FileAndFolderEntriesCountWhateverTheCase) {
     EXPECT_EQ(count(), 2);
 }
 
-TEST_F(SourcesFolder, NestedUserSourceIsCounted) { // the user ruling: Sea/Extra/OpenSeaMap.zmp
+TEST_F(SourcesFolder, NestedUserSourceIsCounted) { // Sea/Extra/OpenSeaMap.zmp
     file("Sea/Extra/OpenSeaMap.zmp");
     EXPECT_EQ(count(), 1);
 }

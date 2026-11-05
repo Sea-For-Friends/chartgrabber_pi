@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "guid": "{30D88DB0-B695-412B-91ED-1656B598D49E}",
+  "name": "NASA GOES-East GeoColor (Americas, Atlantic)",
+  "group": "Weather now",
+  "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_GeoColor/default/{ver}/GoogleMapsCompatible_Level7/{z}/{y}/{x}.png",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Weather_GIBS_GOES_East_GeoColor",
+  "cacheType": 71,
+  "license": "Imagery: NASA GIBS (ESDIS); GOES ABI — NOAA",
+  "maxConnections": 2,
+  "maxZoom": 7,
+  "snapshot": {
+    "index": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/GOES-East_ABI_GeoColor/default/GoogleMapsCompatible_Level7/all/2026-11-01--2100-01-01.xml",
+    "type": "wmts-domain"
+  }
+}

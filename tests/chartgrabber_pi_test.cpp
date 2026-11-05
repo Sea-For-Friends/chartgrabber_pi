@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// the toolbar tool of ChartGrabberPi against the recording
+// The toolbar tool of ChartGrabberPi against the recording
 // fakes of ocpn_fakes.cpp. The expected file names and call order are the literals of the spec.
 #include "chartgrabber_pi.h"
 #include "config_store.h"
+#include "job_controller.h"
 #include "job_files.h"
 #include "main_dialog.h"
 #include "ocpn_fakes.h"
@@ -52,7 +53,11 @@ protected:
         ASSERT_NE(mkdtemp(tmpl), nullptr);
         root_ = tmpl;
         ocpn_fake::privateData = wxString::FromUTF8((root_ / "private").string());
-        ocpn_fake::dataDir = wxString::FromUTF8("/opt/pl\xC3\xA5gin 'd'"); // a space, a quote, non-ASCII
+        // a space, a quote, non-ASCII; under root_ so that the earlier favourites file can sit beside the
+        // sources
+        plugDir_ = (root_ / "pl\xC3\xA5gin 'd'").string();
+        stub::installFavourites(plugDir_);
+        ocpn_fake::dataDir = wxString::FromUTF8(plugDir_);
         ocpn_fake::toolbar.clear();
         config_ = std::make_unique<wxFileConfig>(wxString("cgpitest"), wxEmptyString,
                                                  wxString::FromUTF8((root_ / "opencpn.conf").string()),
@@ -63,7 +68,8 @@ protected:
         ocpn_fake::canvases = {frame_};
         ocpn_fake::focus = frame_;
         pi_ = std::make_unique<ChartGrabberPi>(nullptr);
-        ASSERT_NE(pi_->Init(), 0);
+        caps_ = pi_->Init();
+        ASSERT_NE(caps_, 0);
     }
     void TearDown() override {
         if (!frame_)
@@ -81,14 +87,14 @@ protected:
         std::error_code ec;
         std::filesystem::remove_all(root_, ec);
     }
-    static wxString file(const char* name) {
-        return wxString::FromUTF8("/opt/pl\xC3\xA5gin 'd'/data/") + name;
-    }
+    wxString file(const char* name) const { return wxString::FromUTF8(plugDir_ + "/data/") + name; }
 
     std::filesystem::path root_;
+    std::string plugDir_;
     std::unique_ptr<wxFileConfig> config_;
     wxFrame* frame_ = nullptr;
     std::unique_ptr<ChartGrabberPi> pi_;
+    int caps_ = 0;
 };
 
 } // namespace
@@ -172,7 +178,7 @@ TEST_F(PluginToolTest, PluginManagerPictureIsTheToolFileAt32) {
     EXPECT_EQ(ocpn_fake::svgSize, (std::pair<unsigned, unsigned>(32, 32)));
 }
 
-// : the strip's "Preferences..." (shown by a start that failed: the CLI path is not there)
+// the strip's "Preferences..." (shown by a start that failed: the CLI path is not there)
 // opens ONE modeless Settings window with the canvas as parent; a second press raises it; DeInit deletes it
 // at once, before anything else, so its callbacks cannot outlive the library.
 TEST_F(PluginToolTest, TheStripsPreferencesOpensOneModelessSettingsWindowThatDeInitDeletesAtOnce) {
@@ -226,7 +232,7 @@ TEST_F(PluginToolTest, TheStripsPreferencesOpensOneModelessSettingsWindowThatDeI
 
 namespace {
 // The source choice of the open main dialog: the last wxChoice below it (the route choice comes first); the
-// weather layer choice (right after it) and the two detail drop-downs of the Advanced fold
+// weather layer choice and the two detail drop-downs of the Advanced fold
 // are skipped.
 wxChoice* sourceChoiceOf(wxWindow* w) {
     wxChoice* found = nullptr;
@@ -319,7 +325,7 @@ TEST_F(PluginToolTest, TheStripsSettingsOkMakesTheOpenPageReadItsSourcesAgain) {
             }
             EXPECT_EQ(choice->GetCount(), 2u) << "Cancel reads nothing again";
         }
-        // the idle delete of the Settings window (shown is false already after the Hide)
+        // the idle delete of the Settings window (shown() is false already after the Hide)
         EXPECT_TRUE(runUntil([] {
             for (auto* n = wxTopLevelWindows.GetFirst(); n; n = n->GetNext())
                 if (dynamic_cast<SettingsDialog*>(n->GetData()))
@@ -549,4 +555,22 @@ TEST_F(PluginToolTest, TheFirstOverlayCallOfEachKindWritesOneLine) {
     pi_->RenderGLOverlayMultiCanvas(nullptr, &vp, 0, OVERLAY_OVER_SHIPS);
     pi_->RenderGLOverlayMultiCanvas(nullptr, &vp, 0, OVERLAY_OVER_SHIPS);
     EXPECT_EQ(count("first chart draw: OpenGL"), 1);
+}
+
+// The version OpenCPN reports (hand-made message text) decides whether a stale file may be dropped.
+TEST_F(PluginToolTest, TheOpenCpnConfigMessageSetsTheDropSeamAndOtherMessagesDoNot) {
+    const auto msg = [](int minor) {
+        return wxString::Format("{\"OpenCPN Version Major\": 5, \"OpenCPN Version Minor\": %d}", minor);
+    };
+    EXPECT_NE(caps_ & WANTS_PLUGIN_MESSAGING, 0);
+    staleDropAllowed() = false;
+    wxString id = "OpenCPN Config", body = msg(10);
+    pi_->SetPluginMessage(id, body);
+    EXPECT_TRUE(staleDropAllowed());
+    wxString other = "SOMETHING_ELSE", body14 = msg(14);
+    pi_->SetPluginMessage(other, body14);
+    EXPECT_TRUE(staleDropAllowed());
+    pi_->SetPluginMessage(id, body14);
+    EXPECT_FALSE(staleDropAllowed());
+    staleDropAllowed() = false;
 }

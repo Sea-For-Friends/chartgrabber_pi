@@ -36,7 +36,7 @@ void failOnWxAssert(const wxString& file, int line, const wxString& func, const 
 
 #ifdef CG_WX_GUI_TESTS
 // The GUI app of the window-test binary. On a display server with no output it keeps running (so wxTheApp is
-// a real wxApp) but reports IsGUI false: the window tests skip on that and no window is created.
+// a real wxApp) but reports IsGUI() false: the window tests skip on that and no window is created.
 bool g_noOutput = false;
 class TestApp : public wxApp {
 public:

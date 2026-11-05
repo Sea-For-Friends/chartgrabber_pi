@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{AC9F22EE-9024-4561-824E-B039C94841AE}",
+  "name": "Regione Toscana orthophoto 2023 (Tuscany, Elba)",
+  "group": "Satellite",
+  "url": "https://www502.regione.toscana.it/ows_ofc/com.rt.wms.RTmap/wms?map=owsofc_rt&SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=rt_ofc.5k23.32bit&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_Tuscany_Ortho_2023",
+  "license": "Regione Toscana — Ortofoto 2023, CC BY 4.0",
+  "maxConnections": 2,
+  "maxZoom": 19
+}

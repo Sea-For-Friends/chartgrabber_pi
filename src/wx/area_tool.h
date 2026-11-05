@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The area tool : remembers the viewport of
+// The area tool: remembers the viewport of
 // every canvas, takes the current view, draws a rectangle by mouse drag or by two taps, and outlines the
 // shown area. GUI thread only. Mouse event pixels are canvas client pixels in
 // logical (DIP) units; PlugIn_ViewPort, GetCanvasLLPix and GetCanvasPixLL use physical pixels = logical x
-// OCPN_GetDisplayContentScaleFactor.
+// OCPN_GetDisplayContentScaleFactor().
 #pragma once
 
 #include "geo_math.h"
@@ -29,12 +29,12 @@ std::optional<cg::BBox> checkedBox(cg::LatLon a, cg::LatLon b, cg::AreaError* er
 
 class AreaTool {
 public:
-    // outline: colour of the outline now (Look::outline); touch: Look::touch. Both are called on
-    // every use.
+    // outline: colour of the outline now (Look::outline()); touch: Look::touch(). Both are called on
+    // every use. Both are plain callbacks.
     AreaTool(std::function<wxColour()> outline, std::function<bool()> touch);
 
     void rememberViewport(int canvasIndex, const PlugIn_ViewPort& vp);
-    // Viewport of the focus canvas (PluginGetFocusCanvas against GetCanvasByIndex(i)); canvas 0 when the
+    // Viewport of the focus canvas (PluginGetFocusCanvas() against GetCanvasByIndex(i)); canvas 0 when the
     // focus canvas is none of them; nullopt when that canvas has not been drawn yet.
     std::optional<PlugIn_ViewPort> focusViewport() const;
 

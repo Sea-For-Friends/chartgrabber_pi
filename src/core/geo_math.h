@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Area arithmetic, Web Mercator tile counts, scale labels, detail bands and zoom lists.
-// Pure functions: no wx, no state, no
-// user-visible text (errors are enum values, except the rejected text of parseZoomList).
+// Area arithmetic, Web Mercator tile counts, scale labels, detail bands and zoom lists. Pure functions: no
+// wx, no state, no user-visible text (errors are enum values, except the rejected text of parseZoomList).
 #pragma once
 
 #include "types.h"
@@ -17,7 +16,7 @@
 
 namespace cg {
 
-// The CLI's bound, (verified 2026-10-15).
+// The CLI's bound, src/sas/app/job_area.cpp:19 in the core repository (verified 2026-10-15).
 inline constexpr double kMaxLat = 85.0511;
 
 enum class AreaError { OutsideMercator, CrossesAntimeridian, Empty, TooFewRoutePoints };
@@ -38,7 +37,7 @@ std::int64_t bboxTileCount(const BBox& box, int zoom);
 double scaleDenominator(int zoom, double lat, double dpi = 96);
 // "1:2.3M", "1:290k", "1:4.5k", "1:900" (two significant digits).
 std::string formatScale(double denominator);
-// Passage 8-11, Coastal 12-14, Approach 15-16, Harbour 17-18.
+// Passage 8-11, Coastal 12-14, Approach 15-16, Harbour 17-18 (ux section 4).
 std::pair<int, int> bandZooms(Band b);
 // Contiguous: the bands from the lowest to the highest ticked band (ticked ones included).
 std::vector<int> zoomsForBands(const std::set<Band>& ticked);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// cg::parseDouble / cg::formatNumber behave as std::from_chars / std::to_chars(double) did, in any
+// Cg::parseDouble / cg::formatNumber behave as std::from_chars / std::to_chars(double) did, in any
 // locale.
 #include "cli_records.h"
 #include "job_files.h"
@@ -55,7 +55,7 @@ void checkParseTable() {
     ASSERT_TRUE(parseDouble("NaN(a_1)", v));
     EXPECT_TRUE(std::isnan(v));
     // 400 digits: out of range for from_chars
-    EXPECT_FALSE(parseDouble("1" + std::string(399, '0'), v));
+    EXPECT_FALSE(parseDouble(std::string("1") + std::string(399, '0'), v));
     EXPECT_FALSE(parseDouble(std::string(400, '9'), v));
 }
 

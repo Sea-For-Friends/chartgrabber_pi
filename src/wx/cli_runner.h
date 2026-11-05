@@ -31,9 +31,9 @@ public:
     };
 
     CliRunner();
-    ~CliRunner(); // running: stopAndWait(destructorWaitMs), then Detach
+    ~CliRunner(); // running: stopAndWait(destructorWaitMs()), then Detach
 
-    // The destructor's wait. setDestructorWaitMs is for tests only.
+    // The destructor's wait (15 s). setDestructorWaitMs is for tests only.
     static constexpr int kDefaultDestructorWaitMs = 15000;
     int destructorWaitMs() const { return destructorWaitMs_; }
     void setDestructorWaitMs(int ms) { destructorWaitMs_ = ms; }
@@ -47,7 +47,7 @@ public:
     void kill();                     // SIGKILL (Linux) / TerminateProcess (Windows)
     bool stopAndWait(int timeoutMs); // terminate(), then drain and poll; true = the process ended
 
-    // Grace between the stop line and the kill. setStopGraceMs is for tests only.
+    // Grace between the stop line and the kill (10 s). setStopGraceMs is for tests only.
     static constexpr int kDefaultStopGraceMs = 10000;
     int stopGraceMs() const { return stopGraceMs_; }
     void setStopGraceMs(int ms) { stopGraceMs_ = ms; }
@@ -68,7 +68,7 @@ private:
     Callbacks cb_;
     cg::LineSplitter outSplit_, errSplit_;
     bool terminated_ = false;
-    bool stopped_ = false; // terminate / kill / stopAndWait ran for this run (the exit log line)
+    bool stopped_ = false; // terminate() / kill() / stopAndWait ran for this run (the exit log line)
     bool draining_ = false;
     std::string proxy_; // the --proxy value of the last start: redacted in the debug copies of CLI lines
     int destructorWaitMs_ = kDefaultDestructorWaitMs;

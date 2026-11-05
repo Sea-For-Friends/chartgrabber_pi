@@ -74,6 +74,7 @@ wxArrayString chartDirs;
 std::vector<DbUpdate> updates;
 std::function<void()> onUpdate;
 std::vector<wxString> removed;
+std::function<void()> onRemove;
 std::vector<wxWindow*> canvases;
 wxWindow* focus = nullptr;
 int underMouse = 0;
@@ -103,7 +104,7 @@ int PlatformFileSelectorDialog(wxWindow*, wxString* file_spec, wxString title, w
     return ocpn_fake::fileResult;
 }
 
-// The strip places itself over the canvas; with none, place returns early.
+// The strip places itself over the canvas; with none, place() returns early.
 wxWindow* GetOCPNCanvasWindow() {
     return ocpn_fake::canvasWindow;
 }
@@ -129,6 +130,8 @@ wxArrayString GetChartDBDirArrayString() {
     return ocpn_fake::chartDirs;
 }
 extern "C" int RemoveChartFromDBInPlace(wxString& path) {
+    if (ocpn_fake::onRemove)
+        ocpn_fake::onRemove();
     ocpn_fake::removed.push_back(path);
     return 1;
 }

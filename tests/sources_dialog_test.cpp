@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// and 6 : SourcesDialog on records the test
-// builds: the filter, the flat list (every `group` empty) and the grouped list of CR 2 records,
+// SourcesDialog on records the test
+// builds: the filter, the flat list (every `group` empty) and the grouped list of records,
 // refused rows greyed with their reason and not selectable, OK only on a usable row, Reload, touch sizes and
 // the 800 x 480 fit. A window test (cg_gui_tests); the dialog is modal and a timer inside its loop drives it.
-// Expected texts are literals; the GUIDs and EPSG values are those of a map set captured
-// from the CLI on 2026-10-15. Dusk / Night colours are OpenCPN's
+// Expected texts are literals; the GUIDs and EPSG values are those of the user's map set captured
+// from the pinned CLI on 2026-10-15. Dusk / Night colours are OpenCPN's
 // (GetGlobalColor is a fake that gives none here): NOT proven in this file.
 #include "look.h"
 #include "ocpn_fakes.h"
@@ -17,6 +17,7 @@
 #include <wx/button.h>
 #include <wx/listctrl.h>
 #include <wx/srchctrl.h>
+#include <wx/stattext.h>
 #include <wx/timer.h>
 
 #include <functional>
@@ -31,7 +32,7 @@ const char* const kYandex = "{5E04039A-331E-4D2C-B051-B00F8871BB39}"; // Yandex 
 const char* const kEarth = "{FD6877DE-9885-4B92-9D01-F3746F2DD239}";  // Earth - GoogleEarth Cache, EPSG:4326
 const char* const kProjection3395 = "Cannot be made into an OpenCPN chart (projection EPSG:3395)";
 const char* const kProjection4326 = "Cannot be made into an OpenCPN chart (projection EPSG:4326)";
-// The verdict of a WebP source:.
+// The verdict of a WebP source: core src/sas/app/job_checks.cpp:192.
 const char* const kWebp =
     "WebP tiles are not shown by every OpenCPN version; pass --allow-webp to export them anyway";
 
@@ -62,14 +63,18 @@ template <class T> void collect(wxWindow* top, std::vector<T*>& out) {
 // The dialog with its controls found; `drive` runs once, from a timer inside ShowModal, and must end it.
 class Fixture {
 public:
-    Fixture(const std::vector<cg::SourceRecord>& sources, const Look& look)
-        : sources_(sources), dlg_(nullptr, sources_, look) {
+    Fixture(const std::vector<cg::SourceRecord>& sources, const Look& look,
+            const cg::SourceDescriptions& descriptions = {})
+        : sources_(sources), dlg_(nullptr, sources_, look, descriptions) {
         std::vector<wxListCtrl*> lists;
         collect(&dlg_, lists);
         list_ = lists.at(0);
         std::vector<wxSearchCtrl*> filters;
         collect(&dlg_, filters);
         filter_ = filters.at(0);
+        std::vector<wxStaticText*> texts;
+        collect(&dlg_, texts);
+        detail_ = texts.at(0);
     }
     int run(const std::function<void()>& drive) {
         wxEvtHandler handler;
@@ -88,6 +93,7 @@ public:
             out.push_back(u(list_->GetItemText(i, 0)));
         return out;
     }
+    std::string detail() const { return u(detail_->GetLabel()); }
     std::string note(long row) const { return u(list_->GetItemText(row, 1)); }
     bool okEnabled() const { return dlg_.FindWindow(wxID_OK)->IsEnabled(); }
     // ---- user actions
@@ -117,6 +123,7 @@ public:
     SourcesDialog dlg_;
     wxListCtrl* list_ = nullptr;
     wxSearchCtrl* filter_ = nullptr;
+    wxStaticText* detail_ = nullptr;
 };
 
 class SourcesDialogTest : public ::testing::Test {
@@ -157,7 +164,7 @@ TEST_F(SourcesDialogTest, AFlatListHasUsableRowsFirstThenTheRefusedOnesWithTheir
 }
 
 TEST_F(SourcesDialogTest, TheGroupedListHasBoldHeadersGroupsInFirstSeenOrderAndTheEmptyGroupLastAsOther) {
-    // CR 2 records (the tsv level carries `group`). Groups are given interleaved and unsorted.
+    // Records (the tsv level carries `group`). Groups are given interleaved and unsorted.
     Fixture f({rec("{1}", "Plain map"), rec(kYandex, "Yandex - Satellite", 3395, "projection", "Sat\\Russia"),
                rec("{2}", "Esri Sat", 3857, "ok", "Sat\\World"),
                rec("{3}", "Kosmo Sat", 3857, "ok", "Sat\\Russia"), rec("{4}", "Other plain"),
@@ -261,7 +268,7 @@ TEST_F(SourcesDialogTest, OkReturnsTheSelectedGuidCancelReturnsNothingAndReloadA
     }
 }
 
-// shown with Show, every way of ending calls onDone ONCE with the result
+// shown with Show(), every way of ending calls onDone ONCE with the result
 // and the GUID, hides the window and deletes it at the next idle. wx alone would only hide it on Cancel /
 // Escape / the close box (proven in settings_dialog_test.cpp).
 TEST_F(SourcesDialogTest, AModelessDialogEndsOnOkReloadCancelEscapeAndTheCloseBoxWithOneCall) {
@@ -320,19 +327,88 @@ TEST_F(SourcesDialogTest, AModelessDialogEndsOnOkReloadCancelEscapeAndTheCloseBo
     }
 }
 
+// what a source is for (source-descriptions.conf): Note, detail line, search.
+TEST_F(SourcesDialogTest,
+       ThePurposeIsTheNoteOfAUsableRowTheDetailLineAndSearchedButARefusedRowKeepsItsReason) {
+    const std::string dash = "\xE2\x80\x94";
+    const cg::SourceDescriptions purposes = {
+        {"{1}", "Mooring and anchorage detail"},
+        {"{2}", "Caf\xC3\xA9 \xD0\x9F\xD0\xBB\xD0\xB0\xD0\xBD d'x"},
+        {kYandex, "Satellite view of anchorages and reefs"}, // a refused row with a purpose
+        {"{ABC}", "Upper-cased key"},
+        {"{9}", "Purpose of a source that is not listed"},
+    };
+    Fixture f({rec("{1}", "Plain", 3857, "ok", "Sat"), rec("{2}", "Second", 3857, "ok", "Sat"),
+               rec(kYandex, "Yandex", 3395, "projection", "Sat"), rec("{abc}", "Lower", 3857, "ok", "Sat"),
+               rec("{4}", "Nothing", 3857, "ok", "Sat")},
+              look_, purposes);
+    // rows: 0 "Sat" header, 1 Plain, 2 Second, 3 Lower, 4 Nothing, 5 Yandex
+    ASSERT_EQ(f.rows(), (std::vector<std::string>{"Sat", "Plain", "Second", "Lower", "Nothing", "Yandex"}));
+    EXPECT_EQ(f.note(1), "Mooring and anchorage detail");
+    EXPECT_EQ(f.note(2), purposes.at("{2}"));
+    EXPECT_EQ(f.note(3), "Upper-cased key") << "the GUID is looked up upper-cased";
+    EXPECT_EQ(f.note(4), "") << "no purpose: empty";
+    EXPECT_EQ(f.note(5), kProjection3395) << "a refused row keeps its reason";
+    EXPECT_EQ(f.detail(), "") << "no selection";
+    struct Row {
+        long row;
+        std::string detail;
+    };
+    const std::vector<Row> rows = {
+        {1, "Mooring and anchorage detail"},
+        {4, ""},
+        {5, std::string(kProjection3395) + " " + dash + " Satellite view of anchorages and reefs"},
+        {0, ""},
+        {2, purposes.at("{2}")},
+    };
+    for (const Row& r : rows) {
+        SCOPED_TRACE(r.row);
+        f.select(r.row);
+        EXPECT_EQ(f.detail(), r.detail);
+    }
+    f.list_->SetItemState(2, 0, wxLIST_STATE_SELECTED);
+    EXPECT_EQ(f.detail(), "") << "deselected";
+    // search: a word only in a purpose lists the row; a word only in the refusal text does not
+    f.filter("ANCHORAGE");
+    EXPECT_EQ(f.rows(), (std::vector<std::string>{"Sat", "Plain", "Yandex"}));
+    f.filter("projection");
+    EXPECT_EQ(f.rows(), (std::vector<std::string>{})) << "the refusal text is not searched";
+    f.filter("\xD0\x9F\xD0\xBB\xD0\xB0\xD0\xBD");
+    EXPECT_EQ(f.rows(), (std::vector<std::string>{"Sat", "Second"})) << "a Cyrillic purpose";
+    f.filter("");
+    EXPECT_EQ(f.rows().size(), 6u);
+    // a refused row without a purpose: the refusal alone
+    Fixture g({rec(kYandex, "Yandex", 3395)}, look_, {});
+    g.select(0);
+    EXPECT_EQ(g.detail(), kProjection3395);
+}
+
 TEST_F(SourcesDialogTest, ALongListFitsEightHundredByFourEightyAndTouchMakesTheButtonsHigh) {
     std::vector<cg::SourceRecord> many;
     for (int i = 0; i < 60; ++i)
         many.push_back(
             rec("{X}", (std::string("Source ") + std::to_string(i)).c_str(), i % 7 == 0 ? 3395 : 3857));
+    // the longest real purpose (the NOAA chart row, 220 characters) is selected in the detail line
+    const std::string longest =
+        "US chart picture for planning. For official US charts with updates, use OpenCPN's Chart Downloader "
+        "(Options \xE2\x86\x92 Charts \xE2\x86\x92 Chart Downloader). This NOAA source is a picture of the "
+        "same charts for viewing next to other layers.";
+    cg::SourceDescriptions purposes = {{"{X}", longest}};
     {
-        Fixture f(many, look_);
+        Fixture f(many, look_, purposes);
+        f.select(0);
+        EXPECT_EQ(f.detail().find("US chart picture"), 0u);
+        f.dlg_.Layout();
+        EXPECT_GE(f.detail_->GetSize().y, f.detail_->GetBestSize().y) << "the wrapped text is not cut";
         EXPECT_LE(f.dlg_.GetSize().x, 800);
         EXPECT_LE(f.dlg_.GetSize().y, 480);
     }
     ocpn_fake::touch = true;
     ocpn_fake::scale = 1.0;
-    Fixture f(many, look_);
+    Fixture f(many, look_, purposes);
+    f.select(0);
+    f.dlg_.Layout();
+    EXPECT_GE(f.detail_->GetSize().y, f.detail_->GetBestSize().y) << "touch: the wrapped text is not cut";
     EXPECT_LE(f.dlg_.GetSize().x, 800);
     EXPECT_LE(f.dlg_.GetSize().y, 480);
     std::vector<wxButton*> buttons;

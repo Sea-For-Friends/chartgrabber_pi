@@ -1,18 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// the chart and detail rows of the New chart page :
+// The chart and detail rows of the New chart page:
 // the sources run, the chart choice from the curated table, projection refusals, the seamarks checkbox, the
 // imagery line, the four bands with their scale labels, the Harbour rule, the Advanced zooms and the status
 // reasons source / zooms. The tile program is a stand-in script (tests/sources_stub.h) that prints
-// `source` records (the real tsv is not used). Expected texts are
-// literals, not the functions that produce them.
-// The page is reached through a real MainDialog with the shared OpenCPN fakes, as in main_dialog_test.cpp.
+// `source` records (the real tsv was NOT used). Expected texts are\n// literals, not the functions that
+// produce them. The page is reached through a real MainDialog with the shared OpenCPN fakes, as in
+// main_dialog_test.cpp.
 #include "area_tool.h"
+#include "chart_folder.h"
 #include "config_store.h"
 #include "job_controller.h"
 #include "look.h"
 #include "main_dialog.h"
 #include "new_chart_panel.h"
 #include "ocpn_fakes.h"
+#include "plugin_version.h"
 #include "question_probe.h"
 #include "settings_dialog.h"
 #include "sources_dialog.h"
@@ -30,6 +32,11 @@
 #include <wx/evtloop.h>
 #include <wx/fileconf.h>
 #include <wx/frame.h>
+#include <wx/settings.h>
+// clang-format off
+#include <wx/hyperlink.h> // before the generic header, which does not include its base class
+#include <wx/generic/hyperlink.h>
+// clang-format on
 #include <wx/listctrl.h>
 #include <wx/log.h>
 #include <wx/simplebook.h>
@@ -63,11 +70,10 @@ namespace {
 
 namespace fs = std::filesystem;
 
-// ---- the curated table of (GUIDs as the CLI prints them) and the names of a typical map set
+// ---- the curated table of (GUIDs as the CLI prints them) and the names of the user's map set
 const char* const kEsri = "{7B743985-BC5F-4AB6-8915-AC5DBBB8F552}";
 const char* const kGoogle = "{F6574B06-E632-4D5F-BC75-C8FA658B57DF}";
 const char* const kBing = "{9A360A54-7A70-402D-8A11-D570BD759B5B}";
-const char* const kNavionics = "{A830C100-49C8-4623-957A-60B85C39FBE0}";
 const char* const kMapnik = "{D643C5A1-4331-4387-9BE2-DDDF185C117E}";
 const char* const kMapnikLower = "{d643c5a1-4331-4387-9be2-dddf185c117e}";
 const char* const kSentinel = "{92122135-6B15-4800-AA9E-3E48C556DA17}"; // bundled sources
@@ -79,7 +85,6 @@ const char* const kSeamarkLayer = "{AB8A8685-AEC6-4E16-80DA-DC4AC37E4777}";
 const char* const kNameEsri = "ESRI ArcGIS.Imagery";
 const char* const kNameGoogle = "Google - Satellite";
 const char* const kNameBing = "Bing - Satellite";
-const char* const kNameNavionics = "Navionics Marine Charts";
 const char* const kNameMapnik = "OSM OpenStreetMap.org - MAPNIK";
 const char* const kNameSentinel = "Sentinel-2 Cloudless 2025 (EOX)";
 const char* const kNameUsgs = "USGS Imagery (USA)";
@@ -94,11 +99,11 @@ const char* const kAlfa = "{33333333-CCCC-4CCC-8CCC-000000000003}";
 const char* const kYandex = "{5E04039A-331E-4D2C-B051-B00F8871BB39}";     // Yandex - Satellite, EPSG:3395
 const char* const kNameCyrillic = "\xD0\x90\xD0\xBB\xD1\x84\xD0\xB0 d'x"; // "Алфа d'x"
 
-// The `verdict` of a source the CLI refuses:.
+// The `verdict` of a source the CLI refuses: core src/sas/app/job_checks.cpp:192.
 const char* const kRefusedVerdict =
     "WebP tiles are not shown by every OpenCPN version; pass --allow-webp to export them anyway";
 
-// ---- texts of the spec
+// ---- texts
 const char* const kLoading = "Loading chart sources..."; // 7.2
 const char* const kNotFound =
     "Chart Grabber CLI was not found. Install the chart-grabber-cli package, or choose "
@@ -106,6 +111,7 @@ const char* const kNotFound =
 const char* const kTooOld = "Chart Grabber CLI is too old. Install the current chart-grabber-cli package.";
 const char* const kNoSources = "No usable chart source was found. Reinstall Chart Grabber, or check the "
                                "files in your chart sources folder.";
+const char* const kChooseInMore = "Choose in More sources...";
 const char* const kNoUsable = "No usable chart source. Use More sources... or Preferences.";
 const char* const kSeamarksMissing = "The seamarks source (OpenSeaMap) is not among your chart sources";
 const char* const kChooseDetail = "Choose the detail";
@@ -122,7 +128,7 @@ const char* const kEstimating = "Working out the size..."; // 7.4 / 7.5
 const char* const kOutside = "The area is too far north or south (beyond 85 degrees).";
 const char* const kProjection3395 = "Cannot be made into an OpenCPN chart (projection EPSG:3395)";
 
-// Scale labels; messages_test.cpp recomputes them): equator and 60 degrees.
+// Scale labels (messages_test.cpp recomputes them): equator and 60 degrees.
 const char* const kScalesEquator[4] = {"1:2.3M-1:290k", "1:140k-1:36k", "1:18k-1:9.0k", "1:4.5k-1:2.3k"};
 const char* const kScales60[4] = {"1:1.2M-1:140k", "1:72k-1:18k", "1:9.0k-1:4.5k", "1:2.3k-1:1.1k"};
 const char* const kBandNames[4] = {"Passage", "Coastal", "Approach", "Harbour"};
@@ -137,12 +143,20 @@ Rec layer(const char* guid, const char* name, int epsg = 3857, const char* verdi
 }
 // Every curated base and the seamark layer, in an order that is not the order of the table.
 std::vector<Rec> allCurated() {
-    return {map(kMapnik, kNameMapnik),       layer(kSeamarkLayer, kNameSeamark), map(kBing, kNameBing),
-            map(kNavionics, kNameNavionics), map(kGoogle, kNameGoogle),          map(kEsri, kNameEsri)};
+    return {map(kMapnik, kNameMapnik), layer(kSeamarkLayer, kNameSeamark), map(kBing, kNameBing),
+            map(kGoogle, kNameGoogle), map(kEsri, kNameEsri)};
 }
 
 std::string u(const wxString& s) {
     return s.utf8_string();
+}
+
+template <class T> std::vector<T*> shownWindows() { // the windows of this type that are shown now
+    std::vector<T*> out;
+    for (auto* n = wxTopLevelWindows.GetFirst(); n; n = n->GetNext())
+        if (auto* w = dynamic_cast<T*>(n->GetData()); w && w->IsShown())
+            out.push_back(w);
+    return out;
 }
 
 template <class T> void collect(wxWindow* top, std::vector<T*>& out) {
@@ -214,8 +228,10 @@ protected:
                                                  wxString::FromUTF8((root_ / "opencpn.conf").string()),
                                                  wxEmptyString, wxCONFIG_USE_LOCAL_FILE);
         store_ = std::make_unique<ConfigStore>(config_.get());
+        store_->setBundledSourcesDir(stub::installFavourites(root_)); // the earlier lists
         sources_ = std::make_unique<stub::Sources>(root_);
         sources_->records(allCurated());
+        fs::create_directories(root_ / "charts d'x"); // a configured folder must exist
         setSettings([&](cg::Settings& s) { s.chartDir = (root_ / "charts d'x").string(); });
         frame_ = new wxFrame(nullptr, wxID_ANY, "canvas", wxPoint(50, 60), wxSize(800, 480));
         ocpn_fake::canvasWindow = frame_;
@@ -225,6 +241,7 @@ protected:
         setViewport(45, 55, 5, 15);
     }
     void TearDown() override {
+        cg::sandboxProbe() = [] { return cg::detectSandbox(); }; // a test may have faked Flatpak
         if (!frame_)
             return;
         if (sources_) {
@@ -254,15 +271,54 @@ protected:
         fs::remove_all(root_);
     }
 
-    // The arguments of a sources run with empty MapsDir / CacheDir, ).
+    // The arguments of a sources run with empty MapsDir / CacheDir.
     std::string defaultSourcesArgv(const std::string& format = " --format=tsv") const {
-        return "sources" + format + " --cache " + (root_ / "private").string() +
+        return "sources" + format + " --maps " + (root_ / "data" / "sources-x").string() + " --cache " +
+               (root_ / "private").string() +
                "/plugins/chartgrabber/cache"
                " --datadir=" +
                (root_ / "private").string() + "/plugins/chartgrabber/cli-data --stop-on-stdin";
     }
 
     // ---- fixture
+    void writeFavourites(const std::string& text) {
+        std::ofstream(root_ / "data" / "favourite-sources.conf", std::ios::binary | std::ios::trunc) << text;
+    }
+    void removeFavourites() { fs::remove(root_ / "data" / "favourite-sources.conf"); }
+    // the shown warning about the favourites file (text, then the link), else null
+    wxStaticText* favWarning() {
+        for (wxStaticText* s : all<wxStaticText>())
+            if (s->IsShown() && u(s->GetLabel()).rfind("The list of favourite chart sources", 0) == 0)
+                return s;
+        return nullptr;
+    }
+    // the shown link(s): one generic link "Download a fresh copy"
+    std::vector<wxGenericHyperlinkCtrl*> favLinks() {
+        std::vector<wxGenericHyperlinkCtrl*> shown;
+        for (wxGenericHyperlinkCtrl* l : all<wxGenericHyperlinkCtrl>())
+            if (l->IsShown())
+                shown.push_back(l);
+        return shown;
+    }
+    // The address a click on the link reports (the handler swallows the event: no browser starts).
+    std::string clickedUrl(wxGenericHyperlinkCtrl* l) {
+        std::string got;
+        l->Bind(wxEVT_HYPERLINK, [&](wxHyperlinkEvent& e) { got = u(e.GetURL()); });
+        wxMouseEvent down(wxEVT_LEFT_DOWN), up(wxEVT_LEFT_UP);
+        for (wxMouseEvent* e : {&down, &up}) {
+            e->SetEventObject(l);
+            e->SetPosition(wxPoint(1, 1));
+            l->GetEventHandler()->ProcessEvent(*e);
+        }
+        return got;
+    }
+    // A bundled sources folder elsewhere: the default favourites file goes beside it.
+    void useBundledDir(const std::string& dir) {
+        store_->setBundledSourcesDir(dir);
+        const std::string conf = cg::confBesideSources(dir, "favourite-sources.conf");
+        fs::create_directories(fs::path(conf).parent_path());
+        fs::copy_file(root_ / "data" / "favourite-sources.conf", conf, fs::copy_options::overwrite_existing);
+    }
     void setViewport(double latMin, double latMax, double lonMin, double lonMax) {
         PlugIn_ViewPort vp{};
         vp.clat = 50;
@@ -313,7 +369,7 @@ protected:
         dialog_ = nullptr;
         jobs_.reset();
     }
-    bool runUntil(const std::function<bool()>& done, int timeoutMs = 15000) {
+    bool runUntil(const std::function<bool()>& done, int timeoutMs = 60000) {
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
         while (!done()) {
             if (std::chrono::steady_clock::now() >= deadline)
@@ -326,11 +382,15 @@ protected:
     // test's loop) answers the window, and its `found` says it did.
     template <class Driver> void clickUntilFound(wxButton* b, Driver& driver) {
         click(b);
-        ASSERT_TRUE(runUntil([&] { return driver.found; }));
+        ASSERT_TRUE(runUntil([&] { return driver.found; }))
+            << "no shown SettingsDialog was found to answer; top-level windows: "
+            << wxTopLevelWindows.GetCount() << ", stand-in runs: " << sources_->argv().size();
     }
     bool loading() { return chart()->GetCount() == 1 && chart()->GetString(0) == kLoading; }
     void waitLoaded() {
-        ASSERT_TRUE(runUntil([&] { return !loading(); })) << "the sources run did not end";
+        ASSERT_TRUE(runUntil([&] { return !loading(); }))
+            << "the sources run did not end: " << chart()->GetCount()
+            << " entries, stand-in runs: " << sources_->argv().size();
     }
     // the estimate of the current inputs has ended (the status no longer says "Working out the
     // size...").
@@ -381,7 +441,7 @@ protected:
                 return u(s->GetLabel());
         return "";
     }
-    // The shown cost line of the main page ("One more level..."), else "".
+    // The shown cost line of the main page ("One more level ..."), else "".
     std::string nextLevelLine() {
         for (wxStaticText* s : all<wxStaticText>())
             if (s->IsShown() && u(s->GetLabel()).rfind("One more level", 0) == 0)
@@ -396,8 +456,7 @@ protected:
     wxButton* narrower() { return labelled<wxButton>("-"); }
     wxToggleButton* view() { return labelled<wxToggleButton>("Current view"); }
     wxToggleButton* route() { return labelled<wxToggleButton>("Along route"); }
-    static wxString
-    flat(wxStaticText* s) { // a long text is wrapped at spaces; the words are the same
+    static wxString flat(wxStaticText* s) { // a long text is wrapped at spaces; the words are the same
         wxString l = s->GetLabel();
         l.Replace("\n", " ");
         return l;
@@ -409,7 +468,7 @@ protected:
         return nullptr;
     }
     bool shows(const char* t) { return text(t) != nullptr; }
-    // The estimate line : the shown static text that starts with "About ", else "".
+    // The estimate line: the shown static text that starts with "About ", else "".
     std::string estimateLine() {
         for (wxStaticText* s : all<wxStaticText>())
             if (s->IsShown() && u(flat(s)).rfind("About ", 0) == 0)
@@ -493,7 +552,7 @@ protected:
 // ---- the chart choice ----
 
 TEST_F(PanelTest, TheChoiceListsTheCuratedMapsPresentInTableOrderAndNoOtherMap) {
-    // Records are unsorted; Navionics and Bing are absent from the user's maps; Mapnik's GUID is lower case.
+    // Records are unsorted; Bing is absent from the user's maps; Mapnik's GUID is lower case.
     sources_->records({map(kMapnikLower, kNameMapnik), map(kDelta, "Delta"),
                        layer(kSeamarkLayer, kNameSeamark), map(kGoogle, kNameGoogle),
                        map(kAlfa, kNameCyrillic), map(kEsri, kNameEsri)});
@@ -543,16 +602,16 @@ TEST_F(PanelTest, LastSourceAndTheFallbackFollowSpec72) {
          {kNameEsri},
          kNameEsri},
         {"a curated map the CLI refuses (verdict) is not listed",
-         {map(kNavionics, kNameNavionics, 3857, kRefusedVerdict), map(kMapnik, kNameMapnik)},
+         {map(kBing, kNameBing, 3857, kRefusedVerdict), map(kMapnik, kNameMapnik)},
          "",
          {kNameMapnik},
          kNameMapnik},
-        {"no curated map: the first usable map in sourcesDialogOrder order (group A, usable first)",
+        {"no curated map, no LastSource: one empty entry, never the first usable map",
          {map(kYandex, "Refused", 3395, "ok", "A"), map(kBeta, "Beta", 3857, "ok", "B"),
           map(kAlfa, kNameCyrillic, 3857, "ok", "A")},
          "",
-         {kNameCyrillic},
-         kNameCyrillic},
+         {kChooseInMore},
+         kChooseInMore},
         {"a LastSource that is not curated stops the fallback",
          {map(kBeta, "Beta"), map(kDelta, "Delta")},
          kDelta,
@@ -580,6 +639,26 @@ TEST_F(PanelTest, WithNoUsableMapTheStatusSaysSoWithoutAPreferencesButton) {
     EXPECT_FALSE(chart()->IsEnabled());
     EXPECT_FALSE(preferences()->IsShown()) << "the sources run itself worked";
     EXPECT_TRUE(moreSources()->IsEnabled());
+}
+
+TEST_F(PanelTest, WithoutFavouritesTheEmptyEntrySelectsNoSourceKeepsDownloadOffAndIsHarmlessToChoose) {
+    removeFavourites();
+    makeDialog();
+    ASSERT_EQ(entries(), std::vector<std::string>{kChooseInMore});
+    EXPECT_TRUE(chart()->IsEnabled());
+    EXPECT_EQ(chart()->GetSelection(), 0);
+    EXPECT_FALSE(labelled<wxButton>("Download")->IsEnabled());
+    EXPECT_EQ(status(), "") << "the entry says what to do: no reason under it";
+    EXPECT_TRUE(moreSources()->IsEnabled());
+    choose(chart(), 0);
+    EXPECT_FALSE(labelled<wxButton>("Download")->IsEnabled());
+    EXPECT_EQ(entries(), std::vector<std::string>{kChooseInMore});
+    EXPECT_EQ(store_->loadLastChoice().sourceGuid, "") << "choosing the entry saves nothing";
+    destroyDialog();
+    saveLast([&](ConfigStore::LastChoice& c) { c.sourceGuid = kGoogle; });
+    makeDialog();
+    EXPECT_EQ(entries(), std::vector<std::string>{kNameGoogle});
+    EXPECT_EQ(selected(), kNameGoogle);
 }
 
 // ---- the sources run: loading, failures, Preferences, reload ----
@@ -615,7 +694,7 @@ TEST_F(PanelTest, EveryFailureOfTheRunShowsItsTextAndThePreferencesButton) {
     const std::string estimate =
         std::string("estimate\t") + std::string(kEsri) + "\t8\t10\t10\t0.0000\t0.0000\t100\t0\t0\n";
     const std::vector<Row> rows = {
-        // (usageError, exit 2) prints Qt's text through console.cpp:64 ("error:
+        // core src/sas/app/job.cpp:491 (usageError, exit 2) prints Qt's text through console.cpp:64 ("error:
         // ").
         {"exit 2 mentioning the format is the generic failure", 2, "error: Unknown option 'format'.\n", "",
          "Chart Grabber CLI does not work: Unknown option 'format'."},
@@ -653,7 +732,10 @@ TEST_F(PanelTest, ACliThatIsNotThereShowsTheNotFoundTextAndLogsWhy) {
     auto* log = new CollectLog;
     wxLog* previous = wxLog::SetActiveTarget(log);
     makeDialog();
-    const std::vector<std::string> logged = log->messages;
+    std::vector<std::string> logged;
+    for (const std::string& m : log->messages)
+        if (m.find("descriptions:") == std::string::npos) // its own test below
+            logged.push_back(m);
     delete wxLog::SetActiveTarget(previous);
     EXPECT_EQ(status(), kNotFound);
     EXPECT_TRUE(preferences()->IsShown());
@@ -669,11 +751,11 @@ std::string slurpText(const fs::path& p) {
     return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 }
 
-//  proof 3: the real `note:` line of the first start (cli-2026.10.14/sources-first-start-note: stdout
+// the real `note:` line of the first start (cli-2026.11.1/sources-first-start-note: stdout
 // the 3 records, stderr a `note:` line and a `warning:`, exit 0) changes nothing: the same choice and status
 // as without stderr.
 TEST_F(PanelTest, TheFirstStartNoteOfTheCliChangesNothingInTheChoice) {
-    const fs::path fx = fs::path(CG_FIXTURES_DIR) / "cli-2026.10.14";
+    const fs::path fx = fs::path(CG_FIXTURES_DIR) / "cli-2026.11.1";
     const std::string err = slurpText(fx / "sources-first-start-note.stderr");
     ASSERT_EQ(err.rfind("note: moved ", 0), 0u) << err;
     sources_->rawRecords(slurpText(fx / "sources-first-start-note.stdout"));
@@ -691,8 +773,8 @@ TEST_F(PanelTest, TheFirstStartNoteOfTheCliChangesNothingInTheChoice) {
     EXPECT_EQ(status().find("does not work"), std::string::npos) << status();
 }
 
-// / a program that is too old (0.1.0, 2026.10.3) or no tile program shows
-// cliTooOldText with the Preferences button, and the stand-in is not run for sources.
+// a program that is too old (0.1.0, 2026.10.3) or no tile program shows
+// cliTooOldText() with the Preferences button, and the stand-in is not run for sources.
 TEST_F(PanelTest, ATooOldOrUnknownProgramShowsTheTooOldTextWithPreferences) {
     int i = 0;
     for (const char* line :
@@ -749,6 +831,8 @@ TEST_F(PanelTest, PreferencesOkRunsTheSourcesAgainAndCancelDoesNot) {
     sources_->exitWith(3);
     sources_->stderrText("error: broken\n");
     sources_->rawRecords("");
+    saveLast(
+        [&](ConfigStore::LastChoice& c) { c.sourceGuid = kMapnik; }); // no favourites file in this folder
     makeDialog();
     ASSERT_EQ(status(), kBroken);
     ASSERT_TRUE(preferences()->IsShown());
@@ -758,7 +842,7 @@ TEST_F(PanelTest, PreferencesOkRunsTheSourcesAgainAndCancelDoesNot) {
         // its label.
         DialogCloser cancel(wxID_CANCEL, [&] { waitRuns(2); });
         clickUntilFound(preferences(), cancel);
-        EXPECT_TRUE(cancel.found);
+        EXPECT_TRUE(cancel.found) << "Cancel was not clicked";
     }
     // panel run + the dialog's own check; Cancel adds no rerun.
     EXPECT_EQ(sources_->argv().size(), 2u);
@@ -772,14 +856,14 @@ TEST_F(PanelTest, PreferencesOkRunsTheSourcesAgainAndCancelDoesNot) {
             sources_->records({map(kMapnik, kNameMapnik)});
         });
         clickUntilFound(preferences(), ok);
-        EXPECT_TRUE(ok.found);
+        EXPECT_TRUE(ok.found) << "Ok was not clicked";
     }
     // Runs so far: panel + dialog (open 1), dialog (open 2) = 3; the rerun on OK is the 4th: wait for its
     // start (a count of 2 was already true), then for its end.
     waitRuns(4);
     waitLoaded();
     // The closed Settings window is destroyed in idle time; until then its status labels (its own check said
-    // "No usable chart source was found" for run 3) are children of the dialog and status would read them.
+    // "No usable chart source was found" for run 3) are children of the dialog and status() would read them.
     ASSERT_TRUE(runUntil([&] { return !wxWindow::FindWindowByName("sourcesStatus"); }))
         << "the Settings window was not destroyed";
     EXPECT_EQ(entries(), std::vector<std::string>{kNameMapnik});
@@ -810,13 +894,13 @@ TEST_F(PanelTest, ReloadingDuringARunDiscardsTheFirstRunsResult) {
 
 TEST_F(PanelTest, AReloadReadsTheSettingsAgainAndKeepsTheUsersPick) {
     makeDialog();
-    choose(chart(), 4); // Mapnik of [Esri, Google, Bing, Navionics, Mapnik]
+    choose(chart(), 3); // Mapnik of [Esri, Google, Bing, Mapnik]
     ASSERT_EQ(selected(), kNameMapnik);
     const std::string mapsDir = (root_ / "maps d'x").string();
     fs::create_directories(mapsDir);
     std::ofstream(fs::path(mapsDir) / "a.zmp") << "x"; // --maps is passed only when the folder holds a source
     const std::string bundled = (root_ / "bundl\xC3\xA9 d'x").string();
-    store_->setBundledSourcesDir(bundled);
+    useBundledDir(bundled);
     stub::Sources other(root_, "other stub");
     other.records({map(kEsri, kNameEsri), map(kMapnik, kNameMapnik), map(kBeta, "Beta")});
     setSettings([&](cg::Settings& s) {
@@ -841,7 +925,7 @@ TEST_F(PanelTest, AReloadReadsTheSettingsAgainAndKeepsTheUsersPick) {
 TEST_F(PanelTest, WithTheBundledSourcesAndNoFolderTheChoiceIsFilled) {
     makeDialog();
     const std::string bundled = (root_ / "bundled d'x").string();
-    store_->setBundledSourcesDir(bundled);
+    useBundledDir(bundled);
     stub::Sources other(root_, "other stub");
     other.records({map(kEsri, kNameEsri), map(kBeta, "Beta"), layer(kSeamarkLayer, kNameSeamark),
                    map(kMapnik, kNameMapnik)});
@@ -849,7 +933,7 @@ TEST_F(PanelTest, WithTheBundledSourcesAndNoFolderTheChoiceIsFilled) {
     panel()->reloadSources();
     waitLoaded();
     EXPECT_EQ(entries(), (std::vector<std::string>{kNameEsri, kNameMapnik}))
-        << "Bing, Navionics, Google have no record (skipped); Beta and the seamark layer are not curated "
+        << "Bing, Google have no record (skipped); Beta and the seamark layer are not curated "
            "bases";
     EXPECT_EQ(selected(), kNameEsri) << "no LastSource: the first curated base";
     EXPECT_EQ(other.argv(), std::vector<std::string>{"sources --format=tsv --maps " + bundled + " --cache " +
@@ -858,6 +942,128 @@ TEST_F(PanelTest, WithTheBundledSourcesAndNoFolderTheChoiceIsFilled) {
                                                      " --datadir=" +
                                                      (root_ / "private").string() +
                                                      "/plugins/chartgrabber/cli-data --stop-on-stdin"});
+}
+
+// ---- favourite-sources.conf (each test writes its own file; the shipped one is never read) ----
+
+TEST_F(PanelTest, TheChartChoiceFollowsTheFilesChartOrderSkipsAGuidWithoutARecordAndAllowsALayer) {
+    writeFavourites(std::string("format\t1\n# c\nchart\t") + kAlfa + "\tAlfa\nchart\t" + kYandex +
+                    "\tno record\nchart\t" + kBeta + "\tA layer\nchart\t" + kEsri + "\nseamarks\t" +
+                    kSeamarkLayer + "\n");
+    sources_->records({map(kEsri, kNameEsri), map(kDelta, "Delta"), map(kAlfa, kNameCyrillic),
+                       layer(kBeta, "A layer"), layer(kSeamarkLayer, kNameSeamark)});
+    makeDialog();
+    EXPECT_EQ(entries(), (std::vector<std::string>{kNameCyrillic, "A layer", kNameEsri}))
+        << "file order; Yandex has no record; Delta is not listed";
+    EXPECT_EQ(selected(), kNameCyrillic);
+    EXPECT_EQ(favWarning(), nullptr);
+    EXPECT_TRUE(seamarks()->IsEnabled());
+}
+
+TEST_F(PanelTest, WithNoFileThereAreNoFavouritesSeamarksAreDisabledAndTheWarningShowsReasonPathAndUrl) {
+    const std::string path = (root_ / "data" / "favourite-sources.conf").string();
+    const std::string url = std::string("https://github.com/Sea-For-Friends/chartgrabber_pi/blob/v") +
+                            cg::kPluginVersionString + "/data/favourite-sources.conf";
+    const std::string warning =
+        "The list of favourite chart sources is missing or damaged (file not found). Chart Grabber uses the "
+        "lines it can read. To repair it, save a fresh copy over this file: " +
+        path;
+    std::size_t baseline = 0;
+    makeDialog(); // with the file
+    baseline = shownWindows<wxTopLevelWindow>().size();
+    EXPECT_EQ(favWarning(), nullptr);
+    destroyDialog();
+    removeFavourites();
+    struct Case {
+        const char* what;
+        std::string last; // LastSource
+        std::vector<std::string> entries;
+    };
+    for (const Case& c : {Case{"LastSource", kGoogle, {kNameGoogle}},
+                          Case{"no LastSource: the empty entry", "", {kChooseInMore}}}) {
+        SCOPED_TRACE(c.what);
+        saveLast([&](ConfigStore::LastChoice& ch) { ch.sourceGuid = c.last; });
+        auto* log = new CollectLog;
+        wxLog* previous = wxLog::SetActiveTarget(log);
+        makeDialog();
+        std::vector<std::string> logged;
+        for (const std::string& m : log->messages)
+            if (m.find("favourite sources:") != std::string::npos)
+                logged.push_back(m);
+        delete wxLog::SetActiveTarget(previous);
+        EXPECT_EQ(logged, (std::vector<std::string>{"ChartGrabber: favourite sources: " + path +
+                                                    ": file not found"}));
+        EXPECT_EQ(entries(), c.entries);
+        ASSERT_NE(favWarning(), nullptr);
+        EXPECT_EQ(u(flat(favWarning())), warning);
+        EXPECT_EQ(u(flat(favWarning())).find("http"), std::string::npos) << "no raw address in the text";
+        const auto links = favLinks();
+        ASSERT_EQ(links.size(), 1u);
+        EXPECT_EQ(u(links[0]->GetLabel()), "Download a fresh copy");
+        EXPECT_EQ(u(links[0]->GetURL()), url);
+        EXPECT_EQ(links[0]->GetToolTip(), nullptr) << "no tooltip";
+        EXPECT_GT(links[0]->GetPosition().y, favWarning()->GetPosition().y) << "under the warning";
+        EXPECT_EQ(clickedUrl(links[0]), url);
+        EXPECT_TRUE(all<wxHyperlinkCtrl>().empty()) << "the native link hides the underscore";
+        EXPECT_FALSE(seamarks()->IsEnabled());
+        EXPECT_FALSE(seamarks()->GetValue());
+        EXPECT_TRUE(shows(kSeamarksMissing));
+        EXPECT_EQ(shownWindows<wxTopLevelWindow>().size(), baseline) << "no other window opened";
+        destroyDialog();
+    }
+}
+
+TEST_F(PanelTest, OneBadLineKeepsTheOtherRowsNamesTheLineAndFixingTheFileWithReloadHidesTheWarning) {
+    writeFavourites(std::string("format\t1\nchart\t") + kEsri + "\nchart\nchart\t" + kGoogle + "\nboat\t" +
+                    kMapnik + "\nseamarks\t" + kSeamarkLayer + "\n");
+    makeDialog();
+    EXPECT_EQ(entries(), (std::vector<std::string>{kNameEsri, kNameGoogle}))
+        << "the lines around line 3 are used";
+    ASSERT_NE(favWarning(), nullptr);
+    EXPECT_NE(u(favWarning()->GetLabel()).find("(line 3: too few fields)"), std::string::npos)
+        << u(favWarning()->GetLabel());
+    EXPECT_EQ(u(favWarning()->GetLabel()).find("line 5"), std::string::npos)
+        << "only the first problem is shown";
+    EXPECT_TRUE(seamarks()->IsEnabled()) << "the seamarks line is good";
+    writeFavourites(std::string("format\t1\nchart\t") + kEsri + "\nchart\t" + kGoogle + "\nchart\t" +
+                    kMapnik + "\nseamarks\t" + kSeamarkLayer + "\n");
+    panel()->reloadSources();
+    waitLoaded();
+    EXPECT_EQ(favWarning(), nullptr);
+    EXPECT_TRUE(favLinks().empty());
+    EXPECT_EQ(entries(), (std::vector<std::string>{kNameEsri, kNameGoogle, kNameMapnik}));
+}
+
+TEST_F(PanelTest, AnUnknownFormatUsesNoLineAndNeverLeavesTheDialogEmpty) {
+    writeFavourites(std::string("format\t2\nchart\t") + kEsri + "\nseamarks\t" + kSeamarkLayer + "\n");
+    saveLast([&](ConfigStore::LastChoice& c) { c.sourceGuid = kMapnik; });
+    makeDialog();
+    EXPECT_EQ(entries(), std::vector<std::string>{kNameMapnik});
+    ASSERT_NE(favWarning(), nullptr);
+    EXPECT_NE(u(favWarning()->GetLabel()).find("(unknown format)"), std::string::npos);
+    EXPECT_FALSE(seamarks()->IsEnabled());
+}
+
+TEST_F(PanelTest, TheImageryRuleIsTheGroupSatelliteOrAMapNameWithAnImageryWord) {
+    writeFavourites(std::string("format\t1\nchart\t") + kDelta + "\nchart\t" + kBeta + "\nchart\t" + kAlfa +
+                    "\nchart\t" + kYandex + "\nseamarks\t" + kSeamarkLayer + "\n");
+    sources_->records(
+        {map(kDelta, "Plain sentinel name", 3857, "ok", "Satellite"),
+         Rec{kBeta, "layer", "Satellite-derived depth (Pacific islands, DEP)", 3857, "ok", "Depth"},
+         map(kAlfa, "Google - Satellite", 3857, "ok", "Other"),
+         map(kYandex, "Plain map name", 3857, "ok", "Depth"), layer(kSeamarkLayer, kNameSeamark)});
+    makeDialog();
+    ASSERT_EQ(entries().size(), 4u);
+    struct Step {
+        int index;
+        bool imagery;
+    };
+    for (const Step& st : {Step{3, false}, Step{0, true}, Step{1, false}, Step{2, true}}) {
+        choose(chart(), st.index);
+        SCOPED_TRACE(selected());
+        EXPECT_EQ(shows(kImagery), st.imagery);
+        EXPECT_EQ(seamarks()->GetValue(), st.imagery);
+    }
 }
 
 // ---- the seamarks checkbox ----
@@ -877,9 +1083,8 @@ TEST_F(PanelTest, TheFirstFillAppliesLastSeamarksAndEveryBaseChangeFollowsTheSat
         EXPECT_EQ(seamarks()->GetValue(), row.last) << "first fill";
         EXPECT_TRUE(seamarks()->IsEnabled());
         EXPECT_FALSE(text(kSeamarksMissing));
-        // [Esri, Google, Bing, Navionics, Mapnik]; satellite set = the first three.
-        const std::vector<std::pair<int, bool>> steps = {
-            {4, false}, {0, true}, {3, false}, {2, true}, {1, true}};
+        // [Esri, Google, Bing, Mapnik]; satellite set = the first three.
+        const std::vector<std::pair<int, bool>> steps = {{3, false}, {0, true}, {2, true}, {1, true}};
         for (const auto& [index, expected] : steps) {
             choose(chart(), index);
             EXPECT_EQ(seamarks()->GetValue(), expected) << selected();
@@ -948,6 +1153,31 @@ TEST_F(PanelTest, AMissingSeamarkLayerDisablesAndUnticksTheCheckboxWithItsNote) 
     EXPECT_FALSE(seamarks()->GetValue()) << "a satellite base does not tick a missing layer";
 }
 
+// the note beside the check box breaks into lines inside the page width (800 DIP less the caption,
+// 60 px of margins, the check box and its 10 px border) instead of widening the dialog past 800 x 480.
+TEST_F(PanelTest, TheMissingSeamarksNoteBreaksIntoLinesAndDoesNotWidenTheDialog) {
+    writeFavourites(std::string("format\t1\nchart\t") + kEsri + "\n");
+    sources_->records({map(kEsri, kNameEsri), layer(kSeamarkLayer, kNameSeamark)});
+    makeDialog();
+    ASSERT_NE(text(kSeamarksMissing), nullptr);
+    const int caption = dialog_->GetTextExtent("Detail").x + 24; // as the page measured it
+    dialog_->SetFont(dialog_->GetFont().Scaled(2.5)); // a wide font: the text no longer fits one line
+    panel()->reloadSources();
+    waitLoaded();
+    wxStaticText* note = nullptr;
+    for (wxStaticText* t : all<wxStaticText>())
+        if (t->IsShown() && t->GetLabel().Find("seamarks source") != wxNOT_FOUND)
+            note = t;
+    ASSERT_NE(note, nullptr);
+    EXPECT_NE(note->GetLabel().Find('\n'), wxNOT_FOUND) << "broken into more than one line";
+    EXPECT_LE(note->GetSize().x, dialog_->FromDIP(800) - caption - 60 - seamarks()->GetBestSize().x - 10);
+    const int widthMissing = dialog_->GetSize().x;
+    writeFavourites(std::string("format\t1\nchart\t") + kEsri + "\nseamarks\t" + kSeamarkLayer + "\n");
+    panel()->reloadSources();
+    waitLoaded();
+    EXPECT_LE(widthMissing, dialog_->GetSize().x + wxSystemSettings::GetMetric(wxSYS_VSCROLL_X));
+}
+
 TEST_F(PanelTest, ARefusedSeamarkLayerDisablesTheCheckboxAndShowsTheRefusal) {
     struct Row {
         Rec layerRecord;
@@ -979,14 +1209,12 @@ TEST_F(PanelTest, TheImageryLineShowsForSatelliteBasesUnderTheChartRowAndTheDial
     EXPECT_GT(line->GetPosition().y, chart()->GetPosition().y);
     EXPECT_LT(line->GetPosition().y, seamarks()->GetPosition().y) << "directly under the Chart row";
     const wxSize withLine = dialog_->GetSize();
-    choose(chart(), 4); // Mapnik
+    choose(chart(), 3); // Mapnik
     EXPECT_FALSE(shows(kImagery));
     EXPECT_LT(dialog_->GetSize().y, withLine.y) << "the hidden line gives its space back";
     choose(chart(), 1); // Google
     EXPECT_TRUE(shows(kImagery));
     EXPECT_EQ(dialog_->GetSize(), withLine);
-    choose(chart(), 3); // Navionics: a chart, not imagery
-    EXPECT_FALSE(shows(kImagery));
     for (int satellite : {0, 2}) { // Esri, Bing
         choose(chart(), satellite);
         EXPECT_TRUE(shows(kImagery)) << selected();
@@ -1111,7 +1339,7 @@ TEST_F(PanelTest, HarbourIsDisabledAndUntickedForALargeAreaAndStaysUntickedWhenE
 
 TEST_F(PanelTest, TheHarbourLimitIs20000TilesAtZoom17And18OfTheRouteCorridor) {
     // Route (50,10)-(50.02,10.02): 19 144 tiles at a 5.5 NM corridor, 22 021 at 6.0 NM (hand computation of
-    // the formula).
+    // the formula, scratch calc.py).
     addRoute("cccccccc-0000-4000-8000-000000000002", "Short", {{50.0, 10.0}, {50.02, 10.02}});
     saveLast([&](ConfigStore::LastChoice& c) {
         c.bands = {cg::Band::Passage, cg::Band::Coastal, cg::Band::Approach, cg::Band::Harbour};
@@ -1189,8 +1417,7 @@ TEST_F(PanelTest, BandTapsSetTheRange) {
     EXPECT_EQ(ticks(), (std::vector<bool>{true, true, true, true}));
     EXPECT_EQ(least()->GetSelection(), 8);
     EXPECT_EQ(most()->GetSelection(), 18);
-    tick(
-        band(1)); // untick Coastal with Passage below and Approach, Harbour above: Passage only (rule)
+    tick(band(1)); // untick Coastal with Passage below and Approach, Harbour above: Passage only
     EXPECT_EQ(ticks(), (std::vector<bool>{true, false, false, false}));
     EXPECT_EQ(least()->GetSelection(), 8);
     EXPECT_EQ(most()->GetSelection(), 11);
@@ -1434,7 +1661,7 @@ struct MoreSourcesDriver {
     bool found = false;
 };
 
-// the terms-of-use note follows the GUID not the name.
+// the terms-of-use note follows the GUID, not the name.
 TEST_F(PanelTest, TheTermsNoteShowsOnlyForTheEsriAndOpenTopoMapGuids) {
     const std::vector<std::tuple<const char*, const char*, bool>> rows = {
         {kEsri, "ESRI ArcGIS.Imagery", true},                     // the user's catalogue name
@@ -1454,18 +1681,23 @@ TEST_F(PanelTest, TheTermsNoteShowsOnlyForTheEsriAndOpenTopoMapGuids) {
     }
 }
 
-// all ten maps, scrambled, in the order of the choice; then only the seven the CLI ships.
-TEST_F(PanelTest, TheChoiceHoldsTheTenCuratedMapsInTableOrderAndTheShippedSevenWithoutTheOthers) {
-    const std::vector<Rec> all = {
-        map(kEmodEurope, kNameEmodEurope),  map(kMapnik, kNameMapnik), map(kSentinel, kNameSentinel),
-        map(kNavionics, kNameNavionics),    map(kTopo, kNameTopo),     map(kBing, kNameBing),
-        layer(kSeamarkLayer, kNameSeamark), map(kUsgs, kNameUsgs),     map(kGoogle, kNameGoogle),
-        map(kEmodWorld, kNameEmodWorld),    map(kEsri, kNameEsri)};
+// all nine maps, scrambled, in the order of the choice; then only the seven the CLI ships.
+TEST_F(PanelTest, TheChoiceHoldsTheNineCuratedMapsInTableOrderAndTheShippedSevenWithoutTheOthers) {
+    const std::vector<Rec> all = {map(kEmodEurope, kNameEmodEurope),
+                                  map(kMapnik, kNameMapnik),
+                                  map(kSentinel, kNameSentinel),
+                                  map(kTopo, kNameTopo),
+                                  map(kBing, kNameBing),
+                                  layer(kSeamarkLayer, kNameSeamark),
+                                  map(kUsgs, kNameUsgs),
+                                  map(kGoogle, kNameGoogle),
+                                  map(kEmodWorld, kNameEmodWorld),
+                                  map(kEsri, kNameEsri)};
     sources_->records(all);
     makeDialog();
-    EXPECT_EQ(entries(), (std::vector<std::string>{kNameEsri, kNameGoogle, kNameBing, kNameSentinel,
-                                                   kNameUsgs, kNameNavionics, kNameMapnik, kNameTopo,
-                                                   kNameEmodWorld, kNameEmodEurope}));
+    EXPECT_EQ(entries(),
+              (std::vector<std::string>{kNameEsri, kNameGoogle, kNameBing, kNameSentinel, kNameUsgs,
+                                        kNameMapnik, kNameTopo, kNameEmodWorld, kNameEmodEurope}));
     destroyDialog();
     sources_->records({map(kEmodEurope, kNameEmodEurope), map(kTopo, kNameTopo), map(kUsgs, kNameUsgs),
                        layer(kSeamarkLayer, kNameSeamark), map(kEmodWorld, kNameEmodWorld),
@@ -1475,11 +1707,13 @@ TEST_F(PanelTest, TheChoiceHoldsTheTenCuratedMapsInTableOrderAndTheShippedSevenW
                                                    kNameEmodWorld, kNameEmodEurope}));
 }
 
-// the satellite set is the five GUIDs with "yes": imagery line and seamarks default on.
+// the bundled group Satellite (not a GUID list) gives the imagery line and seamarks default
+// on.
 TEST_F(PanelTest, SentinelAndUsgsAreSatelliteAndEmodnetAndOpenTopoMapAreNot) {
-    sources_->records({map(kEmodEurope, kNameEmodEurope), map(kTopo, kNameTopo), map(kUsgs, kNameUsgs),
-                       layer(kSeamarkLayer, kNameSeamark), map(kEmodWorld, kNameEmodWorld),
-                       map(kSentinel, kNameSentinel)});
+    sources_->records({map(kEmodEurope, kNameEmodEurope), map(kTopo, kNameTopo),
+                       map(kUsgs, kNameUsgs, 3857, "ok", "Satellite"), layer(kSeamarkLayer, kNameSeamark),
+                       map(kEmodWorld, kNameEmodWorld),
+                       map(kSentinel, kNameSentinel, 3857, "ok", "Satellite")});
     makeDialog();
     ASSERT_EQ(entries().size(), 5u);
     // [Sentinel-2, USGS, OpenTopoMap, EMODnet world, EMODnet Europe]
@@ -1489,7 +1723,7 @@ TEST_F(PanelTest, SentinelAndUsgsAreSatelliteAndEmodnetAndOpenTopoMapAreNot) {
         choose(chart(), index);
         SCOPED_TRACE(selected());
         EXPECT_EQ(seamarks()->GetValue(), satellite);
-        EXPECT_EQ(shows(kImagery), satellite || index == 1) << "USGS also has 'Imagery' in its name";
+        EXPECT_EQ(shows(kImagery), satellite);
     }
 }
 
@@ -1616,9 +1850,27 @@ TEST_F(PanelTest, AMoreSourcesPickTakesTheLastSlotOfTheChoiceAndTheImageryLineFo
               std::string::npos);
 }
 
+TEST_F(PanelTest, AMoreSourcesPickReplacesTheEmptyEntryAndDownloadFollows) {
+    removeFavourites();
+    makeDialog();
+    ASSERT_EQ(entries(), std::vector<std::string>{kChooseInMore});
+    const std::size_t runs = sources_->estimateArgv().size();
+    MoreSourcesDriver driver(
+        [&](SourcesDialog& dlg, wxListCtrl& list) { MoreSourcesDriver::pick(dlg, list, kNameMapnik); });
+    clickUntilFound(moreSources(), driver);
+    ASSERT_TRUE(driver.found);
+    EXPECT_EQ(entries(), std::vector<std::string>{kNameMapnik}) << "the empty entry is gone";
+    EXPECT_EQ(selected(), kNameMapnik);
+    waitEstimateRuns(runs + 1);
+    waitEstimate();
+    EXPECT_EQ(status(), "");
+    EXPECT_TRUE(labelled<wxButton>("Download")->IsEnabled());
+    waitSourcesDialogGone();
+}
+
 TEST_F(PanelTest, CancelChangesNothingAndReloadRunsTheSourcesAgainWithTheNewRecords) {
     makeDialog();
-    ASSERT_EQ(entries().size(), 5u);
+    ASSERT_EQ(entries().size(), 4u);
     {
         MoreSourcesDriver driver(
             [&](SourcesDialog& dlg, wxListCtrl&) { MoreSourcesDriver::press(dlg, wxID_CANCEL); });
@@ -1628,7 +1880,7 @@ TEST_F(PanelTest, CancelChangesNothingAndReloadRunsTheSourcesAgainWithTheNewReco
     // A closed window is shown once more by wx's deferred show until its deferred Destroy runs: a driver
     // would find that corpse (its answer is gone) and a click on More sources would only raise it.
     waitSourcesDialogGone();
-    EXPECT_EQ(entries().size(), 5u);
+    EXPECT_EQ(entries().size(), 4u);
     EXPECT_EQ(selected(), kNameEsri);
     EXPECT_EQ(sources_->argv().size(), 1u) << "Cancel runs nothing";
     // Reload: the dialog ends with wxID_RETRY and the page runs `sources` again.
@@ -1658,15 +1910,7 @@ TEST_F(PanelTest, CancelChangesNothingAndReloadRunsTheSourcesAgainWithTheNewReco
     EXPECT_EQ(shown, (std::vector<std::string>{kNameEsri, "Delta", kNameSeamark}));
 }
 
-// ---- : More sources and Preferences from the page are modeless ----
-
-template <class T> std::vector<T*> shownWindows() { // the windows of this type that are shown now
-    std::vector<T*> out;
-    for (auto* n = wxTopLevelWindows.GetFirst(); n; n = n->GetNext())
-        if (auto* w = dynamic_cast<T*>(n->GetData()); w && w->IsShown())
-            out.push_back(w);
-    return out;
-}
+// ---- More sources and Preferences from the page are modeless ----
 
 TEST_F(PanelTest, MoreSourcesIsAModelessWindowThePageIsDisabledAndThePickHappensOnTheAnswer) {
     sources_->records({map(kEsri, kNameEsri), map(kDelta, "Delta"), layer(kSeamarkLayer, kNameSeamark)});
@@ -1698,6 +1942,58 @@ TEST_F(PanelTest, MoreSourcesIsAModelessWindowThePageIsDisabledAndThePickHappens
     EXPECT_EQ(selected(), "Delta");
     EXPECT_EQ(entries(), (std::vector<std::string>{kNameEsri, "Delta"}));
     wxTheApp->ProcessIdle();
+}
+
+// source-descriptions.conf beside the bundled sources folder fills the Note column; a missing
+// file leaves it empty, opens no message box and logs one line.
+TEST_F(PanelTest, MoreSourcesReadsTheDescriptionsFileBesideTheBundledFolderAndLogsWhenItIsMissing) {
+    const fs::path parent = root_ / "bundled d'x \xD0\x9F";
+    const std::string bundled = (parent / "sources-x").string();
+    fs::create_directories(parent);
+    struct Case {
+        bool file;
+        std::string note;
+        std::vector<std::string> log;
+    };
+    const std::string conf = (parent / "source-descriptions.conf").string();
+    const std::vector<Case> cases = {
+        {true,
+         "Sharper reef imagery \xD0\x9F",
+         {"ChartGrabber: descriptions: " + conf + ": line 4: not a GUID"}},
+        {false, "", {"ChartGrabber: descriptions: " + conf + ": not found"}},
+    };
+    for (const Case& c : cases) {
+        SCOPED_TRACE(c.file);
+        if (c.file)
+            std::ofstream(conf, std::ios::binary) << "format\t1\n# c\n"
+                                                  << kEsri << "\tSharper reef imagery \xD0\x9F\n"
+                                                  << "bad line\tx\n";
+        store_->setBundledSourcesDir(bundled);
+        sources_->records({map(kEsri, kNameEsri), map(kDelta, "Delta")});
+        auto* log = new CollectLog;
+        wxLog* previous = wxLog::SetActiveTarget(log);
+        makeDialog();
+        std::vector<std::string> logged;
+        for (const std::string& m : log->messages)
+            if (m.find("descriptions:") != std::string::npos)
+                logged.push_back(m);
+        delete wxLog::SetActiveTarget(previous);
+        EXPECT_EQ(logged, c.log);
+        const std::size_t windows = shownWindows<wxTopLevelWindow>().size();
+        std::string note = "<unset>";
+        std::size_t during = 0;
+        MoreSourcesDriver driver([&](SourcesDialog& dlg, wxListCtrl& list) {
+            note = list.GetItemText(MoreSourcesDriver::rowOf(list, kNameEsri), 1).utf8_string();
+            during = shownWindows<wxTopLevelWindow>().size();
+            MoreSourcesDriver::press(dlg, wxID_CANCEL);
+        });
+        clickUntilFound(moreSources(), driver);
+        EXPECT_EQ(note, c.note);
+        EXPECT_EQ(during, windows + 1) << "only the dialog opened";
+        waitSourcesDialogGone();
+        destroyDialog();
+        fs::remove(conf);
+    }
 }
 
 // a More sources window hidden before wx finished showing it comes back shown (wx's deferred show);
@@ -1772,7 +2068,7 @@ TEST_F(PanelTest, DeletingThePageDeletesItsOpenMoreSourcesAndSettingsWindowsAtOn
     EXPECT_EQ(sources_->argv().size(), 1u + 1u) << "the page's run, and the Settings window's own check";
 }
 
-// with CR 2 records that carry a `group` (the tsv level): header rows, the
+// with records that carry a `group` (the tsv level): header rows, the
 // refused row of the user's set after the usable ones of its group.
 TEST_F(PanelTest, GroupedRecordsGiveHeaderRowsAndTheRefusedRowIsGreyedAndNotSelectable) {
     sources_->records({map(kMapnik, kNameMapnik, 3857, "ok", ""),
@@ -1799,8 +2095,8 @@ TEST_F(PanelTest, GroupedRecordsGiveHeaderRowsAndTheRefusedRowIsGreyedAndNotSele
     EXPECT_EQ(selected(), "Delta Sat");
 }
 
-// A refused source is never in the choice and the next curated one is preselected, so the refusal check of the
-// Download button is not reachable through the choice. This test pins what the page really does.
+// A refused source is never in the choice and the next curated one is preselected, so the refusal check
+// of the Download button is not reachable through the choice. This test pins what the page really does.
 TEST_F(PanelTest, AChosenBaseThatBecomesRefusedAfterReloadLeavesTheChoiceAndTheNextOneIsPreselected) {
     makeDialog();
     ASSERT_EQ(selected(), kNameEsri);
@@ -1825,11 +2121,10 @@ TEST_F(PanelTest, AChosenBaseThatBecomesRefusedAfterReloadLeavesTheChoiceAndTheN
 }
 
 // =====================================================================================================
-// the estimate the enable order and the Download flow Advanced threads and
+// the estimate, the enable order and the Download flow, Advanced threads and
 // chart folder. The tile program is the stand-in of tests/sources_stub.h; its `estimate` and `run`
-// answers are CR 2 records (the tsv level, version 2026.10.0); the real CLI is NOT used here).
-// Expected values are literals or the captures in
-// tests/fixtures/cli-2026.10.14/.
+// answers are records (the tsv level); the real CLI is NOT used here.\n// Expected values are literals or the
+// captures in tests/fixtures/cli-2026.11.1/.
 // =====================================================================================================
 
 const char* const kTooLarge = "Area too large for this detail - choose a smaller area or less detail"; // 7.5
@@ -1845,14 +2140,14 @@ std::string tsvLine(const std::vector<std::string>& fields) {
         out += (out.empty() ? "" : "\t") + f;
     return out + "\n";
 }
-// A CR 2 `estimate` record: guid, zoom, tiles, bboxTiles, sharePresent, shareMarkedMissing, bytesToDownload,
+// An `estimate` record: guid, zoom, tiles, bboxTiles, sharePresent, shareMarkedMissing, bytesToDownload,
 // assumed, bytesOnDisk.
 std::string estimateRecord(const char* guid, int zoom, long long tiles, long long toDownload, bool assumed,
                            long long onDisk) {
     return tsvLine({"estimate", guid, std::to_string(zoom), std::to_string(tiles), std::to_string(tiles),
                     "0.0", "0.0", std::to_string(toDownload), assumed ? "1" : "0", std::to_string(onDisk)});
 }
-// 1 950 tiles, 38 000 000 bytes to download, 70 000 000 on disk: the example of over three records.
+// 1 950 tiles, 38 000 000 bytes to download, 70 000 000 on disk: the example, over three records.
 std::string estimate1950(bool assumed = false) {
     return estimateRecord(kEsri, 12, 1000, 20000000, false, 40000000) +
            estimateRecord(kEsri, 13, 500, 10000000, assumed, 20000000) +
@@ -1911,7 +2206,7 @@ private:
             std::vector<wxStaticText*> texts;
             collect(rich, texts);
             wxString text = texts.at(0)->GetLabel();
-            text.Replace("\n", " "); // Wrap breaks the label into lines
+            text.Replace("\n", " "); // Wrap() breaks the label into lines
             shown.push_back(text.utf8_string());
             std::vector<wxCheckBox*> boxes;
             collect(rich, boxes);
@@ -2017,10 +2312,11 @@ TEST_F(DownloadTest, TheEstimateLineShowsTheSumsAndTheCliGetsTheArgumentsOfSpec8
         std::regex_match(estimateLine(), std::regex("About 1 950 tiles, 38 MB to download, 70 MB on disk "
                                                     "\\([0-9]+(\\.[0-9])? (MB|GB) free\\)")))
         << estimateLine();
-    // Base and seamarks (the satellite set ticks them), --maps / --cache from, no network flag.
+    // Base and seamarks (the satellite set ticks them), --maps / --cache, no network flag.
     EXPECT_EQ(sources_->estimateArgv(),
               std::vector<std::string>{
-                  "estimate --format=tsv --progress=lines --cache " + (root_ / "private").string() +
+                  "estimate --format=tsv --progress=lines --maps " + (root_ / "data" / "sources-x").string() +
+                  " --cache " + (root_ / "private").string() +
                   "/plugins/chartgrabber/cache"
                   " --datadir=" +
                   (root_ / "private").string() + "/plugins/chartgrabber/cli-data --source " + kEsri +
@@ -2037,12 +2333,12 @@ TEST_F(DownloadTest, TheEstimateLineShowsTheSumsAndTheCliGetsTheArgumentsOfSpec8
 // space, a quote and non-ASCII bytes); the empty case is pinned by the tests above and below.
 TEST_F(DownloadTest, APickedMapsFolderIsPassedToTheEstimateAndTheRun) {
     const std::string maps = (root_ / "maps \xD1\x91 d'x").string();
-    fs::create_directories(fs::path(maps) / "Sea" / "Extra"); // the user ruling: a nested source counts
+    fs::create_directories(fs::path(maps) / "Sea" / "Extra"); // a nested source counts
     std::ofstream(fs::path(maps) / "Sea" / "Extra" / "OpenSeaMap.zmp")
         << "x"; // --maps is passed only when the folder holds a source
     setSettings([&](cg::Settings& s) { s.mapsDir = maps; });
     const std::string bundled = (root_ / "bundled d'x").string();
-    store_->setBundledSourcesDir(bundled);
+    useBundledDir(bundled);
     store_->setDisclaimerShown();
     sources_->holdRun(true);
     sources_->estimateOut(estimate1950());
@@ -2114,13 +2410,13 @@ TEST_F(DownloadTest, ChangesAreDebouncedAndOneRunGetsTheLastInputs) {
     EXPECT_NE(sources_->estimateArgv()[1].find(" --zooms 9-11"), std::string::npos);
     EXPECT_GE(took, std::chrono::milliseconds(380)) << "the debounce is 400 ms";
     // No wall-clock upper bound (it would depend on the host load): the run having started and the estimate
-    // having ended within waitEstimate's timeout is what U-03 needs; the debounce itself is the lower
+    // having ended within waitEstimate()'s timeout is what U-03 needs; the debounce itself is the lower
     // bound.
 }
 
 TEST_F(DownloadTest, ANewChangeCancelsTheRunningEstimateAndItsResultIsDiscarded) {
-    const std::string first = estimateOf(111, 1000000, 2000000);  // "About 111 tiles, 1.0 MB..., 2.0 MB"
-    const std::string second = estimateOf(222, 3000000, 4000000); // "About 222 tiles, 3.0 MB..., 4.0 MB"
+    const std::string first = estimateOf(111, 1000000, 2000000);  // "About 111 tiles, 1.0 MB ..., 2.0 MB"
+    const std::string second = estimateOf(222, 3000000, 4000000); // "About 222 tiles, 3.0 MB ..., 4.0 MB"
     sources_->estimateOut(estimate1950());
     ready();
     sources_->estimateOut(first);
@@ -2154,7 +2450,8 @@ TEST_F(DownloadTest, ARouteIsEstimatedAsACorridorFromTheGpxFileOfTheJobsFolder) 
     waitEstimate();
     const std::string gpx = (jobsRoot() / "estimate-route.gpx").string();
     const std::string expected =
-        "estimate --format=tsv --progress=lines --cache " + (root_ / "private").string() +
+        "estimate --format=tsv --progress=lines --maps " + (root_ / "data" / "sources-x").string() +
+        " --cache " + (root_ / "private").string() +
         "/plugins/chartgrabber/cache --datadir=" + (root_ / "private").string() +
         "/plugins/chartgrabber/cli-data --source " + kEsri + " --overlay " + kSeamarkLayer + " --route " +
         gpx + " --corridor-nm 2.0 --zooms 8-14 --stop-on-stdin";
@@ -2173,7 +2470,7 @@ TEST_F(DownloadTest, ARouteIsEstimatedAsACorridorFromTheGpxFileOfTheJobsFolder) 
 }
 
 TEST_F(DownloadTest, EveryEstimateFailureShowsItsTextInPlaceOfTheLineAndDownloadStaysOff) {
-    const fs::path fx = fs::path(CG_FIXTURES_DIR) / "cli-2026.10.14";
+    const fs::path fx = fs::path(CG_FIXTURES_DIR) / "cli-2026.11.1";
     struct Row {
         const char* name;
         int exitCode;
@@ -2186,8 +2483,7 @@ TEST_F(DownloadTest, EveryEstimateFailureShowsItsTextInPlaceOfTheLineAndDownload
          "This chart source cannot be made into an OpenCPN chart: the projection of \"Yandex - Satellite\" "
          "is "
          "EPSG:3395; only EPSG:3857 (Web Mercator) can be exported."},
-        //
-
+        // core src/sas/app/cli_main.cpp:239
         {"no tile", 3, "error: the area holds no tile at the chosen zooms\n",
          "The area has no tiles at the chosen detail."},
         // usage-unknown-option.stderr: exit 2 with an unknown option is a plain failure
@@ -2241,6 +2537,8 @@ TEST_F(DownloadTest, ACliThatDisappearsAfterTheSourcesRunShowsTheNotFoundTextAsT
 
 // ---- the enable order ----
 
+static const std::string kCannotWrite = "This folder cannot be written. Choose another one.";
+
 TEST_F(DownloadTest, TheReasonsFollowTheOrderEstimateNameLargeDiskAndTheirBoundaries) {
     struct Row {
         const char* name;
@@ -2253,13 +2551,14 @@ TEST_F(DownloadTest, TheReasonsFollowTheOrderEstimateNameLargeDiskAndTheirBounda
     const std::string free = "[0-9]+(\\.[0-9])? (MB|GB)";
     const std::string cache = escaped((root_ / "private").string() + "/plugins/chartgrabber/cache");
     // checkPreflight: TooLarge = tiles > 200 000 or bytesOnDisk > 2 000 000 000 (200 000 / 2e9 are fine). A
-    // folder whose free space is unknown (a relative path, ) skips its disk check, so the 2e9 row
+    // folder whose free space is unknown (a relative path) skips its disk check, so the 2e9 row
     // does not depend on the free space of the test machine.
     const std::vector<Row> rows = {
         {"200000 tiles are fine", estimateOf(200000, 1000, 1000), "", "", "", true},
         {"200001 tiles", estimateOf(200001, 1000, 1000), "", "", escaped(kTooLarge), false},
-        {"2e9 bytes on disk are fine", estimateOf(10, 1000, 2000000000), "cg-no-such-folder/sub", "", "",
-         true},
+        // (the folder does not exist, so after the disk rule has passed its refusal is the reason)
+        {"2e9 bytes on disk are fine", estimateOf(10, 1000, 2000000000), "cg-no-such-folder/sub", "",
+         escaped(kCannotWrite), false},
         {"2e9+1 bytes on disk", estimateOf(10, 1000, 2000000001), "cg-no-such-folder/sub", "",
          escaped(kTooLarge), false},
         // the name comes before the size check
@@ -2280,6 +2579,7 @@ TEST_F(DownloadTest, TheReasonsFollowTheOrderEstimateNameLargeDiskAndTheirBounda
     for (const Row& row : rows) {
         SCOPED_TRACE(row.name);
         sources_->estimateOut(row.estimate);
+        fs::create_directories(root_ / "charts d'x"); // a configured folder must exist
         setSettings([&](cg::Settings& s) { s.chartDir = (root_ / "charts d'x").string(); });
         ready();
         if (!row.chartDir.empty()) { // chosen with the folder button: a loaded setting must be absolute (8.7)
@@ -2310,7 +2610,33 @@ TEST_F(DownloadTest, AFolderWhoseFreeSpaceIsUnknownSaysSoAndItsDiskCheckIsSkippe
     ocpn_fake::dirSelected = "cg-no-such-folder/sub";
     click(chooseFolder());
     EXPECT_EQ(estimateLine(), "About 10 tiles, 0.0 MB to download, 1.0 GB on disk (free unknown)");
-    EXPECT_EQ(status(), "");
+    EXPECT_TRUE(shows(kCannotWrite.c_str())) << "the disk rule passed; the missing folder is the reason";
+    EXPECT_FALSE(downloadButton()->IsEnabled());
+    ocpn_fake::dirResult = wxID_CANCEL;
+    ocpn_fake::dirSelected.clear();
+}
+
+// Download waits for a usable chart folder: a picked folder must exist, and under Flatpak lie in
+// home.
+TEST_F(DownloadTest, ARefusedChartFolderStopsDownloadWithItsReason) {
+    sources_->estimateOut(estimate1950());
+    ready();
+    EXPECT_TRUE(downloadButton()->IsEnabled()) << "the default folder may be missing";
+    ocpn_fake::dirResult = wxID_OK;
+    ocpn_fake::dirSelected = (root_ / "no such folder").string();
+    click(chooseFolder());
+    EXPECT_TRUE(shows(kCannotWrite.c_str()));
+    EXPECT_FALSE(downloadButton()->IsEnabled());
+    fs::create_directories(root_ / "mnt");
+    ocpn_fake::dirSelected = (root_ / "mnt").string();
+    cg::sandboxProbe() = [&] { return cg::Sandbox{true, (root_ / "home").string(), {}}; };
+    click(chooseFolder());
+    EXPECT_TRUE(
+        shows("OpenCPN from Flathub can only keep charts inside your home folder. Choose a folder there."));
+    EXPECT_FALSE(downloadButton()->IsEnabled());
+    cg::sandboxProbe() = [] { return cg::detectSandbox(); }; // the host is no Flatpak again
+    click(chooseFolder());
+    EXPECT_FALSE(shows(kCannotWrite.c_str()));
     EXPECT_TRUE(downloadButton()->IsEnabled());
     ocpn_fake::dirResult = wxID_CANCEL;
     ocpn_fake::dirSelected.clear();
@@ -2361,6 +2687,7 @@ TEST_F(DownloadTest, DownloadWritesTheJobFilesSavesTheChoiceStartsTheJobAndHides
         SCOPED_TRACE(row.name);
         fs::remove_all(jobsRoot());
         fs::remove_all(chartFolder());
+        fs::create_directories(chartFolder()); // a configured folder must exist
         fs::remove(sources_->dir() / "run.log");
         sources_->holdRun(true);
         setSettings([&](cg::Settings& s) {
@@ -2371,7 +2698,7 @@ TEST_F(DownloadTest, DownloadWritesTheJobFilesSavesTheChoiceStartsTheJobAndHides
         sources_->estimateOut(estimate1950());
         ready();
         threads()->SetValue(row.threads);
-        typeInto(nameField(), "  \xD0\x90\xD0\xBB\xD1\x84\xD0\xB0 d'x  "); // " Алфа d'x ": trimmed, no '
+        typeInto(nameField(), "  \xD0\x90\xD0\xBB\xD1\x84\xD0\xB0 d'x  "); // "  Алфа d'x  ": trimmed, no '
         Answerer answers({});
         download();
         EXPECT_TRUE(answers.shown.empty()) << "no question: no budget issue, disclaimer shown, no file";
@@ -2403,13 +2730,13 @@ TEST_F(DownloadTest, DownloadWritesTheJobFilesSavesTheChoiceStartsTheJobAndHides
         // the job runs: runArguments of for the tsv level
         ASSERT_TRUE(runUntil([&] { return !sources_->runArgv().empty(); }));
         EXPECT_EQ(sources_->runArgv(),
-                  std::vector<std::string>{"run --job " + (job / "job.ini").string() +
-                                           " --format=tsv --progress=lines --cache " +
-                                           (root_ / "private").string() +
-                                           "/plugins/chartgrabber/cache"
-                                           " --datadir=" +
-                                           (root_ / "private").string() + "/plugins/chartgrabber/cli-data" +
-                                           (row.slow ? " --threads 1" : "") + " --stop-on-stdin"});
+                  std::vector<std::string>{
+                      "run --job " + (job / "job.ini").string() + " --format=tsv --progress=lines --maps " +
+                      (root_ / "data" / "sources-x").string() + " --cache " + (root_ / "private").string() +
+                      "/plugins/chartgrabber/cache"
+                      " --datadir=" +
+                      (root_ / "private").string() + "/plugins/chartgrabber/cli-data" +
+                      (row.slow ? " --threads 1" : "") + " --stop-on-stdin"});
         EXPECT_FALSE(dialog_->IsShown()) << "onStarted hides the dialog";
         EXPECT_TRUE(jobs_->busy());
         // LastChoice and the settings of the page (step 8)
@@ -2608,7 +2935,7 @@ TEST_F(DownloadTest, AnExistingChartFileAsksReplaceAndNoStartsNothingYesRunsWith
         {"overlay file exists, Yes", over, true, true, true},
         {"overlay file exists but no seamarks", over, false, false, false},
         {"none exists", "other.mbtiles", true, false, false},
-        // A file under the old name ("T:x" kept its colon; the name is now "T_x") no longer asks.
+        // A file under the earlier name ("T:x" kept its colon; the name is now "T_x") no longer asks.
         {"old-name base file does not ask", "T:x.mbtiles", true, false, false, "T:x"},
         {"old-name overlay file does not ask", "T:x - Seamarks.mbtiles", true, false, false, "T:x"},
         {"new-name base file asks", "T_x.mbtiles", true, false, true, "T:x"},
@@ -2795,10 +3122,12 @@ TEST_F(DownloadTest, DeletingThePanelDeletesTheOpenQuestionAtOnce) {
 }
 
 TEST_F(DownloadTest, AnUnusableChartFolderShowsCannotWriteAndStartsNothing) {
-    // The chart folder lies under a regular file: Mkdir fails (step 5); the job directory is removed.
+    // The DEFAULT chart folder (may be missing) lies under a regular file: Mkdir fails (step 5); the job
+    // directory is removed.
     std::ofstream(root_ / "a file") << "x";
-    const std::string folder = (root_ / "a file" / "sub").string();
-    setSettings([&](cg::Settings& s) { s.chartDir = folder; });
+    setenv("HOME", (root_ / "a file").c_str(), 1);            // TearDown puts it back
+    setSettings([](cg::Settings& s) { s.chartDir.clear(); }); // the fixture's own folder is gone
+    const std::string folder = (root_ / "a file" / "Charts" / "ChartGrabber").string();
     store_->setDisclaimerShown();
     ready();
     ASSERT_TRUE(downloadButton()->IsEnabled());
@@ -2844,6 +3173,7 @@ TEST_F(DownloadTest, AdvancedThreadsStartAtTheSettingsValueAndTheChartFolderIsFo
     EXPECT_EQ(u(ocpn_fake::dirInit), chartFolder());
     // OK takes the folder (with a space and a quote); the free space of that folder is shown.
     const std::string other = (root_ / "other d'x").string();
+    fs::create_directories(other); // a picked folder must exist
     ocpn_fake::dirResult = wxID_OK;
     ocpn_fake::dirSelected = wxString::FromUTF8(other);
     click(chooseFolder());
@@ -2852,7 +3182,6 @@ TEST_F(DownloadTest, AdvancedThreadsStartAtTheSettingsValueAndTheChartFolderIsFo
     download();
     ASSERT_EQ(jobDirs().size(), 1u);
     EXPECT_EQ(readIni(jobDirs()[0] / "job.ini").get("Out"), other + "/" + kNameDefaultEsri + ".mbtiles");
-    EXPECT_TRUE(fs::is_directory(other)) << "step 5 creates the chart folder";
     EXPECT_EQ(store_->loadSettings().chartDir, chartFolder()) << "never saved";
     sources_->holdRun(false);
     ocpn_fake::dirResult = wxID_CANCEL;
@@ -2867,7 +3196,7 @@ TEST_F(DownloadTest, AResultThatArrivesAfterANewChangeIsDiscardedAndTheNewInputs
     pickZooms(9, 10);
     waitEstimateRuns(2); // run 2 prints its records and waits
     sources_->estimateOut(estimateOf(222, 3000000, 4000000));
-    pickZooms(9, 11);              // the 400 ms timer is now waiting...
+    pickZooms(9, 11);              // the 400 ms timer is now waiting ...
     sources_->holdEstimate(false); // ... and run 2 ends before it fires: its result is for old inputs
     bool sawOld = false;
     ASSERT_TRUE(runUntil([&] {
@@ -2913,10 +3242,10 @@ TEST_F(DownloadTest, AJobFolderThatAlreadyExistsGetsTheSuffixMinusTwo) {
 
 // ---- the range in the job, LastZooms and the cost lines ----
 
-// The 10 `estimate` records of the captured run (cli-2026.10.14/run-continued.stdout, base + seamarks, zooms
+// The 10 `estimate` records of the captured run (cli-2026.11.1/run-continued.stdout, base + seamarks, zooms
 // 9-13).
 static std::string capturedEstimates() {
-    std::istringstream in(slurpText(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.14" / "run-continued.stdout"));
+    std::istringstream in(slurpText(fs::path(CG_FIXTURES_DIR) / "cli-2026.11.1" / "run-continued.stdout"));
     std::string out;
     for (std::string line; std::getline(in, line);)
         if (line.rfind("estimate\t", 0) == 0)
@@ -2933,6 +3262,7 @@ TEST_F(DownloadTest, TheRangeIsTheZoomListOfTheEstimateAndTheJobAndLastZoomsIsSa
         SCOPED_TRACE(row.zooms);
         fs::remove_all(jobsRoot());
         fs::remove_all(chartFolder());
+        fs::create_directories(chartFolder()); // a configured folder must exist
         sources_->holdRun(true);
         store_->setDisclaimerShown();
         sources_->estimateOut(estimate1950());
@@ -3035,8 +3365,11 @@ TEST_F(DownloadTest, TheLargestPageStillFitsEightHundredByFourEightyWithTheLonge
 
 // MEASURED on Xvfb in touch mode (48 px controls): the page with route rows, the imagery line
 // and the Harbour note is 668 x 591 before the cost line, the cost line adds one text line (610 high). So 800
-// x 480 is NOT met in touch mode. The test pins what the cost line adds (width within 800, one more text
-// line, the new controls are 48 px high).
+// x 480 is NOT met in touch mode; touch mode needs a separate layout. In the default (non-touch)
+// mode, with route rows, imagery line, range note and cost line shown and Advanced collapsed, the page
+// measures 668 x 494: the cost line breaks the 480 fit there (the non-touch
+// fit tests above stay at or below 480 only because they never show the cost line). The test pins what the
+// cost line adds (width within 800, the cost line adds one text line, the new controls are 48 px high).
 TEST_F(DownloadTest, InTouchModeTheCostLineAddsOneTextLineAndTheDropDownsAre48PixelsHigh) {
     ocpn_fake::touch = true;
     ocpn_fake::scale = 1.0;
@@ -3067,8 +3400,8 @@ TEST_F(DownloadTest, InTouchModeTheCostLineAddsOneTextLineAndTheDropDownsAre48Pi
         EXPECT_GE(c->GetMinSize().y, 48) << "inside the collapsed fold";
 }
 
-// 3, 5. Touch mode (48 px controls) on an 800 x 480 screen: the longest page (route rows,
-// imagery line, cost line, "One more level...") fits, its rows scroll, and the last row and Download stay
+// Touch mode (48 px controls) on an 800 x 480 screen: the longest page (route rows,
+// imagery line, cost line, "One more level ...") fits, its rows scroll, and the last row and Download stay
 // reachable. Measured before: the page 668 x 610, the dialog 952 x 547 after a job ended.
 class TouchFitTest : public DownloadTest {
 protected:
@@ -3103,6 +3436,43 @@ protected:
     wxTextCtrl* nameField() { return all<wxTextCtrl>().back(); }
     wxCollapsiblePane* fold() { return all<wxCollapsiblePane>().at(0); }
 };
+
+// the warning about the favourites file joins the imagery line and the terms note (Esri has both).
+TEST_F(TouchFitTest, ThePageWithTheWarningTheImageryLineAndTheTermsNoteFitsEightHundredByFourEighty) {
+    ocpn_fake::touch = true;
+    ocpn_fake::scale = 1.0;
+    store_->setDisclaimerShown();
+    removeFavourites();
+    saveLast([&](ConfigStore::LastChoice& c) { c.sourceGuid = kEsri; });
+    makeDialog();
+    ASSERT_NE(favWarning(), nullptr);
+    ASSERT_TRUE(shows(kImagery));
+    ASSERT_TRUE(shows(kTermsNote));
+    EXPECT_LE(dialog_->GetSize().x, 800);
+    EXPECT_LE(dialog_->GetSize().y, 480);
+    ASSERT_GT(body()->GetScrollRange(wxVERTICAL), body()->GetScrollThumb(wxVERTICAL)) << "the rows scroll";
+    ASSERT_EQ(favLinks().size(), 1u);
+    EXPECT_TRUE(clientRect().Contains(downloadButton()->GetScreenRect())) << "Download never scrolls away";
+    for (wxGenericHyperlinkCtrl* l : favLinks())
+        EXPECT_TRUE(reachable(l, false)) << "the link is whole and inside the page";
+    EXPECT_TRUE(reachable(favWarning(), false));
+    EXPECT_TRUE(reachable(all<wxChoice>().at(1), false));
+}
+
+// the page with the warning is at most 800 px wide, touch or not.
+TEST_F(TouchFitTest, TheWarningWithTheLinkIsNoWiderThanEightHundredInBothModes) {
+    for (const bool touch : {false, true}) {
+        SCOPED_TRACE(touch);
+        ocpn_fake::touch = touch;
+        ocpn_fake::scale = 1.0;
+        store_->setDisclaimerShown();
+        removeFavourites();
+        makeDialog();
+        ASSERT_EQ(favLinks().size(), 1u);
+        EXPECT_LE(dialog_->GetSize().x, 800);
+        destroyDialog();
+    }
+}
 
 TEST_F(TouchFitTest, TheLongestPageFitsInTouchModeAndScrollsToTheLastRowAndDownload) {
     longestPage();
@@ -3149,7 +3519,9 @@ TEST_F(TouchFitTest, AVeryLongPathOnTheStatusLineIsBrokenAndTheDialogStaysEightH
     std::string folder = (root_ / "a file").string();
     for (int i = 0; i < 12; ++i)
         folder += std::string("/very_long_directory_name_") + std::to_string(i);
-    setSettings([&](cg::Settings& s) { s.chartDir = folder; });
+    setenv("HOME", folder.c_str(),
+           1); // the default chart folder lies under the file; TearDown puts HOME back
+    setSettings([](cg::Settings& s) { s.chartDir.clear(); });
     store_->setDisclaimerShown();
     ready();
     ASSERT_TRUE(downloadButton()->IsEnabled());
@@ -3177,7 +3549,7 @@ TEST_F(TouchFitTest, AnExpandedAdvancedFoldScrollsAndDownloadStaysReachable) {
     EXPECT_TRUE(clientRect().Contains(downloadButton()->GetScreenRect()));
 }
 
-// item 4: the 480 px cap and the scrolling are touch mode only; the non-touch page keeps its natural
+// the 480 px cap and the scrolling are touch mode only; the non-touch page keeps its natural
 // size.
 TEST_F(TouchFitTest, InNonTouchModeTheLongestPageWithAdvancedExpandedIsNotCappedNorScrolled) {
     ocpn_fake::touch = false;
@@ -3227,12 +3599,15 @@ protected:
         setViewport(50, 50.2, 10, 10.4);
         sources_->estimateOut(estimateOf(1000, 0, 20000000));
     }
-    // The question the last pick opened (it opens from a posted event): waits for one to appear (hang guard
-    // only); nullptr when none came or when several are open.
+    // The question the last pick opened (a window shows when the toolkit says so, not at the call): waits
+    // until exactly one is shown; nullptr, with a failure naming the event, when that did not happen in time.
     Question* open() {
-        runUntil([] { return !qprobe::shown().empty(); });
+        const bool one = runUntil([] { return qprobe::shown().size() == 1; });
         const auto q = qprobe::shown();
-        return q.size() == 1 ? q[0] : nullptr;
+        if (!one)
+            ADD_FAILURE() << "timed out waiting for exactly one detail question to be shown; " << q.size()
+                          << " are shown";
+        return one ? q[0] : nullptr;
     }
     // The answer is delivered; the window goes at the next idle.
     void settle() {
@@ -3425,8 +3800,8 @@ TEST_F(DetailWarningTest, TheQuestionFitsEightHundredByFourEightyInTouchMode) {
 }
 
 // ---- Weather on top ----
-// The stand-in prints the lines of the real CLI 2026.10.14 `sources` output (tests/fixtures/cli-2026.10.14/
-// sources-bundled-all.stdout, 28 rows since ) unless a case edits one line; every edit is named at its
+// The stand-in prints the lines of the real CLI 2026.11.1 `sources` output (tests/fixtures/cli-2026.11.1/
+// sources-bundled-all.stdout, 81 rows) unless a case edits one line; every edit is named at its
 // test.
 
 const char* const kRainViewer = "{1A696D82-F258-41A4-BCD6-7648D9E08DE2}";
@@ -3438,20 +3813,31 @@ const char* const kGeoColour = "{FE84A175-2C0F-420F-86DF-5900DE16A33C}";
 const char* const kRainViewerCredit = "Weather data by RainViewer (https://www.rainviewer.com)";
 const char* const kCoverage =
     "Radar reaches about 80-130 NM off the coast; far offshore only satellite pictures show the weather.";
-// The five weather layers in the order of as the choice labels them (50 code points or
+// The five weather layers in the order, as the choice labels them (50 code points or
 // 47 + "...").
 const std::vector<std::string> kWeatherLabels = {
     "RainViewer radar (worldwide, current)", "DWD weather radar (Germany, North Sea and weste...",
     "NOAA nowCOAST weather radar (contiguous US)", "EUMETSAT H SAF precipitation rate H60B (Europe,...",
     "NASA IMERG precipitation rate (30 min, worldwide)"};
-// the seven other snapshot layers (NASA sea ice and SST, NOAA clouds, warnings, cyclones,
-// RTOFS currents east and west) come after the curated five, in the CLI's order:
+// the fifteen other snapshot layers (Copernicus currents and waves, FMI and
+// KNMI radar, NASA sea ice and SST, NOAA clouds, warnings, cyclones, OFS currents, RTOFS currents east and
+// west, STOFS 2D and 3D water levels) come after the curated five, in the CLI's order:
 // `sources-bundled-all.stdout` lists them sorted by name.
-const std::vector<std::string> kNewWeatherLabels = {
-    "NASA sea ice concentration (daily, MUR)",         "NASA sea surface temperature (daily, MUR)",
-    "NOAA nowCOAST clouds, infrared (worldwide)",      "NOAA nowCOAST NWS watches and warnings (US)",
-    "NOAA nowCOAST tropical cyclones (active storms)", "NOAA RTOFS surface currents (eastern Pacific)",
-    "NOAA RTOFS surface currents (western Atlantic)"};
+const std::vector<std::string> kNewWeatherLabels = {"Copernicus currents (North-West European shelf)",
+                                                    "Copernicus currents with tide (global)",
+                                                    "Copernicus significant wave height (global)",
+                                                    "FMI weather radar (Finland)",
+                                                    "KNMI weather radar (Netherlands)",
+                                                    "NASA sea ice concentration (daily, MUR)",
+                                                    "NASA sea surface temperature (daily, MUR)",
+                                                    "NOAA nowCOAST clouds, infrared (worldwide)",
+                                                    "NOAA nowCOAST NWS watches and warnings (US)",
+                                                    "NOAA nowCOAST tropical cyclones (active storms)",
+                                                    "NOAA OFS surface currents (US bays and coasts)",
+                                                    "NOAA RTOFS surface currents (eastern Pacific)",
+                                                    "NOAA RTOFS surface currents (western Atlantic)",
+                                                    "NOAA STOFS-2D peak water level (global)",
+                                                    "NOAA STOFS-3D surge water level (US coasts)"};
 // The whole choice of the unedited fixture.
 std::vector<std::string> allWeatherLabels() {
     std::vector<std::string> all = kWeatherLabels;
@@ -3497,7 +3883,7 @@ protected:
         return lines;
     }
     // The stand-in prints the fixture of `dir`, after `edit`.
-    void useFixture(const char* dir = "cli-2026.10.14",
+    void useFixture(const char* dir = "cli-2026.11.1",
                     const std::function<void(std::vector<std::string>&)>& edit = {}) {
         std::vector<std::string> lines = fixture(dir);
         if (edit)
@@ -3509,7 +3895,7 @@ protected:
     }
     // Field `n` (0 = "source") of the fixture line of `guid`.
     std::string fieldOf(const char* guid, int n) const {
-        for (const std::string& l : fixture("cli-2026.10.14"))
+        for (const std::string& l : fixture("cli-2026.11.1"))
             if (l.find(std::string("\t") + guid + "\t") != std::string::npos) {
                 std::vector<std::string> f;
                 std::istringstream in(l);
@@ -3529,14 +3915,14 @@ protected:
             out.push_back(u(weatherChoice()->GetString(i)));
         return out;
     }
-    // The shown weather line 1 ("Made as its own chart..."), else "".
+    // The shown weather line 1 ("Made as its own chart ..."), else "".
     std::string weatherLine() {
         for (wxStaticText* s : all<wxStaticText>())
             if (s->IsShown() && u(s->GetLabel()).rfind("Made as its own chart", 0) == 0)
                 return u(s->GetLabel());
         return "";
     }
-    // The detail note: "Detail set under Advanced..." or "... has detail only up to...", else "".
+    // The detail note: "Detail set under Advanced ..." or "... has detail only up to ...", else "".
     std::string sourceLimitLine() {
         for (wxStaticText* s : all<wxStaticText>())
             if (s->IsShown() && u(s->GetLabel()).find(" has detail only up to ") != std::string::npos)
@@ -3562,6 +3948,50 @@ protected:
     }
 };
 
+// Weather on top follows the weather rows of favourite-sources.conf (a GUID without a record is
+// skipped), then the CLI order; with no file it is the CLI order alone and the seamarks checkbox is disabled.
+TEST_F(PanelWeatherTest, TheWeatherChoiceFollowsTheFilesWeatherRowsThenTheCliOrder) {
+    const std::vector<std::string>& w = kWeatherLabels;
+    const std::vector<std::string>& n = kNewWeatherLabels;
+    // the fixture's own order (sorted by name)
+    const std::vector<std::string> cliOrder = {n[0],  n[1],  n[2],  w[1],  w[3],  n[3], n[4],
+                                               w[4],  n[5],  n[6],  n[7],  n[8],  n[9], w[2],
+                                               n[10], n[11], n[12], n[13], n[14], w[0]};
+    const std::vector<std::string> afterFile = {n[0], n[1], n[2], w[1],  n[3],  n[4],  n[5],  n[6], n[7],
+                                                n[8], n[9], w[2], n[10], n[11], n[12], n[13], n[14]};
+    std::vector<std::string> fromFile = {w[4], w[3], w[0]};
+    fromFile.insert(fromFile.end(), afterFile.begin(), afterFile.end());
+    struct Case {
+        const char* what;
+        std::string conf; // "" = no file
+        std::vector<std::string> expected;
+        bool seamarks;
+    };
+    const std::vector<Case> cases = {
+        {"the file's rows first",
+         std::string("format\t1\nweather\t") + kImerg + "\nweather\t" + kYandex + "\nweather\t" + kH60b +
+             "\nweather\t" + kRainViewer + "\nseamarks\t" + kSeamarkLayer + "\n",
+         fromFile, true},
+        {"no weather rows: the CLI order", std::string("format\t1\nseamarks\t") + kSeamarkLayer + "\n",
+         cliOrder, true},
+        {"no file: the CLI order, no seamarks layer", "", cliOrder, false},
+    };
+    for (const Case& c : cases) {
+        SCOPED_TRACE(c.what);
+        if (c.conf.empty())
+            removeFavourites();
+        else
+            writeFavourites(c.conf);
+        useFixture();
+        makeDialog();
+        waitEstimate();
+        EXPECT_EQ(weatherEntries(), c.expected);
+        EXPECT_EQ(seamarks()->IsEnabled(), c.seamarks);
+        EXPECT_EQ(shows(kSeamarksMissing), !c.seamarks);
+        destroyDialog();
+    }
+}
+
 // Proof 1: a stand-in without field 11: no control, and the page is lower than the page of a CLI with field
 // 11 (the weather row shown) by at least one control height. Sizes are compared in one run (no pixel
 // constant: fonts and theme differ per machine).
@@ -3572,7 +4002,7 @@ TEST_F(PanelWeatherTest, WithoutFieldElevenThereIsNoWeatherControlAndThePageKeep
     });
     // The dialog size after the stand-in printed the lines of the fixture, `edit`ed.
     const auto sizeWith = [&](const std::function<void(std::vector<std::string>&)>& edit) {
-        useFixture("cli-2026.10.14", edit);
+        useFixture("cli-2026.11.1", edit);
         makeDialog();
         waitEstimate();
         const wxSize size = dialog_->GetSize();
@@ -3631,7 +4061,7 @@ TEST_F(PanelWeatherTest,
         EXPECT_EQ(u(weatherChoice()->GetToolTipText()), fullNames[i]);
     }
     destroyDialog();
-    useFixture("cli-2026.10.14", [&](std::vector<std::string>& lines) {
+    useFixture("cli-2026.11.1", [&](std::vector<std::string>& lines) {
         editLine(lines, kDwd, "\tok\t", std::string("\t") + kRefusedVerdict + "\t");
     });
     makeDialog();
@@ -3663,7 +4093,7 @@ TEST_F(PanelWeatherTest, TickingShowsTheScaleAndCreditLineAndTheCoverageLineAndU
     EXPECT_FALSE(shows(kCoverage));
     EXPECT_FALSE(weatherChoice()->IsEnabled());
     destroyDialog();
-    useFixture("cli-2026.10.14",
+    useFixture("cli-2026.11.1",
                [&](std::vector<std::string>& lines) { editLine(lines, kRainViewer, kRainViewerCredit, ""); });
     makeDialog();
     waitEstimate();
@@ -3704,11 +4134,11 @@ TEST_F(PanelWeatherTest, LastWeatherAndItsSourceSelectTheLayerAndCloseSavesNothi
     EXPECT_EQ(weatherChoice()->GetSelection(), 0) << "a GUID that is not listed: the first layer";
 }
 
-// . Edited fixture lines (hand-made from the RainViewer line): an extra layer with another GUID
+// Edited fixture lines (hand-made from the RainViewer line): an extra layer with another GUID
 // and a Cyrillic name put FIRST in CLI order; the RainViewer line dropped.
 TEST_F(PanelWeatherTest, TheShippedLayersComeFirstInTheFixedOrderAndRainViewerIsTheDefault) {
     const char* const kExtra = "{00000000-0000-4000-8000-0000000000AA}";
-    useFixture("cli-2026.10.14", [&](std::vector<std::string>& lines) {
+    useFixture("cli-2026.11.1", [&](std::vector<std::string>& lines) {
         std::string extra;
         for (const std::string& l : lines)
             if (l.find(kRainViewer) != std::string::npos)
@@ -3727,7 +4157,7 @@ TEST_F(PanelWeatherTest, TheShippedLayersComeFirstInTheFixedOrderAndRainViewerIs
     EXPECT_EQ(weatherEntries(), expected);
     EXPECT_EQ(weatherChoice()->GetSelection(), 0) << "no LastWeatherSource: RainViewer";
     destroyDialog();
-    useFixture("cli-2026.10.14", [&](std::vector<std::string>& lines) {
+    useFixture("cli-2026.11.1", [&](std::vector<std::string>& lines) {
         lines.erase(
             std::remove_if(lines.begin(), lines.end(),
                            [&](const std::string& l) { return l.find(kRainViewer) != std::string::npos; }),
@@ -3740,9 +4170,9 @@ TEST_F(PanelWeatherTest, TheShippedLayersComeFirstInTheFixedOrderAndRainViewerIs
     EXPECT_EQ(u(weatherChoice()->GetString(0)), kWeatherLabels[1]) << "without RainViewer: DWD";
 }
 
-// and 3.
+//
 TEST_F(PanelWeatherTest, TheWeatherPicturesAreBasesAfterTheCuratedMapsWithoutImageryLineTermsNoteOrSeamarks) {
-    useFixture("cli-2026.10.14", dropMarine);
+    useFixture("cli-2026.11.1", dropMarine);
     makeDialog();
     waitEstimate();
     const std::string geoLabel = "EUMETSAT MTG GeoColour (Europe, Africa, Atlanti...";
@@ -3775,7 +4205,7 @@ TEST_F(PanelWeatherTest, TheWeatherPicturesAreBasesAfterTheCuratedMapsWithoutIma
     EXPECT_TRUE(shows(kImagery));
 }
 
-// the test GUIDs are the fixture's; kind and field 11 as the spec's tables say.
+// the test GUIDs are the fixture's; kind and field 11 as the CLI prints them.
 TEST_F(PanelWeatherTest, EveryGuidOfTheSpecTablesIsInTheFixtureWithKindAndSnapshot) {
     for (const char* g : {kRainViewer, kDwd, kNowcoast, kH60b, kImerg}) {
         EXPECT_EQ(fieldOf(g, 2), "layer") << g;
@@ -3906,7 +4336,7 @@ TEST_F(PanelWeatherTest, AnExistingWeatherFileAloneAsksToReplace) {
     EXPECT_EQ(jobDirs().size(), 1u);
 }
 
-// A weather file under the old name ("T:x" kept its colon) no longer asks. The table above has no
+// A weather file under the earlier name ("T:x" kept its colon) no longer asks. The table above has no
 // weather control (no field 11), so the weather row of it lives here.
 TEST_F(PanelWeatherTest, AnOldNamedWeatherFileDoesNotAskToReplace) {
     useFixture();
@@ -3930,7 +4360,7 @@ TEST_F(PanelWeatherTest, AnOldNamedWeatherFileDoesNotAskToReplace) {
 // Proof 8. Edited fixture line: the seamark layer's maxZoom (field 13, empty) set to 6; hand-made from the
 // real line.
 TEST_F(PanelWeatherTest, TheSeamarkLayersLimitAddsItsZoomAndTheEstimateAndJobIniCarryTheList) {
-    useFixture("cli-2026.10.14", [&](std::vector<std::string>& lines) {
+    useFixture("cli-2026.11.1", [&](std::vector<std::string>& lines) {
         editLine(lines, kSeamarkLayer, "CC-BY-SA\t", "CC-BY-SA\t6");
     });
     store_->setDisclaimerShown();
@@ -4005,8 +4435,8 @@ TEST_F(PanelWeatherTest, AStaticBasesCreditIsItsLicenseAndItIsNoWeatherChart) {
 }
 
 // Proof 3 (touch): route rows, the imagery line, a Detail note and the weather row with the longest credit
-// still fit 800 x 480 by 's rule: the dialog is at most 800 x 480, the rows scroll, the status line and
-// Close / Download stay in view.
+// still fit 800 x 480 by the earlier rule: the dialog is at most 800 x 480, the rows scroll, the status line
+// and Close / Download stay in view.
 class PanelWeatherTouchTest : public TouchFitTest {};
 
 TEST_F(PanelWeatherTouchTest, TheLongestCreditStillFitsEightHundredByFourEightyAndScrolls) {
@@ -4014,7 +4444,7 @@ TEST_F(PanelWeatherTouchTest, TheLongestCreditStillFitsEightHundredByFourEightyA
     ocpn_fake::scale = 1.0;
     store_->setDisclaimerShown();
     sources_->rawRecords(
-        slurpText(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.14" / "sources-bundled-all.stdout"));
+        slurpText(fs::path(CG_FIXTURES_DIR) / "cli-2026.11.1" / "sources-bundled-all.stdout"));
     sources_->holdRun(true);
     addRoute("cccccccc-0000-4000-8000-000000000003", "Long", {{45.0, 0.0}, {46.0, 10.0}});
     saveLast([&](ConfigStore::LastChoice& c) {
@@ -4063,7 +4493,7 @@ TEST_F(PanelWeatherTouchTest, TheLongestCreditStillFitsEightHundredByFourEightyA
 }
 
 // ---- Marine vessel-density layers ----
-// The stand-in prints tests/fixtures/cli-2026.10.14/sources-bundled-all.stdout: it holds the two
+// The stand-in prints tests/fixtures/cli-2026.11.1/sources-bundled-all.stdout: it holds the two
 // vessel-density records of data/sources/Marine (kind layer, maxZoom 9), verbatim.
 const char* const kVesselAll = "{99D06D6A-F7FA-4F06-8C00-D9F96307C0F3}";
 const char* const kVesselSailing = "{478CBB2F-70D1-4573-8C50-B5361CE2AA46}";
@@ -4072,7 +4502,7 @@ const char* const kVesselAllName = "EMODnet vessel density 2023, all ship types 
 class PanelVesselTest : public PanelWeatherTest {
 protected:
     void useVessels(const std::function<void(std::vector<std::string>&)>& edit = {}) {
-        useFixture("cli-2026.10.14", edit);
+        useFixture("cli-2026.11.1", edit);
     }
 };
 
@@ -4107,7 +4537,7 @@ TEST_F(PanelVesselTest, TheTwoLayersFollowTheWeatherBasesAndDownloadRunsThemAsAB
 
 // Proof 3: a CLI without them leaves the choice as it was; a refused record is not offered.
 TEST_F(PanelVesselTest, WithoutTheRecordsOrWithARefusedOneTheChoiceIsUnchanged) {
-    useFixture("cli-2026.10.14", dropMarine);
+    useFixture("cli-2026.11.1", dropMarine);
     makeDialog();
     waitEstimate();
     EXPECT_EQ(entries().size(), 8u);

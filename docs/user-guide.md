@@ -33,7 +33,7 @@ Chart Grabber has two parts:
 
 ## Install
 
-You need OpenCPN 5.10.2 or newer. The Chart Grabber CLI 2026.10.14 is inside the plugin file on every system, so there is nothing else to install. The plugin always uses this bundled CLI unless you choose another one in [Settings](#settings-reference), for example one you installed from the CLI's `.deb` or Windows zip for your own scripts.
+You need OpenCPN 5.10.2 or newer. The Chart Grabber CLI 2026.11.1 is inside the plugin file on every system, so there is nothing else to install. The plugin always uses this bundled CLI unless you choose another one in [Settings](#settings-reference), for example one you installed from the CLI's `.deb` or Windows zip for your own scripts.
 
 **Getting OpenCPN:**
 
@@ -111,24 +111,59 @@ Chart Grabber does not run on OpenCPN for Android. Make the charts on a PC or a 
 
 ## Bundled charts
 
-28 sources come with the plugin, in seven groups (the menus under **Chart**).
+81 sources come with the plugin, in seven groups (the menus under **Chart**).
 
 | Group | Source | What it is for | Area |
 |---|---|---|---|
 | Nautical charts | Norway sea chart (Kartverket, not for navigation) | Planning passages along the coast and skerries | Norway |
 | Nautical charts | Finland sea chart (Traficom, not for navigation) | Planning archipelago routes and harbour approaches | Finland |
-| Nautical charts | NOAA chart (US coast, not for navigation) | US chart picture for planning; for ENC, OpenCPN's Chart Downloader | US coast |
+| Nautical charts | NOAA chart (US coast, not for navigation) | US chart picture for planning. For official US charts with updates, use OpenCPN's Chart Downloader (Options → Charts → Chart Downloader). This NOAA source is a picture of the same charts for viewing next to other layers. | US coast |
+| Nautical charts | CHS chart (Canada coast, not for navigation) | Canadian chart picture for planning; no free CHS ENC in OpenCPN's Chart Downloader | Canadian waters |
+| Nautical charts | IH chart (Portugal coast, not for navigation) | Portuguese chart picture for planning; non-commercial (CC BY-NC-SA) | Portuguese waters |
 | Seamarks and traffic | OpenSeaMap Seamarks | Buoys, lights and beacons on top of any chart | Worldwide |
 | Seamarks and traffic | EMODnet vessel density 2023, all ship types (AIS, European seas) | Where the shipping lanes and busy waters are, 2023 average | European seas |
 | Seamarks and traffic | EMODnet vessel density 2023, sailing and pleasure craft (AIS, European seas) | Popular yacht routes and cruising grounds, 2023 average | European seas |
+| Seamarks and traffic | SHOM buoyage (France) | Buoys and beacons from SHOM on top of any chart; not for navigation | France |
+| Seamarks and traffic | SHOM wrecks and obstructions (France) | Wrecks and obstructions; not for navigation | France |
+| Seamarks and traffic | SHOM navigation rules and zones (France) | Speed limits, prohibited and regulated zones; not for navigation | France |
 | Depth | EMODnet Bathymetry (European seas, depth shading) | Planning approaches and anchoring depths; not for navigation | European seas |
 | Depth | EMODnet Bathymetry (world) | Seabed depths for passage planning; not for navigation | Worldwide |
 | Depth | GEBCO bathymetry (world) | Coarse ocean depth: shelf edge, seamounts; not for navigation | Worldwide |
 | Depth | NOAA BlueTopo bathymetry (US coast) | Nearshore depths for approaches and anchoring; not for navigation | US coast |
+| Depth | CHS NONNA-10 bathymetry (Canadian waters) | Surveyed depths for Canadian anchorages and approaches; patchy inshore; not for navigation | Canadian waters |
+| Depth | SHOM Litto3D lidar depth, Martinique 2016 | Lidar depths of shallows, reefs and anchorages; not for navigation | Martinique |
+| Depth | SHOM Litto3D lidar depth, Guadeloupe 2016 | Lidar depths of shallows, reefs and anchorages; not for navigation | Guadeloupe |
+| Depth | SHOM Litto3D lidar depth, Saint-Martin 2019 | Lidar depths of shallows, reefs and anchorages; not for navigation | Saint-Martin |
+| Depth | SHOM Litto3D lidar depth, Saint-Barthélemy 2019 | Lidar depths of shallows, reefs and anchorages; not for navigation | Saint-Barthélemy |
+| Depth | SHOM lidar depth, Corsica 2017-2018 | Lidar depths of coves and anchorages; not for navigation | Corsica |
+| Depth | SHOM 100 m depth, Guadeloupe and Martinique | Offshore depth model on a 100 m grid; not for navigation | Guadeloupe, Martinique |
+| Depth | SHOM 100 m depth, Saint-Martin, Saint-Barthélemy | Offshore depth model on a 100 m grid; not for navigation | Saint-Martin, Saint-Barthélemy |
+| Depth | SHOM 100 m depth, Corsica | Offshore depth model on a 100 m grid; not for navigation | Corsica |
+| Depth | SHOM 100 m depth, Gulf of Lion and Côte d'Azur | Offshore depth model on a 100 m grid; not for navigation | Gulf of Lion, Côte d'Azur |
+| Depth | SHOM lidar depth, Bora Bora 2015 | Lidar depths of the lagoon and passes; not for navigation | Bora Bora |
+| Depth | SHOM coastal depth model, Tahiti | Coastal depth model of the lagoon and passes; not for navigation | Tahiti |
+| Depth | SHOM coastal depth model, Moorea | Coastal depth model of the lagoon and passes; not for navigation | Moorea |
+| Depth | SHOM 100 m depth, Tahiti and Moorea | Offshore depth model on a 100 m grid; not for navigation | Tahiti, Moorea |
+| Depth | SHOM 100 m depth, New Caledonia | Offshore depth model on a 100 m grid; not for navigation | New Caledonia |
+| Depth | SHOM seabed type (France) | Sand, mud or rock: the holding ground for anchoring; not for navigation | French coasts |
+| Depth | Satellite-derived depth (Pacific islands, DEP) | Approximate depths from satellite over reefs and lagoons; not for navigation | Pacific islands |
 | Satellite | Sentinel-2 Cloudless 2025 (EOX) | Reef edges, banks, passes where charts are poor | Worldwide |
 | Satellite | USGS Imagery (USA) | Reef edges, banks and pass entrances in US waters | USA |
-| Satellite | Esri World Imagery (greyed) | Sharper reef and anchorage imagery; greyed by Esri's terms | Worldwide |
-| Coast and land | OpenTopoMap (greyed) | Coastline, hills and landmarks ashore; greyed at server's request | Worldwide |
+| Satellite | IGN orthophoto 20 cm (France and overseas) | Anchorages, sand and weed patches, harbour approaches | France, Corsica, French Antilles and other overseas departments |
+| Satellite | PNOA orthophoto (Spain, Balearics, Canaries) | Calas and anchorages, harbour layout | Spain, Balearics, Canaries |
+| Satellite | PDOK aerial photo (Netherlands) | Wadden shoals and gullies, harbour entrances; two flights a year | Netherlands |
+| Satellite | Satellite mosaic 2025 (Pacific islands, DEP) | Cloud-free satellite picture of islands and reefs, 10 m | Pacific islands |
+| Satellite | Regione Toscana orthophoto 2023 (Tuscany, Elba) | Sharp 20 cm photo of Tuscan anchorages and Elba; draws from about zoom 13 | Tuscany, Elba |
+| Satellite | theLIST orthophoto (Tasmania) | Aerial photo of Tasmanian anchorages; non-commercial use, tiles unaltered | Tasmania |
+| Satellite | IDE Uruguay orthophoto 2017-18 (Uruguay coast) | Sharp 32 cm photo of the whole Uruguayan shore: harbour entrances and anchorages | Uruguay, Río de la Plata |
+| Satellite | IGN Argentina aerial photo (Buenos Aires, Paraná, towns) | Sharp aerial photos of yacht-club approaches; patches only, draws from zoom 11 | Buenos Aires, Paraná, Necochea, Río Gallegos, Río Grande |
+| Satellite | Esri World Imagery | Sharp satellite picture worldwide: anchorages, reefs and passes; use within Esri's terms | Worldwide |
+| Coast and land | OpenTopoMap | Land relief along the shore: what gives shelter, where squalls come down; light use at the server's request | Worldwide |
+| Coast and land | IDEIB Posidonia and protected seabed (Balearics) | Posidonia meadows and the Decree 25/2018 zones where anchoring is regulated; informative | Balearics |
+| Coast and land | EMODnet seagrass and Caribbean seabed | Seagrass meadows to avoid when anchoring; a hint, not a no-anchor line | European seas, Caribbean |
+| Coast and land | EMODnet MPAs and Natura 2000 (European seas) | Marine protected areas and Natura 2000 sites; check the local rules | European seas |
+| Coast and land | Queensland marine parks, moorings, reef markers | State marine park zones, public moorings and reef protection markers; not federal GBR zoning | Queensland coast |
+| Coast and land | IGN Argentina protected areas | National and provincial protected areas on land and at sea; check the local rules | Argentina |
 | Weather now | DWD weather radar (Germany, North Sea and western Baltic coasts) | Rain showers coming your way, new every 5 min | German coasts |
 | Weather now | EUMETSAT MTG GeoColour (Europe, Africa, Atlantic; clouds day and night) | Clouds and fronts day and night, new every 10 min | Europe, Africa, Atlantic |
 | Weather now | EUMETSAT H SAF precipitation rate H60B (Europe, Africa, Atlantic) | Where it is raining now, new every 15 min | Europe, Africa, Atlantic |
@@ -139,10 +174,32 @@ Chart Grabber does not run on OpenCPN for Android. Make the charts on a PC or a 
 | Weather now | NOAA nowCOAST tropical cyclones (active storms) | Storm track and cone; empty when no storm is active | Where storms are active |
 | Weather now | NOAA nowCOAST weather radar (contiguous US) | Rain and thunderstorms near US coasts now | US waters |
 | Weather now | RainViewer radar (worldwide, current) | Rain near the coast now; none offshore; personal use | Worldwide, near radars |
+| Weather now | NASA GOES-East GeoColor (Americas, Atlantic) | Clouds day and night every 10 min; about an hour old | Americas, western Atlantic |
+| Weather now | NASA GOES-West GeoColor (Pacific, Americas) | Clouds day and night every 10 min; about an hour old | Eastern Pacific, Americas |
+| Weather now | NASA GOES-East infrared (Americas, Atlantic) | Cloud tops and thunderstorms, day and night | Americas, western Atlantic |
+| Weather now | NASA GOES-West infrared (Pacific, Americas) | Cloud tops and thunderstorms, day and night | Eastern Pacific, Americas |
+| Weather now | NOAA STOFS-3D surge water level (US coasts) | Storm surge water level, the hour nearest now; guidance only | US Atlantic, Gulf and Pacific coasts |
+| Weather now | NOAA STOFS-2D peak water level (global) | Peak water level contours of the latest forecast; guidance only | Worldwide coasts |
+| Weather now | FMI weather radar (Finland) | Rain showers coming your way, new every 5 min | Finnish coasts |
+| Weather now | KNMI weather radar (Netherlands) | Rain showers coming your way, new every 5 min | Dutch coasts |
 | Ocean | NASA sea surface temperature (daily, MUR) | Gulf Stream and eddies before a crossing; 1-2 days old | Worldwide |
 | Ocean | NASA sea ice concentration (daily, MUR) | Ice edge for high-latitude cruising | Polar seas |
 | Ocean | NOAA RTOFS surface currents (eastern Pacific) | Model currents for planning a crossing; forecast, not measured | US West coast, eastern Pacific |
 | Ocean | NOAA RTOFS surface currents (western Atlantic) | Model currents for planning a crossing; forecast, not measured | US East coast, western Atlantic |
+| Ocean | SHOM tidal range, spring tides (France) | How far the tide rises and falls at mean spring tides (coefficient 95) | French coasts |
+| Ocean | SHOM tidal range, neap tides (France) | How far the tide rises and falls at mean neap tides (coefficient 45) | French coasts |
+| Ocean | SHOM tidal stream, maximum speed (French coasts) | Where tidal streams run strongest; plan races and headlands | French coasts |
+| Ocean | SHOM surface currents, 3D model (Channel) | Surface currents of SHOM's 3D model | Channel |
+| Ocean | SHOM surface currents, 3D model (Fromveur, Ushant) | Surface currents of SHOM's 3D model in the Fromveur passage | Ushant |
+| Ocean | SHOM tide zones (France) | Which tide zone applies where | French coasts |
+| Ocean | NOAA OFS surface currents (US bays and coasts) | Currents in US bays and approaches, the hour nearest now; forecast, not measured | Chesapeake, Delaware, Gulf of Maine, northern Gulf of Mexico, Tampa Bay, San Francisco Bay, US West coast |
+| Ocean | Copernicus currents with tide (global) | Model currents including tides for passage planning; forecast, not measured | Worldwide |
+| Ocean | Copernicus currents (North-West European shelf) | Tidal currents of the Channel, North Sea and Irish Sea at 1.5 km; forecast | North-West European shelf |
+| Ocean | Copernicus significant wave height (global) | Significant wave height forecast for passage planning | Worldwide |
+
+Croatia DGU orthophoto is planned, added on request.
+
+CHS NONNA-10: downloading accepts the CHS NONNA Licence; a chart file you make from it and pass on must carry the notice of its clause 7 with your name.
 
 - **Not for navigation**: everything in the Nautical charts and Depth groups is a picture of a chart or of depths, not a chart to navigate by.
 - **Satellite**: Sentinel-2 (10 m) and USGS show reef edges, banks and passes, not single coral heads.
@@ -166,6 +223,8 @@ Chart Grabber does not run on OpenCPN for Android. Make the charts on a PC or a 
 - Tick **Weather on top** and pick a layer (rain radar, clouds, precipitation). It is made as a separate chart.
 - Radar reaches about 80-130 NM off the coast; far offshore, only satellite pictures show the weather.
 - In My charts, **More...**, **Update to latest weather** fetches the newest picture as a new chart named with its time.
+- On Windows the new picture is written to a file whose name may end in " (2)" (OpenCPN keeps the old file open); Chart Grabber removes the old file itself, when OpenCPN lets go of it.
+- **Update all weather charts** (My charts, left of Close) updates every weather chart one after another and then refreshes OpenCPN's chart list once. **Stop** stops the rest; the result line says how many charts were updated, unchanged, failed (with their names), skipped or not started.
 
 ![Rain radar (RainViewer) over the Norway sea chart](images/weather.png)
 
@@ -178,9 +237,9 @@ Chart Grabber does not run on OpenCPN for Android. Make the charts on a PC or a 
 
 ## Your own sources
 
-- The 28 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
+- The 81 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
 - Add your own `.zmp` source folders to `Charts/Chart sources` in your home folder (Settings, **Chart sources**, **Open folder** creates it), or pick another folder with **Change...**. They are read after the bundled ones.
-- Sources that need a key, and Navionics, are not bundled: put the source folder there and enter your key where its file says `KEY`.
+- Sources that need a key are not bundled: put the source folder there and enter your key where its file says `KEY`.
 
 ### Where to find more sources
 
@@ -221,7 +280,7 @@ OpenCPN, Options, Plugins, Chart Grabber, **Preferences**.
 | Symptom | Fix |
 |---|---|
 | "Chart Grabber CLI was not found" | Import the plugin file of this release again (the CLI is inside it), or choose the CLI under Advanced in Settings. |
-| "Chart Grabber CLI ... is too old" | Import the plugin file of this release (it carries CLI 2026.10.14), or choose a CLI 2026.10.9 or newer under Advanced in Settings. |
+| "Chart Grabber CLI ... is too old" | Import the plugin file of this release (it carries CLI 2026.11.1), or choose a CLI 2026.10.9 or newer under Advanced in Settings. |
 | Chart added but not visible | Click it in the chart bar; turn on OpenGL (Options > Display > Advanced). |
 | Source greyed in More sources, or Seamarks on top disabled | It cannot be made into an OpenCPN chart; the text beside it says why. |
 | "Area too large for this detail" | Choose a smaller area or less detail. |
@@ -229,6 +288,7 @@ OpenCPN, Options, Plugins, Chart Grabber, **Preferences**.
 | "OpenCPN from Flathub can only keep charts inside your home folder" | Flatpak OpenCPN cannot write outside your home folder: choose a chart folder inside it under Settings, Advanced, **Save charts in**. |
 | Import plugin refuses the tarball | Check the [system table](#install) and that you have OpenCPN 5.10.2 or newer. |
 | macOS asks "OpenCPN was prevented from modifying apps" or for local network access | Deny or ignore it: in our macOS test (OpenCPN 5.12.4) nothing broke. The local network prompt appears when OpenCPN is started from a terminal app. |
+| "The list of favourite chart sources is missing or damaged" | The first entries of **Chart** and the order of **Weather on top** come from the file `favourite-sources.conf` in the plugin's data folder; the warning shows its full path and the reason. Until it is repaired, Chart Grabber uses the lines it can read, your last source and **More sources...**; downloading works. To repair it with internet (a phone will do): click **Download a fresh copy** under the warning (it opens the file of your plugin version), download the file, save it over the old one under the same name, then press **Reload** in **More sources...**. Without internet: import the plugin tarball of your version again from your saved copy (Options, Plugins, **Import plugin...**, see [Install by Import](#install-by-import)); this puts back every file of the plugin. |
 
 ### Uninstall
 

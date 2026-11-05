@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "guid": "{B645CE30-A8D2-4B40-9E04-6823908F8EF3}",
+  "name": "CHS NONNA-10 bathymetry (Canadian waters)",
+  "group": "Depth",
+  "url": "https://nonna-geoserver.data.chs-shc.ca/geoserver/gwc/service/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=nonna:NONNA%2010&STYLE=&FORMAT=image/png&TILEMATRIXSET=EPSG:900913&TILEMATRIX=EPSG:900913:{z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Depth_CHS_NONNA_10_Canada",
+  "license": "Contains intellectual property of the Canadian Hydrographic Service (CHS), Fisheries and Oceans Canada; CHS NONNA Licence and Open Government Licence - Canada. Not for navigation.",
+  "maxConnections": 2,
+  "maxZoom": 16,
+  "navigationWarning": true
+}

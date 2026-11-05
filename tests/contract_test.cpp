@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The plugin's own runner and parsers against a real
+// Contract test: the plugin's own runner and parsers against a real
 // CLI. Skipped unless CG_CLI and CG_MAPS are set. Environment: CG_CLI (program), CG_MAPS (--maps), CG_BBOX
 // (west,south,east,north; default -1.5,50.5,-1.0,50.9), CG_ZOOMS (default 0-2), CG_RUN=1 (also download and
-// export), CG_OQ6=1 with CG_RUN=1 (OQ-6: an estimate beside a running download, CG_OQ6_ZOOMS, default 13-14,
+// export), CG_OQ6=1 with CG_RUN=1 (an estimate beside a running download, CG_OQ6_ZOOMS, default 13-14,
 // at most 900 tiles, one thread). --cache is always a fresh temp directory, never the user's.
 #include "cli_runner.h"
 #include "job_files.h"
@@ -139,8 +139,8 @@ bool mentionsSqlite(const Result& r) {
     return false;
 }
 
-// The detector OQ-6 relies on: the real CLI prints no message at all when all is well, so the positive case
-// is proven here with made-up lines.
+// The detector the estimate-beside-a-download test relies on: the real CLI prints no message at all when all
+// is well, so the positive case is proven here with made-up lines.
 TEST(ContractHelpers, SqliteDetectorSeesLockedDatabaseAndIgnoresOtherMessages) {
     Result locked, fine;
     locked.lines.push_back(MessageLine{MessageLine::Kind::Error, "error: Database Is Locked"});
@@ -179,7 +179,7 @@ protected:
         bbox_ = *box;
         ASSERT_TRUE(probeCli(*cli, settings_))
             << "probeCli(" << *cli << ") failed: too old or not a tile program";
-        // : CLI 2026.10.13 creates the data folder (its fontconfig sysroot) already for `--version`;
+        // CLI 2026.10.13 creates the data folder (its fontconfig sysroot) already for `--version`;
         // DatadirEqualsFormCreatesTheFolder needs it absent.
         fs::remove_all(settings_.cliDataDir);
     }
@@ -293,6 +293,37 @@ TEST_F(MapsContractTest, TheUnionOfTwoFoldersAndTheLaterOneWinsADuplicate) {
     EXPECT_EQ(replaced, 1) << r.tail(6);
 }
 
+// the imagery rule and the Satellite folder rest on the group name "Satellite" never being
+// translated. The bundled sources listed under non-English UTF-8 locales: the Esri record keeps the group
+// `Satellite`.
+TEST_F(MapsContractTest, TheBundledGroupSatelliteIsNotTranslatedUnderANonEnglishLocale) {
+    const std::string esri = "{7B743985-BC5F-4AB6-8915-AC5DBBB8F552}";
+    settings_.cliMaps = {(fs::path(CG_SOURCE_DIR) / "data" / "sources").string()};
+    const char* const names[] = {"LANG", "LC_ALL"};
+    std::string old[2];
+    bool had[2];
+    for (int i = 0; i < 2; ++i) {
+        const char* v = std::getenv(names[i]);
+        had[i] = v != nullptr;
+        old[i] = v ? v : "";
+    }
+    for (const char* locale : {"de_DE.UTF-8", "ru_RU.UTF-8"}) {
+        SCOPED_TRACE(locale);
+        setenv("LANG", locale, 1);
+        setenv("LC_ALL", locale, 1);
+        Result r;
+        const bool ran = exec(r, sourcesArguments(settings_), false, 60000);
+        std::string group = "<no record>";
+        for (const SourceRecord& s : r.all<SourceRecord>())
+            if (s.guid == esri)
+                group = s.group;
+        EXPECT_TRUE(ran);
+        EXPECT_EQ(group, "Satellite");
+    }
+    for (int i = 0; i < 2; ++i)
+        had[i] ? setenv(names[i], old[i].c_str(), 1) : unsetenv(names[i]);
+}
+
 TEST_F(MapsContractTest, WithoutAnyMapsFolderTheCliRefusesWithExit3) {
     settings_.cliMaps.clear();
     Result r;
@@ -367,7 +398,7 @@ TEST_F(ContractTest, SourcesEstimateAndWhenAskedRunExport) {
 // stopped at once ends 143 with the CLI's own last line; with CG_RUN=1 a run stopped after its first progress
 // record ends 143 within the grace and the same run again ends 0. A kill would show as exit -9 and as a run
 // slower than the grace.
-// : the CLI honours the one-element --datadir=DIR form and creates the folder.
+// the CLI honours the one-element --datadir=DIR form and creates the folder.
 TEST_F(ContractTest, DatadirEqualsFormCreatesTheFolder) {
     ASSERT_FALSE(fs::exists(settings_.cliDataDir));
     Result sources;
@@ -422,11 +453,11 @@ TEST_F(ContractTest, StopThroughStdinGives143AndTheSessionContinues) {
     EXPECT_EQ(again.exitCode, 0) << again.tail(10);
 }
 
-// OQ-6: an estimate of the same source with the same --cache while a run downloads: both end with
+// An estimate of the same source with the same --cache while a run downloads: both end with
 // exit 0 and no SQLite error.
 TEST_F(ContractTest, EstimateBesideRunningDownloadSharesTheCache) {
     if (env("CG_RUN").value_or("") != "1" || env("CG_OQ6").value_or("") != "1") {
-        GTEST_SKIP() << "CG_RUN=1 and CG_OQ6=1 are not both set: OQ-6 is NOT run";
+        GTEST_SKIP() << "CG_RUN=1 and CG_OQ6=1 are not both set: the test is NOT run";
     }
     const auto zooms = parseZooms(env("CG_OQ6_ZOOMS").value_or("13-14"));
     ASSERT_TRUE(zooms);

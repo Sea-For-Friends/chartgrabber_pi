@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{C72F0919-06A3-4653-A452-02241CB692C0}",
+  "name": "SHOM Litto3D lidar depth, Saint-Martin 2019",
+  "group": "Depth",
+  "layer": true,
+  "url": "https://services.data.shom.fr/INSPIRE/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=LITTO3D_STMARTIN_2019_PYR_3857_WMTS&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Depth_SHOM_Litto3D_Saint_Martin",
+  "license": "© Shom / IGN — Litto3D® / HOMONIM, Licence Ouverte 2.0. Non certifié pour la navigation",
+  "maxConnections": 2,
+  "maxZoom": 17,
+  "navigationWarning": true
+}

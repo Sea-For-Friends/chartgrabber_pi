@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{0B84A398-3EA3-420D-8322-839AF8D5E6BB}",
+  "name": "theLIST orthophoto (Tasmania)",
+  "group": "Satellite",
+  "url": "https://services.thelist.tas.gov.au/arcgis/rest/services/Basemaps/Orthophoto/MapServer/tile/{z}/{y}/{x}",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_Tasmania_LIST_Ortho",
+  "license": "Creative Commons BY-NC-ND 3.0 AU © State of Tasmania",
+  "maxConnections": 2,
+  "maxZoom": 19
+}

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// regression guard for "OpenCPN freezes when the Chart Grabber window is closed while a download
+// Regression guard for "OpenCPN freezes when the Chart Grabber window is closed while a download
 // runs". A stand-in CLI job is held alive (holdRun); the main dialog is opened by the toolbar callback and
 // closed by the close box, the Close button and Escape, with the New chart and the My charts page shown,
 // reopened and closed 20 times, then the job ends while the dialog is hidden. Every step must return within

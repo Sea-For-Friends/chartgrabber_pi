@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// / the CLI version line and the supported minimum.
+// The CLI version line and the supported minimum.
 #include "cli_text.h"
 
 #include <gtest/gtest.h>
@@ -57,7 +57,7 @@ TEST(CliVersion, GrammarAndSupport) {
     EXPECT_TRUE(atLeast({2, 0, 0}, {2, 0, 0}));
 }
 
-// / calendar versions compare numerically field by field (2026.9.30 is OLDER than 2026.10.9,
+// calendar versions compare numerically field by field (2026.9.30 is OLDER than 2026.10.9,
 // which a string compare gets wrong); 2026.10.9 is the minimum, 2026.10.8 is too old (no
 // JSON chart sources).
 TEST(CliVersion, SupportedFromTheMinimumOn) {
@@ -83,14 +83,14 @@ TEST(CliVersion, SupportedFromTheMinimumOn) {
     EXPECT_FALSE(atLeast({2026, 10, 1}, {2027, 1, 0}));
 }
 
-// / the pinned release (a real capture) is supported.
+// the pinned release (a real capture) is supported.
 TEST(CliVersion, PinnedReleaseCapturedVersionLine) {
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.14/version.stdout", std::ios::binary);
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.1/version.stdout", std::ios::binary);
     ASSERT_TRUE(in.good());
     std::ostringstream ss;
     ss << in.rdbuf();
     const auto v = parseVersionLine(ss.str());
     ASSERT_TRUE(v);
-    EXPECT_EQ(v->commit, "951d3db248cc");
+    EXPECT_EQ(v->commit, "abbe831b4db3");
     EXPECT_TRUE(supportedCli(v));
 }

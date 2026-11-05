@@ -23,7 +23,7 @@ int jobPermille(const std::vector<std::pair<std::string, DownloadProgress>>& see
 // Missing -> (tiles - missing) * 1000 / tiles when tiles > 0 and 0 <= missing <= tiles; else nullopt.
 std::optional<int> frozenPermille(const ChartRecord& r);
 
-// What the running job is doing, for the live row (JobController::live).
+// What the running job is doing, for the live row (JobController::live()).
 enum class LiveStage { Sizing, Downloading, Checking, Building, RetryWait, Stopping };
 struct LiveProgress {
     std::string chartId; // the running record's id

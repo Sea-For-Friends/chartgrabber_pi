@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{8BC59B43-9257-40CA-B59C-807A2652EAE5}",
+  "name": "SHOM seabed type (France)",
+  "group": "Depth",
+  "layer": true,
+  "url": "https://services.data.shom.fr/INSPIRE/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=NDF_PYR-PNG_WLD_3857_WMTS&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Depth_SHOM_Seabed_Type",
+  "license": "© Shom — Licence Ouverte 2.0. Non certifié pour la navigation",
+  "maxConnections": 2,
+  "maxZoom": 13,
+  "navigationWarning": true
+}

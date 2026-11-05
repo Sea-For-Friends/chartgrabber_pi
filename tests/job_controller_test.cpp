@@ -3,18 +3,16 @@
 // CLI. The stand-in is a small sh script written into a temp directory (never the real CLI): it saves its
 // arguments, prints the stdout / stderr text the test put next to the job file, then exits with the given
 // code or waits for a signal. The records it prints are the CLI records of cli-requirements.md 2 and 3; the
-// error texts are the core's
-// download_runner.cpp:419). The real CLI is not used here: the proofs that need it are manual.
+// error texts are the CLI's. The real CLI is not used here: the proofs that need it are manual.
 // A window test: it lives in cg_gui_tests and skips (and says so) without a display.
 //
-
 // the stand-in answers `--version` from the file `version` next to it ("chart-grabber-cli 2026.10.0
 // (test)" when absent, the tsv level) and counts the probes in `probes`; it records its LC_ALL per run.
 //
-
 // The 1 s timer of the controller is stopped in the tests that count ticks and onTick is called by hand, so
 // "60 s" and "30 s" cost no time; one test lets the real timer run and checks that it ticks.
 #include "area_tool.h"
+#include "chart_folder.h"
 #include "cli_runner.h"
 #include "config_store.h"
 #include "job_files.h"
@@ -122,6 +120,7 @@ case $mode in
 esac
 if [ -f "$dir/out.$n" ]; then cat "$dir/out.$n"; fi
 if [ -f "$dir/err.$n" ]; then cat "$dir/err.$n" >&2; fi
+if [ -f "$dir/hook.$n" ]; then . "$dir/hook.$n"; fi # a test's extra work (writes the Out= file)
 case $mode in
   wait|slowterm|termzero|ignore) k=0; while [ $k -lt 1200 ]; do sleep 0.05; k=$((k + 1)); done ;;
   selfkill) kill -9 $$ ;;
@@ -216,7 +215,7 @@ protected:
                                                  wxString::FromUTF8((root_ / "opencpn.conf").string()),
                                                  wxEmptyString, wxCONFIG_USE_LOCAL_FILE);
         store_ = std::make_unique<ConfigStore>(config_.get());
-        // the strip takes at most 60 % of the canvas width : wide enough for the longest line
+        // the strip takes at most 60 % of the canvas width: wide enough for the longest line
         canvas_ = new wxFrame(nullptr, wxID_ANY, "canvas", wxPoint(-4000, -4000), wxSize(4000, 600));
         store_->setStripHintShown(); // the drag line at the top of Details has its own test
         ocpn_fake::canvasWindow = canvas_;
@@ -224,6 +223,7 @@ protected:
         setSettings([](cg::Settings&) {});
     }
     void TearDown() override {
+        cg::sandboxProbe() = [] { return cg::detectSandbox(); }; // a test may have faked Flatpak
         if (!wxTheApp || !wxTheApp->IsGUI())
             return;
         jc_.reset();
@@ -274,6 +274,10 @@ protected:
         edit(s);
         store_->saveSettings(s);
     }
+    // The default chart folder of this test's HOME (it may be missing): a chart goes back to it.
+    std::string planned(const std::string& file) const {
+        return (root_ / "home" / "Charts" / "ChartGrabber" / file).string();
+    }
     cg::ChartRecord makeRecord(const std::string& id, bool withJobIni = true) {
         cg::ChartRecord r;
         r.id = id;
@@ -284,7 +288,7 @@ protected:
         r.bbox = {-1.5, 50.25, 2.125, 51.0};
         r.zooms = {8, 9};
         r.created = "2026-10-15T10:15:00";
-        r.files = {"/planned/a.mbtiles", "/planned/b.mbtiles"};
+        r.files = {planned("a.mbtiles"), planned("b.mbtiles")};
         r.state = cg::ChartState::Running; // a new chart, as the dialog hands it over
         if (withJobIni) {
             cg::JobSpec spec;
@@ -350,7 +354,7 @@ protected:
             t.pop_back();
         return t;
     }
-    std::string defaultMaps() const { return (root_ / "home" / ".config" / "Charts" / "Maps").string(); }
+    std::string defaultMaps() const { return (root_ / "home" / ".config" / "SAS.Planet" / "Maps").string(); }
     std::string defaultCache() const {
         return (root_ / "private" / "plugins" / "chartgrabber" / "cache").string();
     }
@@ -543,7 +547,9 @@ std::string fill(const std::string& guid, int zoom, int tiles, int missing) {
 TEST_F(JobTest, TwoChartsAddedRegisteredAndFirstSuccessHintOnce) {
     canvas_->SetSize(wxSize(4000, 600)); // wide enough for the full headline on the strip's three lines
     auto r = makeRecord("20261015-103000");
-    const std::string a = "/charts/" + kName + ".mbtiles", b = "/charts/" + kName + " - Seamarks.mbtiles";
+    fs::create_directories(root_ / "charts"); // the Top up below goes back to this folder
+    const std::string a = (root_ / "charts" / (kName + ".mbtiles")).string(),
+                      b = (root_ / "charts" / (kName + " - Seamarks.mbtiles")).string();
     scenario(r.id, 1,
              fill(kBase, 8, 100, 0) + fill(kBase, 9, 300, 0) + fill(kOver, 8, 50, 0) +
                  written(kBase, a, 400, 321) + written(kOver, b, 50, 679),
@@ -567,7 +573,7 @@ TEST_F(JobTest, TwoChartsAddedRegisteredAndFirstSuccessHintOnce) {
         << detailsText();
     EXPECT_EQ(buttons(), (std::vector<std::string>{"Show", "Close"}));
     ASSERT_EQ(ocpn_fake::updates.size(), 1u); // one rescan for both files (same folder)
-    EXPECT_EQ(dirs(0), (std::vector<std::string>{"/charts"}));
+    EXPECT_EQ(dirs(0), (std::vector<std::string>{(root_ / "charts").string()}));
     EXPECT_FALSE(ocpn_fake::updates[0].force);
     EXPECT_FALSE(ocpn_fake::updates[0].progress);
     EXPECT_EQ(busyCalls_, (std::vector<bool>{true, false}));
@@ -953,7 +959,7 @@ TEST_F(JobTest, StopThenResumeContinuesTheSession) {
     EXPECT_TRUE(jc().busy());
 }
 
-// and 6: an Update runs the Download argv plus --replace and the date; Stop keeps the date in
+// an Update runs the Download argv plus --replace and the date; Stop keeps the date in
 // chart.ini; the strip's Resume starts the same update with the same date; Done clears the date.
 TEST_F(JobTest, UpdateRunsWithTheDateKeepsItOnStopAndClearsItWhenDone) {
     auto r = makeRecord("20261015-106100");
@@ -1009,7 +1015,7 @@ TEST_F(JobTest, BuildFromSavedEndingDoneClearsTheUpdateDate) {
 // neither kills early nor changes the text, the runner kills after its grace: Killed headline.
 TEST_F(JobTest, AChildThatIgnoresTheStopIsKilledByTheRunnerAfterTheGrace) {
     auto r = makeRecord("20261015-107000");
-    // the phase text comes from the child (start itself shows "downloading"), so the trap is installed
+    // the phase text comes from the child (start() itself shows "downloading"), so the trap is installed
     scenario(r.id, 1, "", tsv({"phase", "fill", kBase}), 0, "ignore");
     start(r);
     jc_->runner_->setStopGraceMs(800);
@@ -1248,11 +1254,35 @@ TEST_F(JobTest, StartFailedOffersPreferencesAndKeepsOrInterruptsTheRecord) {
     start(old);
     EXPECT_EQ(chart(old.id).state, cg::ChartState::Complete);
     EXPECT_EQ(buttons(), (std::vector<std::string>{"Preferences...", "Close"}));
-    EXPECT_TRUE(strip()->IsShown()); // the next start shows the strip again
+    EXPECT_TRUE(strip()->IsShown()); // the next start() shows the strip again
+}
+
+// a chart with files goes back to its folder; under Flatpak a folder outside home stops the job
+// before any program is probed or run.
+TEST_F(JobTest, AResumeInAFolderFlatpakCannotKeepDoesNotStart) {
+    auto r = makeRecord("20261015-120800");
+    r.state = cg::ChartState::Interrupted;
+    r.files = {"/mnt/boat/a.mbtiles"};
+    store_->saveChart(r);
+    cg::sandboxProbe() = [] { return cg::Sandbox{true, "/home/nobody", {}}; };
+    start(r);
+    EXPECT_FALSE(jc().busy());
+    EXPECT_EQ(stripText(),
+              "OpenCPN from Flathub can only keep charts inside your home folder. Choose a folder there.");
+    EXPECT_EQ(chart(r.id).state, cg::ChartState::Interrupted);
+    EXPECT_EQ(probes(), 0);
+    EXPECT_EQ(runs(r.id), 0);
+    // a folder that was removed: the general rule (this host is not Flatpak)
+    cg::sandboxProbe() = [] { return cg::detectSandbox(); };
+    r.files = {(root_ / "gone folder" / "a.mbtiles").string()};
+    start(r);
+    EXPECT_FALSE(jc().busy());
+    EXPECT_EQ(stripText(), "This folder cannot be written. Choose another one.");
+    EXPECT_EQ(runs(r.id), 0);
 }
 
 // Carried item (one "program not found" text): with no CliPath and no Chart Grabber CLI on PATH the headline
-// AND the `error:` line under Details are cliNotFoundText; nothing is probed, no child starts.
+// AND the `error:` line under Details are cliNotFoundText(); nothing is probed, no child starts.
 TEST_F(JobTest, NoProgramOnPathGivesTheSameTextInTheHeadlineAndTheDetails) {
     // Through the seam, so an installed /usr/bin/chart-grabber-cli cannot be found.
     fs::create_directories(root_ / "empty path");
@@ -1317,7 +1347,7 @@ TEST_F(JobTest, ExtraArgumentsAreAppendedInDebugBuilds) {
 // ---------------------------------------------------------------------------------------- shutdown, 8.6
 
 // Proof 6: the controller is destroyed while the child runs (DeInit). Events arriving during the wait
-// (a strip Stop, a new start, busy) change nothing; whatever the exit (143 or a clean 0) the record on disk
+// (a strip Stop, a new start, busy()) change nothing; whatever the exit (143 or a clean 0) the record on disk
 // says Interrupted with the last error and the planned files, nothing is registered, no strip is left.
 TEST_F(JobTest, DestroyedWhileRunningSavesInterruptedAndIgnoresEventsDuringTheWait) {
     for (const char* mode : {"slowterm", "termzero"}) {
@@ -1351,13 +1381,13 @@ TEST_F(JobTest, DestroyedWhileRunningSavesInterruptedAndIgnoresEventsDuringTheWa
         const cg::ChartRecord c = chart(r.id);
         EXPECT_EQ(c.state, cg::ChartState::Interrupted);
         EXPECT_EQ(c.lastError, "disk is slow");
-        EXPECT_EQ(c.files, (std::vector<std::string>{"/planned/a.mbtiles", "/planned/b.mbtiles"}));
+        EXPECT_EQ(c.files, (std::vector<std::string>{planned("a.mbtiles"), planned("b.mbtiles")}));
         EXPECT_NE(chartIniText(r.id).find("\nState=interrupted\n"), std::string::npos);
         EXPECT_TRUE(ocpn_fake::updates.empty());
         EXPECT_EQ(busyCalls_.size(), before); // the hooks were cleared first
         EXPECT_EQ(changes_, changesBefore);
         EXPECT_EQ(strip(), nullptr);
-        EXPECT_FALSE(fs::exists(jobDir("20261015-114999") / "chart.ini")); // start was ignored
+        EXPECT_FALSE(fs::exists(jobDir("20261015-114999") / "chart.ini")); // start() was ignored
     }
 }
 
@@ -1504,15 +1534,15 @@ TEST_F(JobTest, GivenFoldersPassThroughUnchanged) {
     EXPECT_EQ(store_->loadSettings().cacheDir, cache);
 }
 
-// ---- : the records of --progress=lines (CLI 2026.10.14), captured in tests/fixtures/cli-2026.10.14/
+// ---- the records of --progress=lines (CLI 2026.11.1), captured in tests/fixtures/cli-2026.11.1/
 
 namespace {
 const std::string kEsri = "{7B743985-BC5F-4AB6-8915-AC5DBBB8F552}";
 const std::string kMarks = "{AB8A8685-AEC6-4E16-80DA-DC4AC37E4777}";
 
-// A capture of the pinned CLI 2026.10.14 with the scratch directory of its capture replaced by /scr.
+// A capture of the pinned CLI 2026.11.1 with the scratch directory of its capture replaced by /scr.
 std::string fixtureNew(const std::string& name) {
-    std::string t = slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.14" / name);
+    std::string t = slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.11.1" / name);
     EXPECT_FALSE(t.empty()) << name;
     for (std::size_t at; (at = t.find("$SCRATCH")) != std::string::npos;)
         t.replace(at, 8, "/scr");
@@ -1681,14 +1711,14 @@ TEST_F(JobTest, AProgressRecordWithAnEmptyGuidKeepsTheJobRunningAndTheNextRecord
     ASSERT_TRUE(waitIdle(10000));
 }
 
-//  proof 5: the real stderr of the pinned 2026.10.14 CLI. A run (the plugin's command) puts the CLI's
+// the real stderr of the pinned 2026.11.1 CLI. A run (the plugin's command) puts the CLI's
 // navigation notice into Details exactly once, after the phase lines and before the first tile; an export
 // capture of the same job holds none. Nothing in the plugin matches the wording: the line is shown as it
 // came.
 TEST_F(JobTest, TheCliNavigationNoticeReachesDetailsOnceForARunAndNotForAnExport) {
     store_->setFirstSuccessShown();
     const auto capture = [](const char* name) {
-        return slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.14" / name);
+        return slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.11.1" / name);
     };
     const std::string notice =
         "warning: \"EMODnet Bathymetry (world)\": not for navigation. This source is not an "
@@ -1716,7 +1746,7 @@ TEST_F(JobTest, TheCliNavigationNoticeReachesDetailsOnceForARunAndNotForAnExport
 }
 
 // Proof 5, step 3a: a program that is too old (0.1.0, 2026.10.3) or is no tile program: no child for the job
-// (only the probe ran), the result line is cliTooOldText with Preferences..., a new chart becomes
+// (only the probe ran), the result line is cliTooOldText() with Preferences..., a new chart becomes
 // Interrupted and another keeps its state.
 TEST_F(JobTest, ATooOldProgramStartsNoChildAndKeepsTheRecordState) {
     int i = 0;
@@ -1761,7 +1791,7 @@ std::string exportProgress(const std::string& guid, int permille) {
     return tsv({"progress", "export", guid, std::to_string(permille)});
 }
 
-// Proof 3: live is nullopt when idle; right after the start it is Sizing with the pulse; a progress record
+// Proof 3: live() is nullopt when idle; right after the start it is Sizing with the pulse; a progress record
 // with a total gives Downloading with the MEAN of the two sources (base 100/200, overlay not seen: 250) and
 // the seconds left (elapsed 40 * 100 / 100); Stop gives Stopping with the bar kept.
 TEST_F(JobTest, LiveFollowsSizingDownloadingAndStopping) {
@@ -1958,8 +1988,8 @@ TEST_F(JobTest, TheSixtiethTickSavesDoneQuietly) {
     ASSERT_TRUE(waitIdle(10000));
 }
 
-// ---- : the weather follow-up, the picture's time, the snapshot failure text.
-// The weather records are the captured lines of the pinned CLI 2026.10.14 (tests/fixtures/cli-2026.10.14/,
+// ---- the weather follow-up, the picture's time, the snapshot failure text.
+// The weather records are the captured lines of the pinned CLI 2026.11.1 (tests/fixtures/cli-2026.11.1/,
 // read from the files, `$SCRATCH` replaced by /scr); only the first job's lines are made by hand (a normal
 // chart).
 
@@ -1968,7 +1998,7 @@ const std::string kRain = "{1A696D82-F258-41A4-BCD6-7648D9E08DE2}";
 const std::string kRainName = "RainViewer radar (worldwide, current)";
 
 std::string fixtureWeather(const std::string& name) {
-    std::string t = slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.10.14" / name);
+    std::string t = slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.11.1" / name);
     EXPECT_FALSE(t.empty()) << name;
     for (std::size_t at; (at = t.find("$SCRATCH")) != std::string::npos;)
         t.replace(at, 8, "/scr");
@@ -1986,7 +2016,7 @@ protected:
         r.sourceName = kRainName;
         r.name = "North Sea - Weather";
         r.weather = true;
-        r.files = {"/planned/North Sea - Weather.mbtiles"};
+        r.files = {planned("North Sea - Weather.mbtiles")};
         return r;
     }
     // A normal chart that ends Done with a `warning:` line, then the weather chart queued behind it.
@@ -2030,13 +2060,13 @@ TEST_F(WeatherTest, AChartDoneStartsTheFollowUpAndTheResultsJoin) {
     EXPECT_EQ(buttons(), (std::vector<std::string>{"Show", "Close"}));
     const std::string d = detailsText();
     const std::size_t warn = d.find("warning: the tiles are slow\n");
-    const std::size_t pic = d.find("Weather picture: 2026-10-23 08:20 UTC\n");
+    const std::size_t pic = d.find("Weather picture: 2026-11-05 15:40 UTC\n");
     ASSERT_NE(warn, std::string::npos) << d;
     ASSERT_NE(pic, std::string::npos) << d;
     EXPECT_LT(warn, pic);
     EXPECT_EQ(chart(first.id).state, cg::ChartState::Complete);
     EXPECT_EQ(chart(next.id).state, cg::ChartState::Complete);
-    EXPECT_EQ(chart(next.id).snapshot, "2026-10-23T08:20:00Z");
+    EXPECT_EQ(chart(next.id).snapshot, "2026-11-05T15:40:00Z");
     EXPECT_EQ(ocpn_fake::updates.size(), 2u);
     EXPECT_EQ(busyCalls_, (std::vector<bool>{true, false, true, false}));
 }
@@ -2158,7 +2188,7 @@ TEST_F(WeatherTest, AFollowUpThatCannotStartShowsTheJoinedHeadline) {
     start(first2);
     jc().queueAfter(next2);
     setSettings(
-        [&](cg::Settings& s) { s.cliPath = (root_ / "nowhere" / "cli").string(); }); // read fresh by start
+        [&](cg::Settings& s) { s.cliPath = (root_ / "nowhere" / "cli").string(); }); // read fresh by start()
     ASSERT_TRUE(waitIdle());
     EXPECT_EQ(stripText().rfind(firstHeadline() + " Chart Grabber CLI was not found.", 0), 0u) << stripText();
     EXPECT_EQ(buttons(), (std::vector<std::string>{"Preferences...", "Close"}));
@@ -2204,7 +2234,7 @@ TEST_F(WeatherTest, TheFirstSuccessHintOfTheFirstJobOpensTheJoinedDetailsOnce) {
     const std::string d = detailsText();
     EXPECT_EQ(d.rfind("If the chart is not visible", 0), 0u) << d;
     EXPECT_EQ(d.find("If the chart is not visible", 1), std::string::npos);
-    EXPECT_NE(d.find("Weather picture: 2026-10-23 08:20 UTC"), std::string::npos);
+    EXPECT_NE(d.find("Weather picture: 2026-11-05 15:40 UTC"), std::string::npos);
     EXPECT_TRUE(store_->firstSuccessShown());
 }
 
@@ -2239,9 +2269,9 @@ TEST_F(WeatherTest, TheSnapshotOfTheWrittenRecordIsKeptAndShownInDetails) {
              fixtureWeather("run-weather-layer.stderr"), 0);
     start(layer);
     ASSERT_TRUE(waitIdle());
-    EXPECT_NE(detailsText().find("Weather picture: 2026-10-23 08:20 UTC\n"), std::string::npos)
+    EXPECT_NE(detailsText().find("Weather picture: 2026-11-05 15:40 UTC\n"), std::string::npos)
         << detailsText();
-    EXPECT_NE(chartIniText(layer.id).find("\nSnapshot=2026-10-23T08:20:00Z\n"), std::string::npos);
+    EXPECT_NE(chartIniText(layer.id).find("\nSnapshot=2026-11-05T15:40:00Z\n"), std::string::npos);
 
     auto base = makeRecord("20261016-206100"); // a weather base with seamarks: the overlay's field 5 is empty
     base.sourceGuid = "{FE84A175-2C0F-420F-86DF-5900DE16A33C}";
@@ -2251,9 +2281,9 @@ TEST_F(WeatherTest, TheSnapshotOfTheWrittenRecordIsKeptAndShownInDetails) {
              fixtureWeather("run-weather-base-seamarks.stderr"), 0);
     start(base);
     ASSERT_TRUE(waitIdle());
-    EXPECT_NE(chartIniText(base.id).find("\nSnapshot=2026-10-23T08:10:00Z\n"), std::string::npos)
+    EXPECT_NE(chartIniText(base.id).find("\nSnapshot=2026-11-05T15:10:00Z\n"), std::string::npos)
         << chartIniText(base.id);
-    EXPECT_NE(detailsText().find("Weather picture: 2026-10-23 08:10 UTC\n"), std::string::npos);
+    EXPECT_NE(detailsText().find("Weather picture: 2026-11-05 15:10 UTC\n"), std::string::npos);
 
     auto none = weatherRecord("20261016-206200"); // a run with no `written` record keeps the previous time
     none.snapshot = "2026-10-01T00:00:00Z";
@@ -2316,7 +2346,8 @@ TEST_F(WeatherTest, ARepeatedPictureLineAfterTheLineCapIsAppended) {
     r.weather = true;
     std::string out = tsv({"snapshot", kRain, "2026-10-23T08:10:00Z", "/a"});
     for (int i = 0; i < 210; ++i)
-        out += tsv({"snapshot", "{OTHER-" + std::to_string(i) + "}", "2026-10-23T08:20:00Z", "/b"});
+        out +=
+            tsv({"snapshot", std::string("{OTHER-") + std::to_string(i) + "}", "2026-10-23T08:20:00Z", "/b"});
     out += tsv({"snapshot", kRain, "2026-10-23T08:30:00Z", "/c"});
     scenario(r.id, 1, out, "", 0);
     start(r);
@@ -2433,6 +2464,769 @@ TEST_F(WeatherTest, AWeatherChartResumesAsADownloadFromZero) {
     EXPECT_EQ(argsOf(x.id, 2).front(), "run");
     jc().stop();
     ASSERT_TRUE(waitIdle(10000));
+}
+
+// ---- Windows weather update writes another file name. The swap OS is set to Windows;
+// the rule itself uses the host's path rules (Linux here), so the files are real. The stand-in's hook writes
+// the Out= file of job.ini and prints its `written` record; a read-only folder is the file OpenCPN holds.
+class SwapTest : public JobTest {
+protected:
+    void SetUp() override {
+        JobTest::SetUp();
+        weatherSwapOs() = cg::Os::Windows;
+        ocpn_fake::onUpdate = nullptr;
+        ocpn_fake::onRemove = nullptr;
+        ocpn_fake::removed.clear();
+        staleDropAllowed() = false;
+        store_->setFirstSuccessShown();
+    }
+    void TearDown() override {
+        weatherSwapOs() = cg::kHostOs;
+        staleDropAllowed() = false;
+        ocpn_fake::onUpdate = nullptr;
+        ocpn_fake::onRemove = nullptr;
+        std::error_code ec;
+        fs::permissions(folder(), fs::perms::owner_write, fs::perm_options::add, ec);
+        JobTest::TearDown();
+    }
+    fs::path folder() const { return root_ / "home" / "Charts" / "ChartGrabber"; }
+    // An existing weather chart (Complete, one file, its job.ini) with the picture file written.
+    cg::ChartRecord weatherChart(const std::string& id, const std::string& file = "W.mbtiles") {
+        cg::ChartRecord r = makeRecord(id, false);
+        r.sourceGuid.clear();
+        r.overlayGuid = kRain;
+        r.name = "North Sea - Weather";
+        r.weather = true;
+        r.files = {planned(file)};
+        r.state = cg::ChartState::Complete;
+        spit(r.files[0], "old picture");
+        cg::JobSpec spec;
+        spec.overlayGuid = kRain;
+        spec.zooms = {5};
+        spec.overlayOutFile = r.files[0];
+        spit(jobDir(id) / "job.ini", cg::jobIni(spec));
+        store_->saveChart(r);
+        return r;
+    }
+    // Run `run`: the hook writes the Out= file of the job.ini the child got; readOnly makes the folder
+    // read-only afterwards (OpenCPN still holds the old file).
+    void picture(const std::string& id, int run, bool readOnly, int code = 0) {
+        std::string hook = "out=$(sed -n 's/^Out=//p' \"$ini\")\nprintf new > \"$out\"\n";
+        if (readOnly)
+            hook += "chmod a-w \"$(dirname \"$out\")\"\n";
+        hook += "printf 'written\\t" + kRain + "\\t%s\\t4\\t9\\n' \"$out\"\n";
+        scenario(id, run, "", "", code);
+        if (code == 0) // a failed run prints no `written` record
+            spit(jobDir(id) / (std::string("hook.") + std::to_string(run)), hook);
+    }
+    void makeWritable() { fs::permissions(folder(), fs::perms::owner_write, fs::perm_options::add); }
+    std::string outOf(const std::string& id) const {
+        const std::string ini = slurp(jobDir(id) / "job.ini");
+        const std::size_t at = ini.find("\nOut=");
+        return at == std::string::npos ? "<none>" : ini.substr(at + 5, ini.find('\n', at + 1) - at - 5);
+    }
+};
+
+TEST_F(SwapTest, TheUpdateWritesAnotherNameKeepsOneRowAndRemovesTheOldFileBeforeTheRescan) {
+    const auto r = weatherChart("20261105-100000");
+    ocpn_fake::chartDirs.Add(wxString::FromUTF8(folder().string()));
+    picture(r.id, 1, false);
+    bool goneAtRescan = false;
+    ocpn_fake::onUpdate = [&] { goneAtRescan = !fs::exists(planned("W.mbtiles")); };
+    start(r);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(outOf(r.id), planned("W (2).mbtiles"));
+    EXPECT_EQ(argsOf(r.id, 1),
+              (std::vector<std::string>{"run", "--job", iniOf(r.id), "--format=tsv", "--progress=lines",
+                                        "--cache", defaultCache(), "--datadir=" + defaultData(),
+                                        "--overwrite", "--stop-on-stdin"}));
+    ASSERT_EQ(store_->loadCharts().size(), 1u);
+    const auto c = chart(r.id);
+    EXPECT_EQ(c.files, (std::vector<std::string>{planned("W (2).mbtiles")}));
+    EXPECT_TRUE(c.stale.empty());
+    EXPECT_EQ(c.state, cg::ChartState::Complete);
+    EXPECT_FALSE(fs::exists(planned("W.mbtiles")));
+    EXPECT_TRUE(fs::exists(planned("W (2).mbtiles")));
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u);
+    EXPECT_TRUE(goneAtRescan);
+    EXPECT_EQ(detailsText().find("restarted"), std::string::npos);
+}
+
+TEST_F(SwapTest, AnOldFileHeldUntilTheRescanIsRemovedAfterItAndRescansAgain) {
+    const auto r = weatherChart("20261105-100100");
+    picture(r.id, 1, true);
+    ocpn_fake::onUpdate = [&] { makeWritable(); }; // OpenCPN lets go during its rescan
+    LogCollector log;
+    start(r);
+    ASSERT_TRUE(waitIdle());
+    ASSERT_EQ(ocpn_fake::updates.size(), 2u);
+    EXPECT_EQ(dirs(1), dirs(0));
+    EXPECT_FALSE(ocpn_fake::updates[1].force);
+    EXPECT_FALSE(ocpn_fake::updates[1].progress);
+    EXPECT_FALSE(fs::exists(planned("W.mbtiles")));
+    EXPECT_TRUE(chart(r.id).stale.empty());
+    EXPECT_EQ(detailsText().find("restarted"), std::string::npos);
+    EXPECT_NE(std::find(log.messages.begin(), log.messages.end(),
+                        "ChartGrabber: chart list updated again (old weather file removed)"),
+              log.messages.end());
+}
+
+TEST_F(SwapTest, AnOldFileHeldForGoodStaysInStaleWithTheRestartLineThenTheNextUpdateRemovesItAndSwapsBack) {
+    const auto r = weatherChart("20261105-100200");
+    picture(r.id, 1, true);
+    start(r);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u);
+    EXPECT_TRUE(fs::exists(planned("W.mbtiles")));
+    auto c = chart(r.id);
+    EXPECT_EQ(c.files, (std::vector<std::string>{planned("W (2).mbtiles")}));
+    EXPECT_EQ(c.stale, (std::vector<std::string>{planned("W.mbtiles")}));
+    EXPECT_NE(chartIniText(r.id).find("Stale0=" + planned("W.mbtiles") + "\n"), std::string::npos);
+    EXPECT_NE(detailsText().find("OpenCPN still holds the previous picture and may still show it; Chart "
+                                 "Grabber removes it later."),
+              std::string::npos);
+    EXPECT_TRUE(ocpn_fake::removed.empty());      // drop not allowed: OpenCPN is never asked
+    EXPECT_EQ(c.state, cg::ChartState::Complete); // no error headline
+    EXPECT_EQ(stripText().find("rror"), std::string::npos);
+
+    // the next update: the folder is writable again, the stale file goes first, then the name is W again
+    makeWritable();
+    picture(r.id, 2, false);
+    ocpn_fake::updates.clear();
+    start(c);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(outOf(r.id), planned("W.mbtiles"));
+    c = chart(r.id);
+    EXPECT_EQ(c.files, (std::vector<std::string>{planned("W.mbtiles")}));
+    EXPECT_TRUE(c.stale.empty());
+    EXPECT_FALSE(fs::exists(planned("W (2).mbtiles")));
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u);
+    EXPECT_EQ(detailsText().find("restarted"), std::string::npos);
+}
+
+TEST_F(SwapTest, AFailedRunKeepsTheRecordAndRescansNothing) {
+    const auto r = weatherChart("20261105-100300");
+    picture(r.id, 1, false, 4);
+    start(r);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(outOf(r.id), planned("W (2).mbtiles")); // job.ini keeps the new Out=
+    const auto c = chart(r.id);
+    EXPECT_EQ(c.files, (std::vector<std::string>{planned("W.mbtiles")}));
+    EXPECT_TRUE(c.stale.empty());
+    EXPECT_TRUE(fs::exists(planned("W.mbtiles")));
+    EXPECT_TRUE(ocpn_fake::updates.empty());
+}
+
+TEST_F(SwapTest, OnTheHostRulesNothingChangesAndTenTakenNamesRunAsToday) {
+    const auto r = weatherChart("20261105-100400");
+    const std::string ini = slurp(jobDir(r.id) / "job.ini");
+    weatherSwapOs() = cg::Os::Posix;
+    scenario(r.id, 1, "", "", 0);
+    start(r);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(slurp(jobDir(r.id) / "job.ini"), ini);
+
+    weatherSwapOs() = cg::Os::Windows;
+    for (int k = 2; k <= 9; ++k)
+        spit(planned(std::string("W (") + std::to_string(k) + ").mbtiles"), "x");
+    scenario(r.id, 2, "", "", 0);
+    start(chart(r.id));
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(slurp(jobDir(r.id) / "job.ini"), ini);
+}
+
+TEST_F(SwapTest, AJobFileWithoutOutRunsAsTodayAndLogsIt) {
+    const auto r = weatherChart("20261105-100500");
+    spit(jobDir(r.id) / "job.ini", "[Job]\nZooms=5\n");
+    scenario(r.id, 1, "", "", 0);
+    LogCollector log;
+    start(r);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(slurp(jobDir(r.id) / "job.ini"), "[Job]\nZooms=5\n");
+    EXPECT_NE(std::find(log.messages.begin(), log.messages.end(),
+                        "ChartGrabber: cannot switch the weather file name"),
+              log.messages.end());
+    EXPECT_FALSE(fs::exists(jobDir(r.id) / "job.ini.cg-swap"));
+}
+
+TEST_F(SwapTest, OnlyAnExistingWeatherChartDownloadIsSwapped) {
+    const auto w = weatherChart("20261105-100600");
+    const std::string ini = slurp(jobDir(w.id) / "job.ini");
+    // not weather, a new chart, an export, a missing file: job.ini untouched
+    auto plain = w;
+    plain.weather = false;
+    auto fresh = w;
+    fresh.state = cg::ChartState::Running;
+    struct Row {
+        const char* what;
+        cg::ChartRecord rec;
+        cg::RunKind kind;
+    };
+    int run = 0;
+    for (const Row& row :
+         {Row{"not weather", plain, cg::RunKind::Download}, Row{"new chart", fresh, cg::RunKind::Download},
+          Row{"export", w, cg::RunKind::BuildFromSaved}}) {
+        SCOPED_TRACE(row.what);
+        scenario(w.id, ++run, "", "", 0);
+        start(row.rec, row.kind);
+        ASSERT_TRUE(waitIdle());
+        EXPECT_EQ(slurp(jobDir(w.id) / "job.ini"), ini);
+    }
+    fs::remove(planned("W.mbtiles"));
+    scenario(w.id, ++run, "", "", 0);
+    start(w);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(slurp(jobDir(w.id) / "job.ini"), ini);
+}
+
+TEST_F(SwapTest, StartUpCleanupRemovesStaleFilesAndRescansOnceAfter120sUnlessAJobDid) {
+    // nothing removable: record unchanged, no timer
+    auto held = weatherChart("20261105-100700", "H.mbtiles");
+    spit(planned("H (2).mbtiles"), "stale");
+    held.stale = {planned("H (2).mbtiles")};
+    store_->saveChart(held);
+    fs::permissions(folder(), fs::perms::owner_write, fs::perm_options::remove);
+    jc().cleanupStaleAtStart();
+    EXPECT_TRUE(fs::exists(planned("H (2).mbtiles")));
+    EXPECT_EQ(chart(held.id).stale, held.stale);
+    EXPECT_TRUE(jc().staleTimer_.IsRunning()); // a held file arms the retry
+    EXPECT_TRUE(ocpn_fake::updates.empty());
+    wxTimerEvent plain(jc().staleTimer_); // drop not allowed: only the plain retry, nothing else
+    jc().onStaleTimer(plain);
+    EXPECT_TRUE(fs::exists(planned("H (2).mbtiles")));
+    EXPECT_TRUE(ocpn_fake::removed.empty());
+    EXPECT_TRUE(ocpn_fake::updates.empty());
+    jc().staleTimer_.Stop();
+
+    makeWritable();
+    auto other = weatherChart("20261105-100800", "O.mbtiles");
+    spit(planned("O (2).mbtiles"), "stale");
+    other.stale = {planned("missing.mbtiles"), planned("O (2).mbtiles")};
+    store_->saveChart(other);
+    ocpn_fake::chartDirs.Add("/x");
+    jc().cleanupStaleAtStart();
+    EXPECT_FALSE(fs::exists(planned("H (2).mbtiles")));
+    EXPECT_FALSE(fs::exists(planned("O (2).mbtiles")));
+    EXPECT_TRUE(chart(held.id).stale.empty());
+    EXPECT_TRUE(chart(other.id).stale.empty());
+    ASSERT_TRUE(jc().staleTimer_.IsRunning());
+    EXPECT_EQ(jc().staleTimer_.GetInterval(), 120000);
+    EXPECT_TRUE(jc().staleTimer_.IsOneShot());
+    EXPECT_TRUE(ocpn_fake::updates.empty());
+
+    wxTimerEvent ev(jc().staleTimer_);
+    jc().onStaleTimer(ev);
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u);
+    EXPECT_EQ(dirs(0), (std::vector<std::string>{"/x"}));
+    EXPECT_FALSE(ocpn_fake::updates[0].force);
+    EXPECT_FALSE(ocpn_fake::updates[0].progress);
+
+    // a job rescan ran meanwhile: the timer does nothing
+    ocpn_fake::updates.clear();
+    auto r = weatherChart("20261105-100900", "P.mbtiles");
+    scenario(r.id, 1, written(kRain, planned("P.mbtiles"), 4, 9), "", 0);
+    start(r);
+    ASSERT_TRUE(waitIdle());
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u);
+    jc().onStaleTimer(ev);
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u);
+}
+
+// ---- a file OpenCPN 5.10-5.13 still lists after the rescan is dropped from its chart list, then
+// removed. The listed folder is spelled as OpenCPN lists it; the fake's onRemove releases the read-only
+// folder.
+TEST_F(SwapTest, AHeldOldFileIsDroppedFromTheChartListThenRemovedWithoutAThirdRescan) {
+    const auto r = weatherChart("20261105-110000");
+    ocpn_fake::chartDirs.Add(wxString::FromUTF8(folder().string() + "/")); // listed with a trailing '/'
+    picture(r.id, 1, true);
+    staleDropAllowed() = true;
+    ocpn_fake::onRemove = [&] { makeWritable(); };
+    LogCollector log;
+    start(r);
+    ASSERT_TRUE(waitIdle());
+    ASSERT_EQ(ocpn_fake::removed.size(), 1u);
+    EXPECT_EQ(ocpn_fake::removed[0].ToStdString(wxConvUTF8), folder().string() + "\\W.mbtiles");
+    EXPECT_FALSE(fs::exists(planned("W.mbtiles")));
+    EXPECT_TRUE(fs::exists(planned("W (2).mbtiles")));
+    EXPECT_TRUE(chart(r.id).stale.empty());
+    EXPECT_EQ(chartIniText(r.id).find("Stale"), std::string::npos);
+    EXPECT_EQ(detailsText().find("still holds"), std::string::npos);
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u); // the job rescan only
+    EXPECT_NE(std::find(log.messages.begin(), log.messages.end(),
+                        "ChartGrabber: old weather file dropped from the chart list"),
+              log.messages.end());
+}
+
+TEST_F(SwapTest, ADropThatDoesNotReleaseTriesBothSpellingsOnceAndKeepsTheStaleLine) {
+    const auto r = weatherChart("20261105-110100");
+    ocpn_fake::chartDirs.Add("/other");
+    ocpn_fake::chartDirs.Add(wxString::FromUTF8(folder().string()));
+    picture(r.id, 1, true);
+    staleDropAllowed() = true;
+    start(r);
+    ASSERT_TRUE(waitIdle());
+    ASSERT_EQ(ocpn_fake::removed.size(), 2u);
+    EXPECT_EQ(ocpn_fake::removed[0].ToStdString(wxConvUTF8), folder().string() + "\\W.mbtiles");
+    EXPECT_EQ(ocpn_fake::removed[1].ToStdString(wxConvUTF8), planned("W.mbtiles"));
+    EXPECT_TRUE(fs::exists(planned("W.mbtiles")));
+    EXPECT_EQ(chart(r.id).stale, (std::vector<std::string>{planned("W.mbtiles")}));
+    EXPECT_NE(chartIniText(r.id).find("Stale0=" + planned("W.mbtiles") + "\n"), std::string::npos);
+    EXPECT_NE(detailsText().find("Chart Grabber removes it later."), std::string::npos);
+}
+
+TEST_F(SwapTest, AHeldFileAtStartIsDroppedWhenTheTimerFiresAndTheRecordOfARunningJobIsSkipped) {
+    auto held = weatherChart("20261105-110200", "H.mbtiles");
+    spit(planned("H (2).mbtiles"), "stale");
+    held.stale = {planned("H (2).mbtiles")};
+    store_->saveChart(held);
+    ocpn_fake::chartDirs.Add(wxString::FromUTF8(folder().string()));
+    fs::permissions(folder(), fs::perms::owner_write, fs::perm_options::remove);
+    jc().cleanupStaleAtStart();
+    ASSERT_TRUE(jc().staleTimer_.IsRunning());
+    EXPECT_TRUE(ocpn_fake::removed.empty());
+
+    staleDropAllowed() = true;
+    ocpn_fake::onRemove = [&] { makeWritable(); };
+    wxTimerEvent ev(jc().staleTimer_);
+    jc().onStaleTimer(ev);
+    ASSERT_EQ(ocpn_fake::removed.size(), 1u);
+    EXPECT_EQ(ocpn_fake::removed[0].ToStdString(wxConvUTF8), folder().string() + "\\H (2).mbtiles");
+    EXPECT_FALSE(fs::exists(planned("H (2).mbtiles")));
+    EXPECT_TRUE(chart(held.id).stale.empty());
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u); // removed and no job rescan: one rescan
+
+    // the record of the running job is left to the job (its stale file sits in a read-only subfolder)
+    const fs::path sub = folder() / "held";
+    fs::create_directories(sub);
+    spit((sub / "H (3).mbtiles").string(), "stale");
+    held.stale = {(sub / "H (3).mbtiles").string()};
+    store_->saveChart(held);
+    fs::permissions(sub, fs::perms::owner_write, fs::perm_options::remove);
+    ocpn_fake::removed.clear();
+    scenario(held.id, 1, "", "", 0, "wait");
+    start(held);
+    ASSERT_TRUE(runUntil([&] { return runs(held.id) == 1; }));
+    jc().onStaleTimer(ev);
+    EXPECT_TRUE(ocpn_fake::removed.empty());
+    EXPECT_TRUE(fs::exists(sub / "H (3).mbtiles"));
+    fs::permissions(sub, fs::perms::owner_write, fs::perm_options::add);
+    jc().stop();
+    ASSERT_TRUE(waitIdle(10000));
+}
+
+// ---- the chart list is rescanned after a weather update only when the file holds a new picture.
+// The stand-in prints a `snapshot` record (field 4 hand-made: the pinned CLI prints none yet) and a `written`
+// record with field 5.
+class SamePictureTest : public SwapTest {
+protected:
+    static std::string records(const std::string& file, const std::string& time, const std::string& run) {
+        return tsv({"snapshot", kRain, time, "/v2/x", run}) + tsv({"written", kRain, file, "4", "9", time});
+    }
+    cg::ChartRecord update(const std::string& id, bool weather, const std::string& prevT,
+                           const std::string& prevRun) {
+        auto r = weatherChart(id);
+        r.weather = weather;
+        r.snapshot = prevT;
+        r.modelRun = prevRun;
+        store_->saveChart(r);
+        return r;
+    }
+};
+
+TEST_F(SamePictureTest, AnUpdateRescansOnlyForANewPictureAndKeepsTheRecordsFile) {
+    weatherSwapOs() = cg::Os::Posix;
+    const std::string t1 = "2026-10-23T08:20:00Z", t2 = "2026-10-23T08:30:00Z", r1 = "2026-10-23T06:00:00Z",
+                      r2 = "2026-10-23T12:00:00Z";
+    struct Row {
+        const char* what;
+        bool weather;
+        std::string prevT, prevRun, newT, newRun;
+        std::size_t rescans;
+        std::string modelRunAfter;
+    };
+    const std::vector<Row> rows = {
+        {"same time, no run", true, t1, "", t1, "", 0, ""},
+        {"same time and run", true, t1, r1, t1, r1, 0, r1},
+        {"newer time", true, t1, r1, t2, r1, 1, r1},
+        {"same time, new run", true, t1, r1, t1, r2, 1, r2},
+        {"same time, run missing now", true, t1, r1, t1, "", 0, r1},
+        {"nothing known before", true, "", "", t1, "", 1, ""},
+        {"a base chart, same time", false, t1, "", t1, "", 1, ""},
+    };
+    int k = 0;
+    for (const Row& row : rows) {
+        SCOPED_TRACE(row.what);
+        const std::string id = std::string("20261105-1100") + std::to_string(10 + k++);
+        const auto r = update(id, row.weather, row.prevT, row.prevRun);
+        scenario(id, 1, records(planned("W.mbtiles"), row.newT, row.newRun), "", 0);
+        ocpn_fake::updates.clear();
+        LogCollector log;
+        start(r);
+        ASSERT_TRUE(waitIdle());
+        EXPECT_EQ(ocpn_fake::updates.size(), row.rescans);
+        const auto c = chart(id);
+        EXPECT_EQ(c.files, (std::vector<std::string>{planned("W.mbtiles")}));
+        EXPECT_EQ(c.snapshot, row.newT);
+        EXPECT_EQ(c.modelRun, row.modelRunAfter);
+        EXPECT_EQ(c.state, cg::ChartState::Complete);
+        const bool logged =
+            std::find(log.messages.begin(), log.messages.end(),
+                      "ChartGrabber: same weather picture; chart list not updated") != log.messages.end();
+        EXPECT_EQ(logged, row.rescans == 0 && row.weather);
+    }
+}
+
+// The snapshot line is the captured one of CLI 2026.11.1, verbatim: field 4 is the model run.
+TEST_F(SamePictureTest, TheCapturedSnapshotLineOfCli20261101CarriesTheModelRun) {
+    weatherSwapOs() = cg::Os::Posix;
+    std::string snap;
+    {
+        std::istringstream in(
+            slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.11.1" / "run-rtofs-snapshot.stdout"));
+        for (std::string l; std::getline(in, l);)
+            if (l.rfind("snapshot\t", 0) == 0)
+                snap = l + "\n";
+    }
+    ASSERT_FALSE(snap.empty());
+    const std::string t = "2026-11-05T18:00:00Z", run = "2026-11-05T00:00:00Z";
+    const auto r = update("20261105-110400", true, t, "2026-11-03T12:00:00Z"); // same time, older run
+    scenario(r.id, 1, snap + tsv({"written", kRain, planned("W.mbtiles"), "1", "57344", t}), "", 0);
+    start(r);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(chart(r.id).modelRun, run);
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u); // a new run: the chart list is rescanned
+}
+
+TEST_F(SamePictureTest, TheLastSnapshotRecordOfAStepBackIsTheOneThatCounts) {
+    weatherSwapOs() = cg::Os::Posix;
+    const std::string t1 = "2026-10-23T08:20:00Z", r1 = "2026-10-23T06:00:00Z", r2 = "2026-10-23T12:00:00Z";
+    const auto r = update("20261105-110100", true, t1, r1);
+    scenario(r.id, 1, tsv({"snapshot", kRain, t1, "/v2/a", r2}) + records(planned("W.mbtiles"), t1, ""), "",
+             0);
+    start(r);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_TRUE(ocpn_fake::updates.empty()); // the first record's run r2 is replaced by the last one (none)
+}
+
+TEST_F(SamePictureTest, AnInterruptedRunDoesNotStoreItsModelRunForTheNextOne) {
+    weatherSwapOs() = cg::Os::Posix;
+    const std::string t1 = "2026-10-23T08:20:00Z", r1 = "2026-10-23T06:00:00Z", r2 = "2026-10-23T12:00:00Z";
+    const auto r = update("20261105-110300", true, t1, r1);
+    scenario(r.id, 1, tsv({"snapshot", kRain, t1, "/v2/x", r2}), "", 1); // failed: no written record
+    start(r);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(chart(r.id).modelRun, r1);
+    scenario(r.id, 2, records(planned("W.mbtiles"), t1, r2), "", 0);
+    ocpn_fake::updates.clear();
+    start(chart(r.id));
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u);
+}
+
+TEST_F(SamePictureTest, OnWindowsTheSamePictureRemovesTheNewFileKeepsTheOldOneAndRescansNothing) {
+    const std::string t1 = "2026-10-23T08:20:00Z";
+    const auto r = update("20261105-110200", true, t1, "");
+    const std::string hook =
+        "out=$(sed -n 's/^Out=//p' \"$ini\")\nprintf new > \"$out\"\nprintf 'snapshot\\t" + kRain + "\\t" +
+        t1 + "\\t/v2/x\\nwritten\\t" + kRain + "\\t%s\\t4\\t9\\t" + t1 + "\\n' \"$out\"\n";
+    scenario(r.id, 1, "", "", 0);
+    spit(jobDir(r.id) / "hook.1", hook);
+    start(r);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(outOf(r.id), planned("W (2).mbtiles")); // the run did write the other name
+    const auto c = chart(r.id);
+    EXPECT_EQ(c.files, (std::vector<std::string>{planned("W.mbtiles")}));
+    EXPECT_TRUE(c.stale.empty());
+    EXPECT_EQ(chartIniText(r.id).find("Stale0="), std::string::npos);
+    EXPECT_TRUE(fs::exists(planned("W.mbtiles")));
+    EXPECT_FALSE(fs::exists(planned("W (2).mbtiles")));
+    EXPECT_TRUE(ocpn_fake::updates.empty());
+}
+
+// -----------------------------------
+// "Update all weather charts": three weather charts in the folders d1..d3, the stand-in prints a picture.
+// GCC 12 false-positives -Werror=restrict on "lit" + std::to_string(...); append instead.
+std::string dirName(int k) {
+    std::string s = "d";
+    s += std::to_string(k);
+    return s;
+}
+
+class BatchTest : public SamePictureTest {
+protected:
+    static constexpr const char* kOld = "2026-10-23T08:20:00Z";
+    static constexpr const char* kNew = "2026-10-23T08:30:00Z";
+    void SetUp() override {
+        SamePictureTest::SetUp();
+        weatherSwapOs() = cg::Os::Posix;
+    }
+    void TearDown() override {
+        std::error_code ec;
+        for (int k = 1; k <= 3; ++k)
+            fs::permissions(folder() / dirName(k), fs::perms::owner_write, fs::perm_options::add, ec);
+        SamePictureTest::TearDown();
+    }
+    // Chart k (1..3): id ...0k, name "Weather k", file dk/W.mbtiles, picture kOld.
+    cg::ChartRecord wchart(int k) {
+        const std::string id = std::string("2026110512000") + std::to_string(k);
+        auto r = weatherChart(id, dirName(k) + "/W.mbtiles");
+        r.name = std::string("Weather ") + std::to_string(k);
+        r.snapshot = kOld;
+        store_->saveChart(r);
+        return r;
+    }
+    // The run of chart k prints a picture of `time` and notes its start in the order file.
+    void prints(const cg::ChartRecord& r, const std::string& time) {
+        scenario(r.id, 1, records(r.files[0], time, ""), "", 0);
+        spit(jobDir(r.id) / "hook.1", "echo " + r.id + " >> '" + (root_ / "order").string() + "'\n");
+    }
+    std::vector<std::string> order() const {
+        std::vector<std::string> v;
+        std::istringstream in(slurp(root_ / "order"));
+        for (std::string line; std::getline(in, line);)
+            v.push_back(line);
+        return v;
+    }
+    std::vector<std::string> folders(std::initializer_list<int> ks) const {
+        std::vector<std::string> v;
+        for (int k : ks)
+            v.push_back(planned(dirName(k)));
+        return v;
+    }
+    void batch(const std::vector<cg::ChartRecord>& v) { jc().startBatch(v); }
+};
+
+TEST_F(BatchTest, ThreeChartsRunInOrderLikeASingleUpdateAndTheListIsRescannedOnce) {
+    std::vector<cg::ChartRecord> v;
+    for (int k = 1; k <= 3; ++k) {
+        v.push_back(wchart(k));
+        prints(v.back(), kNew);
+    }
+    size_t rescansWhenLastRan = 99;
+    ocpn_fake::onUpdate = [&] { rescansWhenLastRan = runs(v[2].id); };
+    batch(v);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(order(), (std::vector<std::string>{v[0].id, v[1].id, v[2].id}));
+    for (const auto& r : v)
+        EXPECT_EQ(argsOf(r.id, 1),
+                  (std::vector<std::string>{"run", "--job", iniOf(r.id), "--format=tsv", "--progress=lines",
+                                            "--cache", defaultCache(), "--datadir=" + defaultData(),
+                                            "--overwrite", "--stop-on-stdin"}));
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u);
+    EXPECT_EQ(dirs(0), folders({1, 2, 3}));
+    EXPECT_EQ(rescansWhenLastRan, 1u);
+    EXPECT_EQ(stripText(), "Weather charts: 3 updated.");
+    EXPECT_EQ(buttons(), (std::vector<std::string>{"Close"}));
+    for (const auto& r : v)
+        EXPECT_EQ(chart(r.id).snapshot, kNew);
+    EXPECT_EQ(busyCalls_, (std::vector<bool>{true, false, true, false, true, false})); // busy flips per chart
+}
+
+TEST_F(BatchTest, AFailedChartDoesNotStopTheBatchAndIsNamedInTheResult) {
+    std::vector<cg::ChartRecord> v;
+    for (int k = 1; k <= 3; ++k)
+        v.push_back(wchart(k));
+    prints(v[0], kNew);
+    scenario(v[1].id, 1, "", "error: no connection", 4);
+    prints(v[2], kNew);
+    batch(v);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(runs(v[2].id), 1);
+    EXPECT_EQ(chart(v[1].id).state, cg::ChartState::Interrupted); // exit 4 is DownloadIncomplete
+    EXPECT_EQ(chart(v[1].id).lastError, "no connection");
+    EXPECT_EQ(chart(v[2].id).snapshot, kNew);
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u);
+    EXPECT_EQ(dirs(0), folders({1, 3}));
+    EXPECT_EQ(stripText(), "Weather charts: 2 updated, 1 failed (Weather 2).");
+}
+
+TEST_F(BatchTest, SamePicturesRescanNothing) {
+    std::vector<cg::ChartRecord> v;
+    for (int k = 1; k <= 2; ++k) {
+        v.push_back(wchart(k));
+        prints(v.back(), kOld);
+    }
+    LogCollector log;
+    batch(v);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_TRUE(ocpn_fake::updates.empty());
+    EXPECT_EQ(stripText(), "Weather charts: 2 unchanged.");
+    EXPECT_NE(std::find(log.messages.begin(), log.messages.end(),
+                        "ChartGrabber: same weather pictures; chart list not updated"),
+              log.messages.end());
+}
+
+TEST_F(BatchTest, ARunLockedByAnotherRunKeepsItsStateAndErrorAndCountsAsBusy) {
+    std::vector<cg::ChartRecord> v;
+    for (int k = 1; k <= 3; ++k)
+        v.push_back(wchart(k));
+    v[1].state = cg::ChartState::Failed;
+    v[1].lastError = "old problem";
+    store_->saveChart(v[1]);
+    prints(v[0], kNew);
+    scenario(v[1].id, 1, "", "error: another run of this job is in progress (lock /x/session.lock)", 3);
+    prints(v[2], kNew);
+    batch(v);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(chart(v[1].id).state, cg::ChartState::Failed);
+    EXPECT_EQ(chart(v[1].id).lastError, "old problem");
+    EXPECT_EQ(runs(v[2].id), 1);
+    EXPECT_EQ(dirs(0), folders({1, 3}));
+    EXPECT_EQ(stripText(), "Weather charts: 2 updated, 1 skipped (busy).");
+}
+
+TEST_F(BatchTest, ALockedSingleRunKeepsTheStateAndRescansNothingButOtherRefusalsFail) {
+    auto r = wchart(1);
+    r.state = cg::ChartState::Missing;
+    r.lastError = "old problem";
+    store_->saveChart(r);
+    scenario(r.id, 1, "", "error: another run of this job is in progress", 3);
+    start(r);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(chart(r.id).state, cg::ChartState::Missing);
+    EXPECT_EQ(chart(r.id).lastError, "old problem");
+    EXPECT_EQ(stripText(), "Skipped: another download of this chart is running.");
+    EXPECT_TRUE(ocpn_fake::updates.empty());
+    scenario(r.id, 2, "", "error: cannot lock /x/session.lock", 3);
+    start(r);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(chart(r.id).state, cg::ChartState::Failed);
+    EXPECT_EQ(chart(r.id).lastError, "cannot lock /x/session.lock");
+}
+
+TEST_F(BatchTest, StopDuringTheSecondChartEndsTheBatchAfterOneRescanForTheFirst) {
+    std::vector<cg::ChartRecord> v;
+    for (int k = 1; k <= 3; ++k)
+        v.push_back(wchart(k));
+    prints(v[0], kNew);
+    scenario(v[1].id, 1, "", "", 0, "wait");
+    LogCollector log;
+    batch(v);
+    ASSERT_TRUE(runUntil([&] { return runs(v[1].id) == 1; }));
+    jc().stop();
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(runs(v[2].id), 0);
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u);
+    EXPECT_EQ(dirs(0), folders({1}));
+    EXPECT_EQ(stripText(), "Weather charts: 1 updated, 1 failed (Weather 2), 1 not updated.");
+    EXPECT_NE(
+        std::find(log.messages.begin(), log.messages.end(), "ChartGrabber: 1 weather charts not started"),
+        log.messages.end());
+}
+
+TEST_F(BatchTest, AMissingCliEndsTheBatchAtTheFirstChart) {
+    fs::create_directories(root_ / "empty path");
+    jc().cliDefaultPaths = {(root_ / "no-such" / "chart-grabber-cli").string()};
+    jc().cliPathEnv = (root_ / "empty path").string();
+    setSettings([](cg::Settings& s) { s.cliPath.clear(); });
+    std::vector<cg::ChartRecord> v{wchart(1), wchart(2)};
+    batch(v);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(
+        stripText(),
+        "Chart Grabber CLI was not found. Install the chart-grabber-cli package, or choose the program under "
+        "Advanced in Preferences. Weather charts: 2 not updated.");
+    EXPECT_EQ(buttons(), (std::vector<std::string>{"Preferences...", "Close"}));
+}
+
+// The budget stop ends the batch: its headline above the counts, Close only (as a single update shows it).
+TEST_F(BatchTest, TheBudgetStopEndsTheBatchWithItsReasonAboveTheCounts) {
+    setSettings([](cg::Settings& s) {
+        s.slowConnection = true;
+        s.dataBudgetMb = 1;
+    });
+    auto a = wchart(1), b = wchart(2);
+    scenario(a.id, 1, "", progressDownload(kRain, 13, 1, 9, 1000001, 1), 0, "wait");
+    batch({a, b});
+    ASSERT_TRUE(waitIdle(10000));
+    EXPECT_EQ(runs(b.id), 0);
+    EXPECT_EQ(stripText(), "Stopped at your data limit (1 MB). Resume to continue. "
+                           "Weather charts: 1 failed (Weather 1), 1 not updated.");
+    EXPECT_EQ(buttons(), (std::vector<std::string>{"Close"}));
+}
+
+TEST_F(BatchTest, NothingStartsWhileBusyOrForAnEmptyList) {
+    jc().startBatch({});
+    EXPECT_FALSE(jc().busy());
+    auto a = wchart(1), b = wchart(2);
+    scenario(a.id, 1, "", "", 0, "wait");
+    start(a);
+    jc().startBatch({b});
+    jc().stop();
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(runs(b.id), 0);
+}
+
+// Windows: the update writes another file name; the old file goes before the ONE rescan or after it.
+class BatchSwapTest : public BatchTest {
+protected:
+    void SetUp() override {
+        BatchTest::SetUp();
+        weatherSwapOs() = cg::Os::Windows;
+        store_->setFirstSuccessShown();
+    }
+    void TearDown() override {
+        weatherSwapOs() = cg::kHostOs;
+        BatchTest::TearDown();
+    }
+    void
+    releaseAtRescan(std::vector<int> ks) { // by value: an initializer_list copy would dangle in the lambda
+        ocpn_fake::onUpdate = [this, ks = std::move(ks)] {
+            for (int k : ks)
+                fs::permissions(folder() / dirName(k), fs::perms::owner_write, fs::perm_options::add);
+        };
+    }
+    size_t count(const std::string& text, const std::string& what) {
+        size_t n = 0;
+        for (size_t at = text.find(what); at != std::string::npos; at = text.find(what, at + 1))
+            ++n;
+        return n;
+    }
+};
+
+TEST_F(BatchSwapTest, OldFilesFreeBeforeTheRescanGoBeforeItAndNoSecondRescanFollows) {
+    auto a = wchart(1), b = wchart(2);
+    picture(a.id, 1, false);
+    picture(b.id, 1, false);
+    int goneAtRescan = 0;
+    ocpn_fake::onUpdate = [&] {
+        goneAtRescan = !fs::exists(planned("d1/W.mbtiles")) + !fs::exists(planned("d2/W.mbtiles"));
+    };
+    batch({a, b});
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u);
+    EXPECT_EQ(goneAtRescan, 2);
+    EXPECT_TRUE(fs::exists(planned("d1/W (2).mbtiles")));
+    EXPECT_TRUE(fs::exists(planned("d2/W (2).mbtiles")));
+    EXPECT_EQ(detailsText().find("restarted"), std::string::npos);
+}
+
+TEST_F(BatchSwapTest, AnOldFileHeldUntilTheRescanIsRemovedAfterItWithExactlyOneSecondRescan) {
+    auto a = wchart(1), b = wchart(2);
+    picture(a.id, 1, true);
+    picture(b.id, 1, true);
+    releaseAtRescan({1, 2});
+    LogCollector log;
+    batch({a, b});
+    ASSERT_TRUE(waitIdle());
+    ASSERT_EQ(ocpn_fake::updates.size(), 2u);
+    EXPECT_EQ(dirs(1), dirs(0));
+    EXPECT_FALSE(fs::exists(planned("d1/W.mbtiles")));
+    EXPECT_FALSE(fs::exists(planned("d2/W.mbtiles")));
+    EXPECT_TRUE(chart(a.id).stale.empty());
+    EXPECT_TRUE(chart(b.id).stale.empty());
+    EXPECT_EQ(detailsText().find("restarted"), std::string::npos);
+}
+
+TEST_F(BatchSwapTest, FilesStillHeldAfterTheRescanAddTheRestartLineOnce) {
+    auto a = wchart(1), b = wchart(2);
+    picture(a.id, 1, true);
+    picture(b.id, 1, true);
+    batch({a, b});
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u);
+    EXPECT_EQ(chart(a.id).stale.size(), 1u);
+    EXPECT_EQ(count(detailsText(), u(staleWeatherText())), 1u);
 }
 
 } // namespace

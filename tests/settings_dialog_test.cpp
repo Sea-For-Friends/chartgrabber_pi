@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// : the Settings dialog in one column, every folder and the Chart
+// The Settings dialog in one column, every folder and the Chart
 // Grabber CLI as a visible read-only field with "Change..." and "Use default", saved tiles, status lines.
 // A window test (cg_gui_tests). "Change..." is always replaced by a script (no modal picker); the Clear...
 // confirmation is a modeless Question answered by button events (question_probe.h).
+#include "chart_folder.h"
 #include "config_store.h"
 #include "job_files.h"
 #include "look.h"
@@ -99,6 +100,7 @@ protected:
         chmod(standIn_.c_str(), 0755);
     }
     void TearDown() override {
+        cg::sandboxProbe() = [] { return cg::detectSandbox(); }; // a test may have faked Flatpak
         if (!store_)
             return;
         dlg_.reset();
@@ -184,7 +186,9 @@ TEST_F(SettingsPage, ChangeTwiceThenUseDefaultForEveryPathRow) {
                                         : c.kind == Kind::Cache
                                             ? (root_ / "private").string() + "/plugins/chartgrabber/cache"
                                             : standIn_;
-        const std::string a = "/pick/a d'\xc3\xa9", b = "/pick/b";
+        const std::string a = (root_ / "pick" / "a d'\xc3\xa9").string(), b = (root_ / "pick" / "b").string();
+        fs::create_directories(a); // a chosen charts folder must exist
+        fs::create_directories(b);
         {
             SettingsDialog& dlg = open();
             dlg.cliDefaultPaths = {standIn_}; // the automatic program of this row
@@ -251,7 +255,7 @@ TEST_F(SettingsPage, TheDefaultPickerCallsTheDirAndFileSelectors) {
     EXPECT_FALSE(fresh.choosePath(Kind::Cli, "/x"));
 }
 
-// Proof 2: the new value reaches the next run's argv through cliSettings(loadSettings).
+// Proof 2: the new value reaches the next run's argv through cliSettings(loadSettings()).
 TEST_F(SettingsPage, TheChosenSourcesFolderIsTheMapsArgumentOfTheNextRun) {
     const fs::path folder = root_ / "my sources d'x";
     fs::create_directories(folder / "one" / "two");
@@ -358,7 +362,7 @@ TEST_F(SettingsPage, ProgressOnTheChartIsOffByDefaultWithItsNoteAndOkStoresIt) {
     EXPECT_TRUE(store_->loadSettings().stripOnChart);
 }
 
-// : the Log file row and the Debug check box.
+// the Log file row and the Debug check box.
 TEST_F(SettingsPage, TheLogFileRowShowsTheOpenFileAndOpenCallsTheSeamWithItsPath) {
     const std::string path = (root_ / "log d'\xD0\x96" / "chartgrabber.log").string();
     ASSERT_TRUE(cg::openPluginLog(path));
@@ -522,7 +526,29 @@ TEST_F(SettingsPage, TheChartsStatusLineSaysWhatIsTrueOfTheFolder) {
         ADD_FAILURE() << "running as root: the read-only folder case was NOT run";
     }
     change("charts", missing.string());
-    EXPECT_EQ(label("chartsStatus"), "The folder will be created at the first download.");
+    EXPECT_EQ(label("chartsStatus"), "This folder cannot be written. Choose another one.")
+        << "a chosen folder must exist; only the default may be created later";
+    EXPECT_EQ(field("charts"), writable.string()) << "the refused folder is not kept";
+}
+
+// under Flatpak a folder outside home (and outside the granted folders) is refused; the old one
+// stays.
+TEST_F(SettingsPage, UnderFlatpakAFolderOutsideHomeIsRefusedWithTheFlathubText) {
+    const fs::path inside = home_ / "boat \xC3\xA9", outside = root_ / "mnt";
+    fs::create_directories(inside);
+    fs::create_directories(outside);
+    cg::sandboxProbe() = [&] { return cg::Sandbox{true, home_.string(), {}}; };
+    open();
+    change("charts", outside.string());
+    EXPECT_EQ(label("chartsStatus"),
+              "OpenCPN from Flathub can only keep charts inside your home folder. Choose a folder there.");
+    EXPECT_EQ(field("charts"), (home_ / "Charts" / "ChartGrabber").string());
+    change("charts", inside.string());
+    EXPECT_EQ(field("charts"), inside.string());
+    EXPECT_NE(label("chartsStatus").find("OpenCPN shows the charts from this folder."), std::string::npos);
+    cg::sandboxProbe() = [&] { return cg::Sandbox{true, home_.string(), {outside.string()}}; };
+    change("charts", outside.string());
+    EXPECT_EQ(field("charts"), outside.string()) << "a granted folder is allowed";
 }
 
 // Proof 9: Open folder creates the missing sources folder; the launcher is the injected hook.
@@ -596,7 +622,7 @@ TEST_F(SavedTiles, TheSizeFollowsTheCacheFolderOfTheDialog) {
     EXPECT_FALSE(find<wxButton>("clear")->IsEnabled());
 }
 
-// , 8.9: Clear... asks with a modeless Question labelled Delete / Cancel and returns at
+// Clear... asks with a modeless Question labelled Delete / Cancel and returns at
 // once; only Delete clears the cache* folders; Cancel, Escape and the close box keep everything.
 TEST_F(SavedTiles, TheQuestionHasDeleteAndCancelAndOnlyDeleteClearsTheCacheFolders) {
     const fs::path cache = root_ / "cache d'x \xc3\xa9";
@@ -643,7 +669,7 @@ TEST_F(SavedTiles, TheQuestionHasDeleteAndCancelAndOnlyDeleteClearsTheCacheFolde
     EXPECT_EQ(label("cacheSize"), "2.0 MB of saved tiles") << "the size is refreshed";
 }
 
-//: opened by OpenCPN's plugin list (modal), Clear... asks MODALLY: the question
+// Opened by OpenCPN's plugin list (modal), Clear... asks MODALLY: the question
 // joins the nested loop; Delete clears, Cancel keeps.
 TEST_F(SavedTiles, WhenTheSettingsWindowIsModalTheClearQuestionIsModalToo) {
     const fs::path cache = root_ / "cache modal";
@@ -680,7 +706,7 @@ TEST_F(SavedTiles, WhenTheSettingsWindowIsModalTheClearQuestionIsModalToo) {
     }
 }
 
-// a download may start while the window is open: Clear... re-reads jobBusy when pressed and in
+// a download may start while the window is open: Clear... re-reads jobBusy() when pressed and in
 // the answer; busy -> no question / nothing deleted, the button disabled and the line says so.
 TEST_F(SavedTiles, ADownloadThatStartsWhileTheWindowIsOpenRefusesClearAtThePressAndAtTheAnswer) {
     const fs::path cache = root_ / "cache busy";
@@ -734,9 +760,9 @@ TEST_F(SavedTiles, DeletingTheDialogWithTheClearQuestionOpenDeletesTheQuestionAt
     EXPECT_TRUE(fs::exists(cache / "cache1"));
 }
 
-// "Dialog end": What wx 3.2 does with a MODELESS plain dialog (the ticket's NV): Cancel,
+// What wx 3.2 does with a MODELESS plain dialog: Cancel,
 // Escape and the close box only hide it; it is not destroyed and no handler of ours runs. That is why
-// SettingsDialog and SourcesDialog end through their own finish.
+// SettingsDialog and SourcesDialog end through their own finish().
 TEST_F(SettingsPage, WxOnlyHidesAModelessDialogOnCancelEscapeAndTheCloseBox) {
     const std::vector<std::pair<const char*, std::function<void(wxDialog*)>>> acts = {
         {"Cancel", [](wxDialog* d) { click(d->FindWindow(wxID_CANCEL)); }},
@@ -813,7 +839,7 @@ TEST_F(SettingsPage, AModelessDialogEndsOnOkCancelEscapeAndTheCloseBoxWithOneCal
     }
 }
 
-// one plugin Settings window at a time; shown finds it (modal or modeless) so the
+// One plugin Settings window at a time; shown() finds it (modal or modeless) so the
 // page and the strip raise it instead of opening a second one.
 TEST_F(SettingsPage, ShownFindsTheOpenSettingsWindowAndNotAHiddenOne) {
     EXPECT_EQ(SettingsDialog::shown(), nullptr);
@@ -852,7 +878,7 @@ protected:
             sum += w->GetPosition().y;
         return sum;
     }
-    // What does by code: open Advanced and tell the dialog.
+    // What the code does: open Advanced and tell the dialog.
     void expand() {
         auto* pane = find<wxCollapsiblePane>("advanced");
         pane->Collapse(false);
@@ -923,7 +949,7 @@ TEST_F(SettingsLayout, ALongPathDoesNotWidenTheDialog) {
     EXPECT_LE(dlg_->GetSize().y, 480);
 }
 
-// The three one-line status labels (fills two of them) never change the dialog's size.
+// The three one-line status labels never change the dialog's size.
 TEST_F(SettingsLayout, ALongStatusTextDoesNotChangeTheSize) {
     open();
     expand();
@@ -962,7 +988,7 @@ TEST_F(SettingsLayout, TheRowsAreInTheSailorsOrderAndTheStatusLabelsAreEmpty) {
     EXPECT_EQ(label("sourcesStatus"), "");
 }
 
-// ---- : the automatic checks. The CLI is the sources stand-in of tests/sources_stub.h; the
+// ---- the automatic checks. The CLI is the sources stand-in of tests/sources_stub.h; the
 // 500 ms timer is the real one (checkDelayMs is left at its default), the waits dispatch events until a
 // condition holds (a deadline only guards a hang). ----
 
@@ -1068,7 +1094,7 @@ protected:
 
 const char* const kReadyNone = "Chart sources are checked when Chart Grabber CLI is ready.";
 
-// and 4: a check by itself on open, no button; the sailor's folder missing, then empty.
+// a check by itself on open, no button; the sailor's folder missing, then empty.
 TEST_F(SettingsCheck, OnOpenTheLinesSayReadyAndWhatTheSourcesAre) {
     stub_->records(recs(3));
     openStub();
@@ -1093,6 +1119,20 @@ TEST_F(SettingsCheck, OnOpenTheLinesSayReadyAndWhatTheSourcesAre) {
     ASSERT_EQ(stub_->argv().size(), 2u);
     EXPECT_EQ(stub_->argv()[1].find("--maps", stub_->argv()[1].find("--maps") + 1), std::string::npos)
         << "an empty folder is not passed: " << stub_->argv()[1];
+}
+
+// Open folder creates the missing folder and the status line is checked again.
+TEST_F(SettingsCheck, OpenFolderRefreshesTheNotFoundLine) {
+    stub_->records(recs(3));
+    openStub();
+    ASSERT_TRUE(settle());
+    ASSERT_NE(label("sourcesStatus").find("was not found"), std::string::npos);
+    click("sourcesOpen");
+    ASSERT_TRUE(runUntil([&] { return label("sourcesStatus").find("was not found") == std::string::npos; }));
+    ASSERT_TRUE(settle());
+    EXPECT_EQ(label("sourcesStatus"), "3 chart sources available. Put your own chart source (.zmp or "
+                                      ".source.json) files in your folder to add more.");
+    EXPECT_EQ(stub_->argv().size(), 2u) << "one more check, not one per press";
 }
 
 TEST_F(SettingsCheck, AFolderWithASourceTwoLevelsDownIsPassedLastAndCounted) {

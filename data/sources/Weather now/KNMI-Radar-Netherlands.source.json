@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "guid": "{C167DA1F-58E9-4261-809F-3B6D16AD56AA}",
+  "name": "KNMI weather radar (Netherlands)",
+  "group": "Weather now",
+  "layer": true,
+  "url": "https://geoservices.knmi.nl/adaguc-server?dataset=RADAR&SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=RAD_NL25_PCP_CM&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE&TIME={ver}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Weather_KNMI_Radar_Netherlands",
+  "cacheType": 71,
+  "license": "Source: KNMI, CC BY 4.0",
+  "maxConnections": 2,
+  "maxZoom": 9,
+  "snapshot": {
+    "index": "https://geoservices.knmi.nl/adaguc-server?dataset=RADAR&service=WMS&version=1.3.0&request=GetCapabilities",
+    "type": "wms-default",
+    "item": "RAD_NL25_PCP_CM"
+  }
+}

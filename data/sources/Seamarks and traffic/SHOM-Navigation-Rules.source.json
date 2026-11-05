@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{8D8C7EC7-8857-4419-9EDC-AD6F1CBB223A}",
+  "name": "SHOM navigation rules and zones (France)",
+  "group": "Seamarks and traffic",
+  "layer": true,
+  "url": "https://services.data.shom.fr/INSPIRE/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=REGLEMENTATION_NAVIGATION_PYR_PNG_3857_WMTS&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Seamarks_SHOM_Navigation_Rules",
+  "license": "© Shom — Licence Ouverte 2.0. Non certifié pour la navigation",
+  "maxConnections": 2,
+  "maxZoom": 17,
+  "navigationWarning": true
+}

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The job strip's place on the primary canvas. Pure integer arithmetic in canvas client pixels; the wx caller converts DIP. No wx, never
-// throws.
+// The job strip's place on the primary canvas. Pure integer arithmetic in canvas client pixels; the wx caller
+// converts DIP. No wx, never throws.
 #pragma once
 
 #include <optional>

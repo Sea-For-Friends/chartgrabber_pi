@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Pack the built plugin into the Plugin Manager tarball .
+# Pack the built plugin into the Plugin Manager tarball.
 # Usage: tools/tarball.sh <build-dir> [out-dir] [--cli-bundle <dir>]     (out-dir default: <build-dir>)
 # --cli-bundle: the content of <dir> (the unpacked core bundle, named
 # chart-grabber-cli-<N.N.N>-(linux-x86_64|linux-arm64|linux-armhf|win64|macos-universal|macos-arm64)) goes to .../chartgrabber_pi/cli/; modes: the
@@ -9,9 +9,10 @@
 # The target/version/arch of metadata.xml are fixed at configure time (tools/vm.sh reads the tuple in the VM):
 #   cmake -S . -B build -DCG_TARGET=debian-arm64 -DCG_TARGET_VERSION=n/a -DCG_TARGET_ARCH=arm64
 # Exit 2 when the build's <target> is empty or "all" (a wx-linked library never claims all).
-# Exit 2 also when data/sources (the bundled chart sources) is missing, holds no .zmp entry or no top-level
+# Exit 2 also when data/sources is missing, holds no .zmp entry or no top-level
 # LICENSE* / NOTICE* file; hidden files and .git inside it are not packed.
-# Byte-reproducible the same build dir and the same commit give the same sha256. Every entry gets the
+# Packages carry no documents: beside data/ only a short README.md (GitHub links); every .md/.txt/.adoc/.html under data/ is dropped.
+# Byte-reproducible: the same build dir and the same commit give the same sha256. Every entry gets the
 # mtime SOURCE_DATE_EPOCH (default: the commit time of HEAD in this tree; a tree without git needs the variable,
 # tools/vm.sh passes it), owner 0:0, sorted names, fixed modes (dirs 755, files 644, the library 755), gzip -n.
 # A <target> starting with msvc: <build>/chartgrabber_pi.dll, entries metadata.xml, plugins/chartgrabber_pi.dll (755),
@@ -65,6 +66,8 @@ src=$here/data/sources
 refuse() { echo "tarball.sh: $1" >&2; exit 2; }
 [[ -n $version && $version != */* ]] || refuse "metadata.xml <version> is '${version}': empty or holding a / (the folder is data/sources-<version>)"
 [[ -d $src ]] || refuse "data/sources is missing"
+[[ -f $here/data/source-descriptions.conf ]] || refuse "data/source-descriptions.conf is missing (the Note column of More sources)"
+[[ -f $here/data/favourite-sources.conf ]] || refuse "data/favourite-sources.conf is missing (the default Chart and Weather on top lists)"
 # the CLI's walk: depth 6, entries ending .zmp (any case), file or directory, or a regular file ending .source.json;
 # hidden entries do not count
 [[ -n $(find "$src" -mindepth 1 -maxdepth 6 -name '.*' -prune -o \( -iname '*.zmp' -o -type f -iname '*.source.json' \) -print -quit) ]] ||
@@ -131,8 +134,21 @@ install -m 0755 "$lib" "$libdst"
 for f in chartgrabber_tool chartgrabber_tool_toggled chartgrabber_tool_rollover_toggled; do
     cp "$here/data/$f.svg" "$data/"
 done
+for f in "$here"/data/*.conf; do # plugin data files, beside sources-<version> (never inside it: that is the CLI's --maps)
+    cp "$f" "$data/"
+done
 cp -r "$src" "$data/sources-$version"
 find "$data/sources-$version" -name '.*' -prune -exec rm -rf {} +
+# Packages carry NO documents. Kept: binaries, icons, *.source.json / *.zmp, the two *.conf, sources LICENSE and NOTICE
+# (licence/attribution notice, Debian copyright format), the CLI as the core ships it, and the 3-line README link below. Every .md/.txt/.adoc/.html
+# under data/ is dropped (README.md = per-service terms: on GitHub; PROVENANCE.md = our history). Attribution and licence of each source
+# stay in its source JSON "license" field, which the plugin shows.
+find "$data" -type f ! -path '*.zmp/*' \( -iname '*.md' -o -iname '*.txt' -o -iname '*.adoc' -o -iname '*.html' \) -delete
+gh=https://github.com/Sea-For-Friends/chartgrabber_pi
+printf '%s\n' '# Chart Grabber (OpenCPN plugin)' '' \
+    "Project: $gh" \
+    "User guide: $gh/blob/main/docs/user-guide.md" \
+    "Chart source terms and attribution: $gh/blob/main/data/sources/README.md" >"$(dirname "$data")/README.md"
 if [[ -n $bundle ]]; then
     clidst=$(dirname "$data")/cli
     mkdir -p "$clidst"

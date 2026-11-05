@@ -45,7 +45,7 @@ inline void escape(Question* q) {
     q->GetEventHandler()->ProcessEvent(e);
 }
 
-// The question text (the first static text; Wrap breaks it into lines).
+// The question text (the first static text; Wrap() breaks it into lines).
 inline std::string text(Question* q) {
     for (wxWindow* w : q->GetChildren())
         if (auto* t = dynamic_cast<wxStaticText*>(w)) {

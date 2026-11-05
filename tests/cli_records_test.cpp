@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <map>
 #include <set>
@@ -20,7 +21,7 @@ using namespace cg;
 namespace {
 
 std::vector<std::string> fixtureLines(const std::string& name) {
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.14/" + name, std::ios::binary);
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.1/" + name, std::ios::binary);
     EXPECT_TRUE(in.good()) << name;
     std::vector<std::string> out;
     for (std::string line; std::getline(in, line);) {
@@ -29,10 +30,10 @@ std::vector<std::string> fixtureLines(const std::string& name) {
     return out;
 }
 
-//  proofs 3 and 8: the captured lines of the pinned 2026.10.14 (15 columns: field 10 `origin` is
+// the captured lines of the pinned 2026.11.1 (15 columns: field 10 `origin` is
 // `user`, the last is `navigationWarning`); the record is read by position and `origin` changes nothing.
 TEST(Records, SourcesOfThePinnedRelease) {
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.14/sources-two-folders.stdout",
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.1/sources-two-folders.stdout",
                      std::ios::binary);
     ASSERT_TRUE(in.good());
     std::vector<SourceRecord> recs;
@@ -51,7 +52,7 @@ TEST(Records, SourcesOfThePinnedRelease) {
     EXPECT_EQ(recs[0].group, "Satellite");
     EXPECT_EQ(recs[0].zmpFile, "Esri-World-Imagery.source.json");
     EXPECT_EQ(recs[0].refresh, "static");
-    EXPECT_EQ(recs[0].license, "Esri, Maxar, Earthstar Geographics, and the GIS User Community");
+    EXPECT_EQ(recs[0].license, "Esri, Vantor, Earthstar Geographics, and the GIS User Community");
     EXPECT_FALSE(recs[0].maxZoom);
     EXPECT_EQ(recs[2].zmpFile, "Copy-Topo.source.json"); // the later folder's row of the duplicate GUID
     EXPECT_EQ(recs[3].refresh, "snapshot");
@@ -126,14 +127,22 @@ TEST(CliRecordsStdout, SourceEmptyGroupAndExtraFields) {
     EXPECT_EQ(std::get<SourceRecord>(*e).group, "G");
 }
 
-// proofs 3 and 7, the captured `sources` answers of the pinned CLI. Bundled
-// data/sources after the regroup: 28 rows, the flag is 1 for
-// exactly the seven sources of the groups `Nautical charts` (Norway, Finland, NOAA chart) and `Depth`
-// (EMODnet Europe and World, GEBCO, BlueTopo) and 0 for the other 21. A sailor-folder definition with
-// NavigationWarning=1 gets the flag too; the plain bundled one does not.
+// the captured `sources` answers of the pinned CLI. Bundled
+// data/sources after 81 rows (four weather sources more, CHS chart,
+// CHS NONNA-10, IGN, PNOA, PDOK, four Coast and land overlays, nine SHOM
+// depth layers, seven more depth layers, nine SHOM layers, four more Satellite
+// layers and the IH Portugal chart, eight more Weather now sources, four more Ocean
+// currents and waves, one of those Satellite layers removed, four more sources, the
+// INEGI row removed), the flag is 1 for exactly the forty sources of the groups `Nautical charts` (Norway,
+// Finland, NOAA chart, CHS chart, IH Portugal chart) and `Depth` (EMODnet Europe and World, GEBCO, BlueTopo,
+// CHS NONNA-10, the nine SHOM layers, the seven more layers) and of the two overlays IDEIB Posidonia and
+// EMODnet seagrass, nine more SHOM layers (buoyage, wrecks, navigation rules, tidal ranges, tidal
+// stream, 3D currents, tide zones), the two STOFS layers (surge water level, peak water level) and the\n//
+// NOAA OFS currents, and 0 for the other 42. A sailor-folder definition with NavigationWarning=1 gets the
+// flag too; the plain bundled one does not.
 TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
     const auto flags = [](const char* file) {
-        std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.14/" + file, std::ios::binary);
+        std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.1/" + file, std::ios::binary);
         EXPECT_TRUE(in.good()) << file;
         std::map<std::string, bool> out;
         for (std::string line; std::getline(in, line);) {
@@ -145,15 +154,48 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
         return out;
     };
     const auto all = flags("sources-bundled-all.stdout");
-    ASSERT_EQ(all.size(), 28u);
+    ASSERT_EQ(all.size(), 81u);
     const std::set<std::string> flagged = {
         "{25DBA489-D484-4A13-B65D-ABA8967FF3DA}", // Norway sea chart
         "{8A9C3A53-0512-4401-A6D3-050E08934949}", // Finland sea chart
         "{5DBBE570-0FA6-403E-B490-7A27AF8A3814}", // NOAA chart
+        "{7939ED8E-731B-4393-920D-D5DC9917D985}", // CHS chart
+        "{3F0A6175-2933-4E3C-9495-57042D2D6EDA}", // IH chart, Portugal
         "{91D4F1B4-A7CD-4FC8-95F1-637609068FB2}", // EMODnet Bathymetry Europe
         "{C44877A0-D455-4238-B5E2-C8BFF25FC0D4}", // EMODnet Bathymetry World
         "{87D82F0F-4841-434F-ADB5-1D63B1BFE5DA}", // GEBCO
         "{D73ACBDA-4E01-4C81-A36A-A069F38CF90C}", // BlueTopo
+        "{B645CE30-A8D2-4B40-9E04-6823908F8EF3}", // CHS NONNA-10
+        "{0C31D17C-5FAB-4A03-AC03-16BD45326219}", // IDEIB Posidonia
+        "{51385452-EFA1-4B30-8D8A-606F7F35DF54}", // EMODnet seagrass
+        "{967427CF-72EC-45F3-8DBA-0CCCC8762CE2}", // SHOM Litto3D lidar depth, Martinique 2016
+        "{426323EC-65E1-493F-A2FA-DAB5D02E0D62}", // SHOM Litto3D lidar depth, Guadeloupe 2016
+        "{C72F0919-06A3-4653-A452-02241CB692C0}", // SHOM Litto3D lidar depth, Saint-Martin 2019
+        "{A60F19C2-D083-4272-8EE8-46D248B6D9F3}", // SHOM Litto3D lidar depth, Saint-Barthelemy 2019
+        "{49DBB292-F25F-4FF3-AF2C-D2CFB2D56775}", // SHOM lidar depth, Corsica 2017-2018
+        "{02109A1A-0782-4E8D-AFC6-E26EFDF7411E}", // SHOM 100 m depth, Guadeloupe and Martinique
+        "{F8D0CFB0-4844-4A0D-A87E-3D9FBA78FFB8}", // SHOM 100 m depth, Saint-Martin, Saint-Barthelemy
+        "{04C99FA6-041B-4E56-A154-0464F26F3620}", // SHOM 100 m depth, Corsica
+        "{EC8D7131-80C6-4B43-B77D-2B585B3772CE}", // SHOM 100 m depth, Gulf of Lion and Cote d'Azur
+        "{CE3F4D53-EE39-412E-9C9F-29722410DD5B}", // SHOM lidar depth, Bora Bora 2015
+        "{147FA47B-9A99-4437-A490-56A3339D1CFD}", // SHOM coastal depth model, Tahiti
+        "{00B62B3C-C5E1-4F2D-BB60-78B330D9C4AF}", // SHOM coastal depth model, Moorea
+        "{75AD4560-CDA0-4C4B-B185-CBB90795FAB1}", // SHOM 100 m depth, Tahiti and Moorea
+        "{9441ED23-4236-4D96-BF7D-FDFB4C8BCF4C}", // SHOM 100 m depth, New Caledonia
+        "{8BC59B43-9257-40CA-B59C-807A2652EAE5}", // SHOM seabed type (France)
+        "{F12728E1-8C83-4B3C-9763-E0651ED9371C}", // Satellite-derived depth (Pacific islands, DEP)
+        "{F8736AA0-56B2-49E8-9D55-9EF7263BD128}", // SHOM buoyage (France)
+        "{B3F0F721-11B0-4806-AC4C-2A7219913F06}", // SHOM wrecks and obstructions (France)
+        "{8D8C7EC7-8857-4419-9EDC-AD6F1CBB223A}", // SHOM navigation rules and zones (France)
+        "{D88BE862-97D3-4062-9332-470B2BB5B5BE}", // SHOM tidal range, spring tides (France)
+        "{B2E953DA-3B93-4651-88F1-DD4EAFC8CD5A}", // SHOM tidal range, neap tides (France)
+        "{6CEDB50E-F401-4653-A69C-D9C402886D0B}", // SHOM tidal stream, maximum speed (French coasts)
+        "{9C9D5257-EC7A-4B63-B163-2537CBA2AA07}", // SHOM surface currents, 3D model (Channel)
+        "{7F6A0B57-C94F-4B1D-AA06-C8A2A797BF78}", // SHOM surface currents, 3D model (Fromveur, Ushant)
+        "{FA4270B3-BFD8-483A-8ED7-6D3C6DEE1080}", // SHOM tide zones (France)
+        "{984FD6D2-DB46-41AC-8E54-4F39E6A1239D}", // NOAA STOFS-3D surge water level (US coasts)
+        "{83FB6266-385F-46A4-BB45-0D2D3BEABE9A}", // NOAA STOFS-2D peak water level (global)
+        "{B7B26ADE-22F8-4CD3-9389-3B289BB04D6F}", // NOAA OFS surface currents (US bays and coasts)
     };
     for (const auto& [guid, flag] : all)
         EXPECT_EQ(flag, flagged.count(guid) == 1) << guid;
@@ -163,29 +205,228 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
     EXPECT_FALSE(sailor.at("{51C1079B-B55D-4DF7-A410-ADC118F53AB1}"));
 }
 
-// proofs 1 and 4: the regrouped bundled set as the pinned CLI lists it. Seven groups with these counts
-// (Nautical charts 3, Seamarks and traffic 3, Depth 4, Satellite 3, Coast and land 1, Weather now 10, Ocean
-// 4 after ), and the fourteen sources of Weather now and Ocean (and only they) refresh as snapshots.
+// the regrouped bundled set as the pinned CLI lists it. Seven groups with these counts
+// (Nautical charts 5, Seamarks and traffic 6, Depth 21, Satellite 11,
+// Coast and land 6, Weather now 18, Ocean 14 with eight
+// snapshots (NASA sea surface temperature and sea ice, NOAA RTOFS east and west, NOAA OFS, three Copernicus)
+// and the six static SHOM layers, and every snapshot is in Weather now or Ocean (twenty-six); the six static
+// Ocean records are the SHOM layers.
 TEST(Records, BundledSetGroupsAndSnapshots) {
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.10.14/sources-bundled-all.stdout",
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.1/sources-bundled-all.stdout",
                      std::ios::binary);
     ASSERT_TRUE(in.good());
     std::map<std::string, int> groups;
     int snapshots = 0;
+    int rows = 0;
+    const std::set<std::string> shomOcean = {
+        "{D88BE862-97D3-4062-9332-470B2BB5B5BE}", "{B2E953DA-3B93-4651-88F1-DD4EAFC8CD5A}",
+        "{6CEDB50E-F401-4653-A69C-D9C402886D0B}", "{9C9D5257-EC7A-4B63-B163-2537CBA2AA07}",
+        "{7F6A0B57-C94F-4B1D-AA06-C8A2A797BF78}", "{FA4270B3-BFD8-483A-8ED7-6D3C6DEE1080}"};
     for (std::string line; std::getline(in, line);) {
         const auto r = parseStdoutLine(line);
         ASSERT_TRUE(r && std::holds_alternative<SourceRecord>(*r)) << line;
         const SourceRecord& s = std::get<SourceRecord>(*r);
+        ++rows;
         ++groups[s.group];
         const bool snap = s.refresh == "snapshot";
         snapshots += snap;
-        EXPECT_EQ(snap, s.group == "Weather now" || s.group == "Ocean") << s.name;
+        if (snap) {
+            EXPECT_TRUE(s.group == "Weather now" || s.group == "Ocean") << s.name;
+        } else if (s.group == "Ocean") {
+            EXPECT_TRUE(shomOcean.count(s.guid) == 1) << s.name;
+        }
     }
     const std::map<std::string, int> expected = {
-        {"Nautical charts", 3}, {"Seamarks and traffic", 3}, {"Depth", 4}, {"Satellite", 3},
-        {"Coast and land", 1},  {"Weather now", 10},         {"Ocean", 4}};
+        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 21}, {"Satellite", 11},
+        {"Coast and land", 6},  {"Weather now", 18},         {"Ocean", 14}};
+    EXPECT_EQ(rows, 81);
     EXPECT_EQ(groups, expected);
-    EXPECT_EQ(snapshots, 14);
+    EXPECT_EQ(snapshots, 26);
+}
+
+// The four more Satellite rows as the pinned CLI lists
+// them: verdict ok, EPSG 3857, a static base map of its group, the max zoom, the navigation flag and the
+// licence line of its definition (byte for byte).
+TEST(Records, R0014SourcesOfThePinnedRelease) {
+    struct Row {
+        const char* guid;
+        const char* group;
+        int maxZoom;
+        bool navigationWarning;
+        const char* license;
+    };
+    const Row rows[] = {
+        {"{1C427DB9-2798-4ADE-803D-3F0F865CA1BD}", "Satellite", 14, false,
+         "Digital Earth Pacific (SPC), Sentinel-2 GeoMAD, CC BY 4.0; contains modified Copernicus Sentinel "
+         "data"},
+        {"{AC9F22EE-9024-4561-824E-B039C94841AE}", "Satellite", 19, false,
+         "Regione Toscana — Ortofoto 2023, CC BY 4.0"},
+        {"{0B84A398-3EA3-420D-8322-839AF8D5E6BB}", "Satellite", 19, false,
+         "Creative Commons BY-NC-ND 3.0 AU © State of Tasmania"},
+        {"{3F0A6175-2933-4E3C-9495-57042D2D6EDA}", "Nautical charts", 17, true,
+         "© Instituto Hidrográfico, ENC WMS, CC BY-NC-SA 4.0. Not for navigation"},
+    };
+    std::map<std::string, SourceRecord> byGuid;
+    for (const auto& line : fixtureLines("sources-bundled-all.stdout")) {
+        const SourceRecord s = std::get<SourceRecord>(*parseStdoutLine(line));
+        byGuid.emplace(s.guid, s);
+    }
+    for (const Row& r : rows) {
+        const auto it = byGuid.find(r.guid);
+        ASSERT_NE(it, byGuid.end()) << r.guid;
+        const SourceRecord& s = it->second;
+        EXPECT_EQ(s.verdict, "ok") << s.name;
+        EXPECT_EQ(s.epsg, 3857) << s.name;
+        EXPECT_EQ(s.kind, "map") << s.name;
+        EXPECT_EQ(s.group, r.group) << s.name;
+        EXPECT_EQ(s.refresh, "static") << s.name;
+        EXPECT_EQ(s.maxZoom, r.maxZoom) << s.name;
+        EXPECT_EQ(s.navigationWarning, r.navigationWarning) << s.name;
+        EXPECT_EQ(s.license, r.license) << s.name;
+    }
+}
+
+// The three remaining rows as the
+// pinned CLI lists them: verdict ok, EPSG 3857, a static base map of its group (the IGN protected areas: a
+// layer of Coast and land), the max zoom, the navigation flag and the licence line of its definition (byte
+// for byte). The removed INEGI row is absent from the bundled set.
+TEST(Records, R0017SourcesOfThePinnedRelease) {
+    struct Row {
+        const char* guid;
+        const char* kind;
+        const char* group;
+        int maxZoom;
+        const char* license;
+    };
+    const Row rows[] = {
+        {"{497CB539-3E59-4BEC-AD24-3DE6DD52A76F}", "map", "Satellite", 19,
+         "IDE Uruguay — Ortoimágenes 2017–2018, Licencia de Datos Abiertos – Uruguay; imagen reproyectada y "
+         "teselada"},
+        {"{DAA88925-58F8-4B43-BEE3-A9434C1CA070}", "map", "Satellite", 19,
+         "FUENTE: Instituto Geográfico Nacional de la República Argentina — mosaicos de vuelos 2011–2022"},
+        {"{3654F1F2-468C-4A2D-84E7-83741E281B08}", "layer", "Coast and land", 12,
+         "FUENTE: Instituto Geográfico Nacional de la República Argentina — Área protegida (WMS, leído "
+         "2026-11-05)"},
+    };
+    std::map<std::string, SourceRecord> byGuid;
+    for (const auto& line : fixtureLines("sources-bundled-all.stdout")) {
+        const SourceRecord s = std::get<SourceRecord>(*parseStdoutLine(line));
+        byGuid.emplace(s.guid, s);
+    }
+    for (const Row& r : rows) {
+        const auto it = byGuid.find(r.guid);
+        ASSERT_NE(it, byGuid.end()) << r.guid;
+        const SourceRecord& s = it->second;
+        EXPECT_EQ(s.verdict, "ok") << s.name;
+        EXPECT_EQ(s.epsg, 3857) << s.name;
+        EXPECT_EQ(s.kind, r.kind) << s.name;
+        EXPECT_EQ(s.group, r.group) << s.name;
+        EXPECT_EQ(s.refresh, "static") << s.name;
+        EXPECT_EQ(s.maxZoom, r.maxZoom) << s.name;
+        EXPECT_FALSE(s.navigationWarning) << s.name;
+        EXPECT_EQ(s.license, r.license) << s.name;
+    }
+    EXPECT_EQ(byGuid.count("{1615753E-78C3-4D38-8305-005C4B00CC7D}"), 0u) << "INEGI Mexico, removed";
+}
+
+// the shipped folder holds the 81 bundled definitions; the removed INEGI file is gone.
+TEST(Records, ShippedSourceFiles) {
+    int shipped = 0;
+    bool inegi = false;
+    for (const auto& e :
+         std::filesystem::recursive_directory_iterator(std::string(CG_SOURCE_DIR) + "/data/sources")) {
+        const std::string name = e.path().filename().string();
+        if (name.size() > 12 && name.compare(name.size() - 12, 12, ".source.json") == 0) {
+            ++shipped;
+        }
+        inegi = inegi || name == "Mexico-INEGI-Ortho.source.json";
+    }
+    EXPECT_EQ(shipped, 81);
+    EXPECT_FALSE(inegi);
+}
+
+// the eight Weather now rows as the pinned CLI lists them: verdict ok, EPSG 3857, the
+// snapshot refresh, the kind (GOES maps; the STOFS and radar layers), the max zoom, the navigation flag and
+// the licence line.
+TEST(Records, WeatherNowSourcesOfThePinnedRelease) {
+    struct Row {
+        const char* guid;
+        const char* kind;
+        int maxZoom;
+        bool navigationWarning;
+        const char* license;
+    };
+    const char* const goes = "Imagery: NASA GIBS (ESDIS); GOES ABI — NOAA";
+    const char* const stofs =
+        "NOAA NOS STOFS via nowCOAST (public domain). Guidance only, not for navigation";
+    const Row rows[] = {
+        {"{30D88DB0-B695-412B-91ED-1656B598D49E}", "map", 7, false, goes},
+        {"{A7EA159A-1A46-4B2D-95FD-5408E996A36E}", "map", 7, false, goes},
+        {"{957861F8-FA84-4192-8DD4-5C1E4E2BC399}", "map", 6, false, goes},
+        {"{AE5863F3-1D34-4B66-8BD4-41630DF8B940}", "map", 6, false, goes},
+        {"{984FD6D2-DB46-41AC-8E54-4F39E6A1239D}", "layer", 10, true, stofs},
+        {"{83FB6266-385F-46A4-BB45-0D2D3BEABE9A}", "layer", 10, true, stofs},
+        {"{336DC3A7-381C-4D77-BA3A-E063C5392F3F}", "layer", 9, false,
+         "Source: Finnish Meteorological Institute, CC BY 4.0"},
+        {"{C167DA1F-58E9-4261-809F-3B6D16AD56AA}", "layer", 9, false, "Source: KNMI, CC BY 4.0"},
+    };
+    std::map<std::string, SourceRecord> byGuid;
+    for (const auto& line : fixtureLines("sources-bundled-all.stdout")) {
+        const SourceRecord s = std::get<SourceRecord>(*parseStdoutLine(line));
+        byGuid.emplace(s.guid, s);
+    }
+    for (const Row& r : rows) {
+        const auto it = byGuid.find(r.guid);
+        ASSERT_NE(it, byGuid.end()) << r.guid;
+        const SourceRecord& s = it->second;
+        EXPECT_EQ(s.verdict, "ok") << s.name;
+        EXPECT_EQ(s.epsg, 3857) << s.name;
+        EXPECT_EQ(s.group, "Weather now") << s.name;
+        EXPECT_EQ(s.kind, r.kind) << s.name;
+        EXPECT_EQ(s.refresh, "snapshot") << s.name;
+        EXPECT_EQ(s.maxZoom, r.maxZoom) << s.name;
+        EXPECT_EQ(s.navigationWarning, r.navigationWarning) << s.name;
+        EXPECT_EQ(s.license, r.license) << s.name;
+    }
+}
+
+// the four Ocean rows of the base set as the pinned CLI lists them: verdict ok, EPSG 3857,
+// the snapshot refresh, the layer kind, the max zoom, the navigation flag and the licence line.
+TEST(Records, OceanSourcesOfThePinnedRelease) {
+    struct Row {
+        const char* guid;
+        int maxZoom;
+        bool navigationWarning;
+        const char* license;
+    };
+    const Row rows[] = {
+        {"{B7B26ADE-22F8-4CD3-9389-3B289BB04D6F}", 12, true,
+         "NOAA NOS CO-OPS OFS via nowCOAST (public domain). Not for navigation"},
+        {"{07ECC645-967B-4C6D-9AE7-E5E7DA075AAA}", 7, false,
+         "Generated using E.U. Copernicus Marine Service Information; GLOBAL_ANALYSISFORECAST_PHY_001_024"},
+        {"{A3A40A49-FF43-4FA5-A74C-036454BE8DEF}", 9, false,
+         "Generated using E.U. Copernicus Marine Service Information; NWSHELF_ANALYSISFORECAST_PHY_004_013"},
+        {"{07CA509E-7F76-436A-98EF-4248B72A5DE8}", 7, false,
+         "Generated using E.U. Copernicus Marine Service Information; GLOBAL_ANALYSISFORECAST_WAV_001_027"},
+    };
+    std::map<std::string, SourceRecord> byGuid;
+    for (const auto& line : fixtureLines("sources-bundled-all.stdout")) {
+        const SourceRecord s = std::get<SourceRecord>(*parseStdoutLine(line));
+        byGuid.emplace(s.guid, s);
+    }
+    for (const Row& r : rows) {
+        const auto it = byGuid.find(r.guid);
+        ASSERT_NE(it, byGuid.end()) << r.guid;
+        const SourceRecord& s = it->second;
+        EXPECT_EQ(s.verdict, "ok") << s.name;
+        EXPECT_EQ(s.epsg, 3857) << s.name;
+        EXPECT_EQ(s.group, "Ocean") << s.name;
+        EXPECT_EQ(s.kind, "layer") << s.name;
+        EXPECT_EQ(s.refresh, "snapshot") << s.name;
+        EXPECT_EQ(s.maxZoom, r.maxZoom) << s.name;
+        EXPECT_EQ(s.navigationWarning, r.navigationWarning) << s.name;
+        EXPECT_EQ(s.license, r.license) << s.name;
+    }
 }
 
 // the four new sources as the pinned CLI lists them.
@@ -212,6 +453,91 @@ TEST(Records, NewWeatherSourcesOfThePinnedRelease) {
         EXPECT_FALSE(s.navigationWarning) << s.name;
     }
     EXPECT_EQ(seen.size(), 4u);
+}
+
+// the CHS NONNA-10 row as the pinned CLI lists it, and its WMTS matrix set. The CLI
+// has no WMTS kind and `probe` answers ok for a wrong set too, so only the file text keeps it right: the set
+// named `EPSG3857` is not the XYZ grid; the definition must name `EPSG:900913` (set and matrix id) and never
+// `EPSG3857`.
+TEST(Records, ChsNonnaRowAndItsMatrixSet) {
+    const SourceRecord* row = nullptr;
+    std::vector<SourceRecord> rows;
+    for (const auto& line : fixtureLines("sources-bundled-all.stdout"))
+        rows.push_back(std::get<SourceRecord>(*parseStdoutLine(line)));
+    for (const auto& r : rows)
+        if (r.guid == "{B645CE30-A8D2-4B40-9E04-6823908F8EF3}")
+            row = &r;
+    ASSERT_NE(row, nullptr);
+    EXPECT_EQ(row->name, "CHS NONNA-10 bathymetry (Canadian waters)");
+    EXPECT_EQ(row->verdict, "ok");
+    EXPECT_EQ(row->kind, "map");
+    EXPECT_EQ(row->epsg, 3857);
+    EXPECT_EQ(row->group, "Depth");
+    EXPECT_EQ(row->refresh, "static");
+    EXPECT_EQ(row->maxZoom, 16);
+    EXPECT_TRUE(row->navigationWarning);
+    EXPECT_EQ(
+        row->license,
+        "Contains intellectual property of the Canadian Hydrographic Service (CHS), Fisheries and Oceans "
+        "Canada; CHS NONNA Licence and Open Government Licence - Canada. Not for navigation.");
+
+    std::ifstream in(std::string(CG_SOURCE_DIR) + "/data/sources/Depth/CHS-NONNA-10-Canada.source.json",
+                     std::ios::binary);
+    ASSERT_TRUE(in.good());
+    std::ostringstream ss;
+    ss << in.rdbuf();
+    const std::string text = ss.str();
+    EXPECT_NE(text.find("&TILEMATRIXSET=EPSG:900913&TILEMATRIX=EPSG:900913:{z}&TILEROW={y}&TILECOL={x}"),
+              std::string::npos);
+    EXPECT_EQ(text.find("EPSG3857"), std::string::npos);
+    EXPECT_EQ(text.find("termsOfUseWarning"), std::string::npos);
+}
+
+// the IGN, PNOA and PDOK rows as the pinned CLI lists them (licence text byte-exact, PNOA in
+// UTF-8), and none carries a navigation flag or a terms-of-use warning.
+TEST(Records, NationalOrthophotoRows) {
+    struct Want {
+        const char* guid;
+        const char* name;
+        const char* file;
+        const char* license;
+    };
+    const Want want[] = {{"{5BFDF522-5EC4-4C7C-A7DB-BB1B827C2622}",
+                          "IGN orthophoto 20 cm (France and overseas)", "IGN-France-Ortho-20cm",
+                          "IGN France, BD ORTHO 20 cm, https://data.geopf.fr (Licence Ouverte Etalab 2.0)"},
+                         {"{094D4409-B58E-424F-ADD0-499AF513ED82}",
+                          "PNOA orthophoto (Spain, Balearics, Canaries)", "PNOA-Spain-Ortho",
+                          "PNOA cedido por \xC2\xA9 Instituto Geogr\xC3\xA1"
+                          "fico Nacional de Espa\xC3\xB1"
+                          "a, CC BY 4.0 scne.es"},
+                         {"{DCF3A72B-CE26-40A1-9A9B-00D20A7219F1}", "PDOK aerial photo (Netherlands)",
+                          "PDOK-Luchtfoto-NL", "Luchtfoto: Beeldmateriaal Nederland / PDOK, CC BY 4.0"}};
+    std::vector<SourceRecord> rows;
+    for (const auto& line : fixtureLines("sources-bundled-all.stdout"))
+        rows.push_back(std::get<SourceRecord>(*parseStdoutLine(line)));
+    for (const Want& w : want) {
+        const SourceRecord* row = nullptr;
+        for (const auto& r : rows)
+            if (r.guid == w.guid)
+                row = &r;
+        ASSERT_NE(row, nullptr) << w.name;
+        EXPECT_EQ(row->name, w.name);
+        EXPECT_EQ(row->verdict, "ok") << w.name;
+        EXPECT_EQ(row->kind, "map") << w.name;
+        EXPECT_EQ(row->epsg, 3857) << w.name;
+        EXPECT_EQ(row->group, "Satellite") << w.name;
+        EXPECT_EQ(row->refresh, "static") << w.name;
+        EXPECT_EQ(row->maxZoom, 19) << w.name;
+        EXPECT_FALSE(row->navigationWarning) << w.name;
+        EXPECT_EQ(row->license, w.license);
+        std::ifstream in(std::string(CG_SOURCE_DIR) + "/data/sources/Satellite/" + w.file + ".source.json",
+                         std::ios::binary);
+        ASSERT_TRUE(in.good()) << w.file;
+        std::ostringstream ss;
+        ss << in.rdbuf();
+        EXPECT_EQ(ss.str().find("termsOfUseWarning"), std::string::npos) << w.file;
+        EXPECT_EQ(ss.str().find("navigationWarning"), std::string::npos) << w.file;
+    }
 }
 
 namespace {
@@ -252,7 +578,7 @@ std::string fixtureText(const std::string& name) {
 }
 } // namespace
 
-// proofs 2 and 4: a none-refetch source (NWS warnings) run twice into one cache. The second run's
+// a none-refetch source (NWS warnings) run twice into one cache. The second run's
 // snapshot is its own instant (later than the first run's, a few seconds on), it downloads the area again
 // (nothing present in its estimate, one tile downloaded in its progress), and the plugin reads the records.
 TEST(Records, WeatherRefetchRunsTakeTheirOwnInstant) {
@@ -291,7 +617,7 @@ TEST(Records, WeatherRefetchRunsTakeTheirOwnInstant) {
     EXPECT_TRUE(downloaded);
 }
 
-// proofs 3 and 4: a nearest-now source (RTOFS currents) takes the listed instant nearest the run
+// a nearest-now source (RTOFS currents) takes the listed instant nearest the run
 // time, not the capabilities default (the last forecast hour, days ahead). The server's text has milliseconds
 // in field 4 only; written field 5 is the 20-character form, so the plugin's date text is right.
 TEST(Records, WeatherNearestNowPicksTheInstantNearTheRun) {
@@ -552,7 +878,7 @@ TEST(CliRecordsStderr, ProgressAndPhase) {
     EXPECT_EQ(std::get<PhaseRecord>(p).guid, "{G}");
 }
 
-//  proof 3: the `note:` line of the first start (captured, 2026.10.14) is a message of kind Other with
+// the `note:` line of the first start (captured, 2026.11.1) is a message of kind Other with
 // its whole text; the line next to it is a Warning and no line of the capture is an Error (lastError stays
 // empty).
 TEST(CliRecordsStderr, TheFirstStartNoteIsOtherAndNeverAnError) {
@@ -653,7 +979,7 @@ TEST(CliRecordsStderr, TheNewStopCasesOfThePinnedRelease) {
         // the CLI's line ends in "\r\n" (the curl text): parseStderrLine trims the "\r"
         {"run-connection-lost", "4",
          "no connection to the server for 3 tiles in a row: Error connecting to server"},
-        // (CR 11.2): a ZMP with CacheType=6 is refused offline with exit 3
+        // A ZMP with CacheType=6 is refused offline with exit 3
         {"run-cache-berkeleydb", "3",
          "\"BerkeleyDB copy\": cannot open the cache: $SCRATCH/Osm_Topo_Map/ (cache type 6): BerkeleyDB "
          "caches "
@@ -674,7 +1000,7 @@ TEST(CliRecordsStderr, TheNewStopCasesOfThePinnedRelease) {
     }
 }
 
-// (CR 11.2, 2026.10.9): the stop on stdin. Both captured runs (a `stop` line after 20 s; EOF at once)
+// CLI 2026.10.9: the stop on stdin. Both captured runs (a `stop` line after 20 s; EOF at once)
 // exit 143, end with the CLI's stop line after the two `warning:` lines of the saved session, and 143 reads
 // as Interrupted. The EOF run stops before the first tile.
 TEST(CliRecordsStderr, TheStopOnStdinEndsWithExit143AndItsStopLine) {
@@ -733,7 +1059,7 @@ TEST(CliRecordsStderr, MessagesAndBadProtocolLinesAreOther) {
     }
 }
 
-//  proof 7: every stderr line of the captured CLI 2026.10.14 runs is a record or a message; a line
+// every stderr line of the captured CLI 2026.11.1 runs is a record or a message; a line
 // starting "phase<TAB>" / "progress<TAB>" is never "other", the `warning:` lines are warnings, and the
 // numbers of a record are the fields of the line (the first progress record of the stopped run, literal from
 // the capture).
@@ -792,7 +1118,7 @@ TEST(CliRecordsStderr, EveryLineOfTheCaptured2026Dot10RunsIsARecordOrAMessage) {
     EXPECT_EQ(ex.permille, 1000);
 }
 
-// / 5 / 6 : the hand-made streams parse in order and to the right
+// 5 / 6: the hand-made streams parse in order and to the right
 // kinds.
 TEST(CliRecordsStderr, AResumeShapedStreamParsesInOrderAndKeepsTheFiguresOfTheRecord) {
     const auto lines = fixtureLines("resume-refused-b.stderr");
@@ -836,7 +1162,7 @@ TEST(CliRecordsStderr, ARunPhaseWithoutProgressAndAnEmptyGuidAreRecordsNotOther)
     EXPECT_EQ(p.downloadedBytes, 60000);
     EXPECT_EQ(std::get<DownloadProgress>(parseStderrLine(empty[2])).guid,
               "{7B743985-BC5F-4AB6-8915-AC5DBBB8F552}");
-    // the same shape typed by hand, literal fields of the ticket
+    // the same shape typed by hand, literal fields
     EXPECT_EQ(
         std::get<DownloadProgress>(parseStderrLine("progress\tdownload\t\t3\t5\t243\t5\t60000\t1")).zoom, 3);
 }
@@ -968,6 +1294,17 @@ TEST(Exit, EveryRowOfTheOutcomeTable) {
     EXPECT_EQ(classifyExit(3, "no progress for 300 s: x", false), Outcome::Refused);
     EXPECT_EQ(classifyExit(3, "no connection to the server for 3 tiles in a row: x", false),
               Outcome::Refused);
+}
+
+// only exit 3 (Refused) with the lock text.
+TEST(Exit, RunLockedNeedsRefusedAndTheLockPrefix) {
+    const std::string lock = "another run of this job is in progress (lock /x/s.lock)";
+    EXPECT_TRUE(runLocked(Outcome::Refused, lock));
+    EXPECT_FALSE(runLocked(Outcome::Refused, "cannot lock /x/s.lock"));
+    EXPECT_FALSE(runLocked(Outcome::Refused, "the area holds no tile at the chosen zooms"));
+    EXPECT_FALSE(runLocked(Outcome::Refused, ""));
+    EXPECT_FALSE(runLocked(Outcome::DownloadIncomplete, lock));
+    EXPECT_FALSE(runLocked(Outcome::Done, lock));
 }
 
 TEST(Exit, ResumableExactlyFive) {
@@ -1181,7 +1518,7 @@ TEST(Sources, ImageryNames) {
         EXPECT_TRUE(nameLooksLikeImagery(n)) << n;
     }
     for (const char* n :
-         {"OSM Mapnik", "Saturn charts", "Navionics", "Карта", "Sa t", "", "КартаSat", "SatКарта"}) {
+         {"OSM Mapnik", "Saturn charts", "Sea Atlas", "Карта", "Sa t", "", "КартаSat", "SatКарта"}) {
         EXPECT_FALSE(nameLooksLikeImagery(n)) << n;
     }
 }
@@ -1211,4 +1548,66 @@ TEST(ExitCode, NormalizeExitPerSystem) {
         EXPECT_EQ(normalizeExit(r.wxCode, r.os, r.killedByUs), r.want)
             << r.wxCode << " os=" << static_cast<int>(r.os) << " killed=" << r.killedByUs;
     }
+}
+
+// the shipped definitions carry the credits of the 2026-11-05 licence check (the captured CLI
+// fixtures above still show the older Esri credit: they are real output of the pinned CLI build and stay).
+TEST(Records, ShippedLicenceFieldsAfterTheLicenceCheck) {
+    const auto licence = [](const char* file) {
+        std::ifstream in(std::string(CG_SOURCE_DIR) + "/data/sources/" + file, std::ios::binary);
+        EXPECT_TRUE(in.good()) << file;
+        std::stringstream ss;
+        ss << in.rdbuf();
+        const std::string t = ss.str();
+        const auto k = t.find("\"license\": \"");
+        return k == std::string::npos ? std::string() : t.substr(k + 12, t.find('"', k + 12) - k - 12);
+    };
+    EXPECT_EQ(licence("Satellite/Esri-World-Imagery.source.json"),
+              "Esri, Vantor, Earthstar Geographics, and the GIS User Community");
+    EXPECT_EQ(licence("Depth/EMODnet-Bathymetry-World.source.json"),
+              "EMODnet Bathymetry Consortium, CC BY 4.0; includes GEBCO 2019");
+    EXPECT_EQ(licence("Depth/EMODnet-Bathymetry-Europe.source.json"),
+              "EMODnet Bathymetry Consortium, CC BY 4.0");
+}
+
+// field 4 of `snapshot` is the model run. The 2026.11.1 CLI prints 5 fields (captured
+// fixtures: the field is empty for RainViewer; run-rtofs-snapshot.stdout carries a run); the parsed 5-field
+// line below is HAND-MADE.
+TEST(Records, SnapshotModelRunIsFieldFourWhenPresent) {
+    SnapshotRecord snap;
+    WrittenRecord written;
+    weatherStdout("run-weather-layer.stdout", snap, written);
+    EXPECT_EQ(snap.time, "2026-11-05T15:40:00Z");
+    EXPECT_EQ(snap.version, "/v2/radar/f8d85bfa2f14");
+    EXPECT_EQ(snap.modelRun, "");
+    SnapshotRecord rtofs;
+    weatherStdout("run-rtofs-snapshot.stdout", rtofs, written);
+    EXPECT_EQ(rtofs.time, "2026-11-05T18:00:00Z");
+    EXPECT_EQ(rtofs.modelRun, "2026-11-05T00:00:00Z");
+    const auto r = parseStdoutLine("snapshot\t{G}\t2026-10-23T08:20:00Z\t/v2/x\t2026-10-23T06:00:00Z");
+    ASSERT_TRUE(r && std::holds_alternative<SnapshotRecord>(*r));
+    EXPECT_EQ(std::get<SnapshotRecord>(*r).modelRun, "2026-10-23T06:00:00Z");
+    EXPECT_EQ(std::get<SnapshotRecord>(*r).version, "/v2/x");
+}
+
+// CLI 2026.11.1: a second run of the same job ends with exit 3 and the error line
+// below (captured by capture.sh); it prints the phase records of the estimate but no `phase download`.
+TEST(CliRecordsStderr, TheCapturedRefusalOfASecondRunOfTheSameJobIsALockedRun) {
+    std::string lastError;
+    int downloadPhases = 0, estimatePhases = 0;
+    for (const std::string& l : fixtureLines("run-refused-busy.stderr")) {
+        const StderrLine r = parseStderrLine(l);
+        if (const auto* p = std::get_if<PhaseRecord>(&r)) {
+            downloadPhases += p->name == "download";
+            estimatePhases += p->name == "estimate";
+        } else if (const auto* m = std::get_if<MessageLine>(&r); m && m->kind == MessageLine::Kind::Error) {
+            lastError = m->text;
+        }
+    }
+    EXPECT_EQ(downloadPhases, 0);
+    EXPECT_EQ(estimatePhases, 2);
+    const Outcome o = classifyExit(3, lastError, false);
+    EXPECT_EQ(o, Outcome::Refused);
+    EXPECT_TRUE(runLocked(o, lastError)) << lastError;
+    EXPECT_FALSE(runLocked(o, "cannot lock /x/run.lock"));
 }

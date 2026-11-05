@@ -28,8 +28,8 @@ public:
     // gives its buttons); day / RGB or GetGlobalColor false: wxNullColour (nothing set, the system theme).
     wxColour controlBackground() const;
     wxColour controlText() const;
-    int minControlHeight() const; // touch: 48 x GetOCPNGUIToolScaleFactor_PlugIn, rounded up; else 0
-    bool touch() const;           // IsTouchInterface_PlugIn
+    int minControlHeight() const; // touch: 48 x GetOCPNGUIToolScaleFactor_PlugIn(), rounded up; else 0
+    bool touch() const;           // IsTouchInterface_PlugIn()
     // Tokens start at 1 and are never reused; unsubscribe of an unknown token does nothing; setScheme
     // iterates over a copy of the list, so a callback may unsubscribe. A window that subscribes unsubscribes
     // in its destructor. Both are const so a window holding `const Look&` can use them; the list is mutable.

@@ -15,7 +15,7 @@ struct BBox {
 
 enum class AreaKind { View, Rectangle, Route };
 
-// Detail bands of the New chart page.
+// Detail bands of the New chart page (ux section 4).
 enum class Band { Passage, Coastal, Approach, Harbour };
 
 } // namespace cg

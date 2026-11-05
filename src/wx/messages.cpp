@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "messages.h"
 
+#include "chart_folder.h"
 #include "job_files.h"
 #include "settings.h"
 #include "wx_util.h"
 
+#include <wx/filename.h>
 #include <wx/intl.h>
 
 #include <algorithm>
@@ -314,6 +316,20 @@ wxString preflightText(cg::Preflight p, const cg::PreflightInput& in, const wxSt
     return wxString();
 }
 
+wxString chartFolderRefusal(const wxString& folder, bool isDefault) {
+    const bool exists = wxFileName::DirExists(folder);
+    switch (cg::checkChartFolder(folder.utf8_string(), isDefault, exists,
+                                 exists && wxFileName::IsDirWritable(folder), cg::sandboxProbe()())) {
+    case cg::FolderVerdict::Ok:
+        break;
+    case cg::FolderVerdict::CannotWrite:
+        return _("This folder cannot be written. Choose another one.");
+    case cg::FolderVerdict::FlatpakOutsideHome:
+        return _("OpenCPN from Flathub can only keep charts inside your home folder. Choose a folder there.");
+    }
+    return wxString();
+}
+
 wxString areaErrorText(cg::AreaError e) {
     switch (e) {
     case cg::AreaError::OutsideMercator:
@@ -523,6 +539,8 @@ wxString uiText(UiText t) {
         return _("Loading chart sources...");
     case UiText::NoUsableSource:
         return _("No usable chart source. Use More sources... or Preferences.");
+    case UiText::ChooseInMoreSources:
+        return _("Choose in More sources...");
     case UiText::SeamarksMissing:
         return _("The seamarks source (OpenSeaMap) is not among your chart sources");
     case UiText::ChooseDetail:
@@ -531,6 +549,38 @@ wxString uiText(UiText t) {
         return _("Too many tiles for this area - draw a smaller area for harbour detail");
     }
     return wxString();
+}
+
+wxString favouriteProblemText(const cg::FavouriteProblem& p) {
+    using Kind = cg::FavouriteProblem::Kind;
+    switch (p.kind) {
+    case Kind::FileNotFound:
+        return _("file not found");
+    case Kind::NoFormatLine:
+        return _("no format line");
+    case Kind::UnknownFormat:
+        return _("unknown format");
+    case Kind::NoEntries:
+        return _("no entries");
+    case Kind::TooFewFields:
+        return wxString::Format(_("line %d: too few fields"), p.line);
+    case Kind::UnknownRole:
+        return wxString::Format(_("line %d: unknown role"), p.line);
+    case Kind::NotGuid:
+        return wxString::Format(_("line %d: not a source ID"), p.line);
+    case Kind::Repeated:
+        return wxString::Format(_("line %d: repeated"), p.line);
+    case Kind::SecondSeamarks:
+        return wxString::Format(_("line %d: second seamarks line"), p.line);
+    }
+    return wxString();
+}
+
+wxString favouritesWarningText(const wxString& reason, const wxString& path) {
+    return wxString::Format(
+        _("The list of favourite chart sources is missing or damaged (%s). Chart Grabber "
+          "uses the lines it can read. To repair it, save a fresh copy over this file:\n%s"),
+        reason, path);
 }
 
 wxString unnamedRouteText(const wxString& guid) {
@@ -698,8 +748,45 @@ wxString creditText(const std::string& credit) {
     return _("Credit: ") + cg::fromUtf8(credit); // the credit is data, not translated
 }
 
+wxString staleWeatherText() {
+    return _(
+        "OpenCPN still holds the previous picture and may still show it; Chart Grabber removes it later.");
+}
+
 wxString updateWeatherMenuText() {
     return _("Update to latest weather");
+}
+
+wxString updateAllWeatherButtonText() {
+    return _("Update all weather charts");
+}
+
+wxString runLockedText() {
+    return _("Skipped: another download of this chart is running.");
+}
+
+wxString updateAllResultText(int updated, int unchanged, int failed, int busy, int notUpdated,
+                             const std::vector<wxString>& failedNames) {
+    std::vector<wxString> parts;
+    if (updated > 0)
+        parts.push_back(wxString::Format(_("%d updated"), updated));
+    if (unchanged > 0)
+        parts.push_back(wxString::Format(_("%d unchanged"), unchanged));
+    if (failed > 0) {
+        wxString names;
+        for (const wxString& n : failedNames)
+            names += (names.empty() ? "" : ", ") + n;
+        parts.push_back(wxString::Format(_("%d failed"), failed) +
+                        (names.empty() ? wxString() : " (" + names + ")"));
+    }
+    if (busy > 0)
+        parts.push_back(wxString::Format(_("%d skipped (busy)"), busy));
+    if (notUpdated > 0)
+        parts.push_back(wxString::Format(_("%d not updated"), notUpdated));
+    wxString text = _("Weather charts: ");
+    for (std::size_t i = 0; i < parts.size(); ++i)
+        text += (i ? ", " : "") + parts[i];
+    return text + ".";
 }
 
 wxString snapshotAgeText(std::int64_t seconds) {

@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{1C427DB9-2798-4ADE-803D-3F0F865CA1BD}",
+  "name": "Satellite mosaic 2025 (Pacific islands, DEP)",
+  "group": "Satellite",
+  "url": "https://ows.prod.digitalearthpacific.io/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=dep_s2_geomad&STYLE=simple_rgb&FORMAT=image/png&TILEMATRIXSET=WholeWorld_WebMercator&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&TIME=2025-01-01",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Satellite_DEP_GeoMAD_2025",
+  "license": "Digital Earth Pacific (SPC), Sentinel-2 GeoMAD, CC BY 4.0; contains modified Copernicus Sentinel data",
+  "maxConnections": 2,
+  "maxZoom": 14
+}

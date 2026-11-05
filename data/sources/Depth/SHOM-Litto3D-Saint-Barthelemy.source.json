@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{A60F19C2-D083-4272-8EE8-46D248B6D9F3}",
+  "name": "SHOM Litto3D lidar depth, Saint-Barthélemy 2019",
+  "group": "Depth",
+  "layer": true,
+  "url": "https://services.data.shom.fr/INSPIRE/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=LITTO3D_STBARTHELEMY_2019_PYR_3857_WMTS&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Depth_SHOM_Litto3D_Saint_Barthelemy",
+  "license": "© Shom / IGN — Litto3D® / HOMONIM, Licence Ouverte 2.0. Non certifié pour la navigation",
+  "maxConnections": 2,
+  "maxZoom": 17,
+  "navigationWarning": true
+}

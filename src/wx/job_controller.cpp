@@ -19,25 +19,150 @@
 #include <algorithm>
 #include <cstdlib>
 #include <exception>
+#include <fstream>
+#include <sstream>
 
 #include <ocpn_plugin.h>
 
 namespace {
 
-constexpr std::size_t kMaxMessages = 200; //: the last 200 stderr message lines
+constexpr std::size_t kMaxMessages = 200; // the last 200 stderr message lines
+
+bool staleExists(const std::string& p) {
+    return wxFileExists(cg::fromUtf8(p));
+}
+bool staleRemove(const std::string& p) {
+    return wxRemoveFile(cg::fromUtf8(p));
+}
+std::vector<std::string> removeStaleFiles(const std::vector<std::string>& stale) {
+    return cg::removeStale(stale, staleExists, staleRemove);
+}
 
 } // namespace
 
+cg::Os& weatherSwapOs() {
+    static cg::Os os = cg::kHostOs;
+    return os;
+}
+
 JobController::JobController(ConfigStore& config, const Look& look, AreaTool& area)
-    : config_(config), look_(look), area_(area), runner_(std::make_unique<CliRunner>()), tick_(this) {
-    Bind(wxEVT_TIMER, &JobController::onTick, this);
+    : config_(config), look_(look), area_(area), runner_(std::make_unique<CliRunner>()), tick_(this),
+      staleTimer_(this) {
+    Bind(wxEVT_TIMER, &JobController::onTick, this, tick_.GetId());
+    Bind(wxEVT_TIMER, &JobController::onStaleTimer, this, staleTimer_.GetId());
+}
+
+bool& staleDropAllowed() {
+    static bool allowed = false;
+    return allowed;
+}
+
+// Plain removal; what OpenCPN still holds (Windows) is dropped from its chart list first when the
+// host is OpenCPN 5.x, x < 14 (5.14+ hangs that call). Returns the paths that remain.
+std::vector<std::string> JobController::dropStale(std::vector<std::string> stale) {
+    stale = removeStaleFiles(stale);
+    if (stale.empty() || !staleDropAllowed())
+        return stale;
+    const wxArrayString dirs = GetChartDBDirArrayString();
+    std::vector<std::string> left;
+    for (const std::string& p : stale) {
+        std::vector<std::string> candidates; // the path as OpenCPN lists it, then the record's own
+        for (const wxString& d : dirs) {
+            if (cg::sameDir(cg::toUtf8(d), cg::parentDir(p))) {
+                candidates.push_back(cg::chartListPath(cg::toUtf8(d), p, weatherSwapOs()));
+                break;
+            }
+        }
+        if (candidates.empty() || candidates[0] != p)
+            candidates.push_back(p);
+        bool gone = false;
+        for (const std::string& c : candidates) {
+            wxString path = cg::fromUtf8(c);
+            RemoveChartFromDBInPlace(path);
+            cg::logLine("old weather file dropped from the chart list");
+            gone = staleRemove(p);
+            if (gone)
+                break;
+        }
+        if (!gone)
+            left.push_back(p);
+    }
+    return left;
+}
+
+void JobController::cleanupStaleAtStart() {
+    bool pending = false;
+    for (cg::ChartRecord r : config_.loadCharts()) {
+        if (r.stale.empty())
+            continue;
+        std::vector<std::string> left = removeStaleFiles(r.stale);
+        pending = pending || !left.empty();
+        if (left == r.stale)
+            continue;
+        staleRemoved_ = true;
+        r.stale = std::move(left);
+        config_.saveChart(r);
+    }
+    if (staleRemoved_ || pending)
+        staleTimer_.StartOnce(120000);
+}
+
+void JobController::onStaleTimer(wxTimerEvent&) {
+    if (closing_)
+        return;
+    for (cg::ChartRecord r : config_.loadCharts()) {
+        if (r.stale.empty() || (busy() && r.id == record_.id))
+            continue;
+        std::vector<std::string> left = dropStale(r.stale);
+        if (left == r.stale)
+            continue;
+        staleRemoved_ = true;
+        r.stale = std::move(left);
+        config_.saveChart(r);
+    }
+    if (!staleRemoved_ || rescanned_)
+        return;
+    cg::guarded("stale rescan", [] {
+        UpdateChartDBInplace(GetChartDBDirArrayString(), false, false);
+        cg::logLine("chart list updated (old weather files removed)");
+    });
+}
+
+// Windows weather update: job.ini Out= names another file, so the CLI's rename never meets the
+// file OpenCPN holds open. Any failure: logged, the run goes on as today.
+void JobController::swapWeatherOutput(const std::string& iniPath) {
+    record_.stale = removeStaleFiles(record_.stale);
+    const auto name = cg::alternateWeatherFile(record_.files[0], staleExists);
+    if (!name)
+        return;
+    const wxString ini = cg::fromUtf8(iniPath), tmp = ini + ".cg-swap";
+    std::ostringstream text;
+    text << std::ifstream(cg::fsPath(iniPath), std::ios::binary).rdbuf();
+    const auto rewritten = cg::rewriteJobOutputs(text.str(), *name, "");
+    bool ok = false;
+    if (rewritten) {
+        {
+            std::ofstream o(cg::fsPath(iniPath + ".cg-swap"), std::ios::binary);
+            o << *rewritten;
+            ok = o.good();
+        }
+        ok = ok && wxRenameFile(tmp, ini, true);
+    }
+    if (!ok) {
+        cg::logLine("cannot switch the weather file name");
+        return;
+    }
+    swapFrom_ = record_.files[0];
 }
 
 JobController::~JobController() {
     closing_ = true; // in this order
     if (next_)
         cg::logLine("weather chart not started");
+    if (inBatch_ && !batch_.empty())
+        cg::logLine(wxString::Format("%d weather charts not started", static_cast<int>(batch_.size())));
     tick_.Stop();
+    staleTimer_.Stop();
     onChartsChanged = nullptr;
     onBusyChanged = nullptr;
     onPreferences = nullptr;
@@ -55,7 +180,7 @@ JobController::~JobController() {
 
 ProgressStrip& JobController::strip() {
     if (!strip_) {
-        // GetOCPNCanvasWindow is never null while the plugin is initialised (caller: any strip use)
+        // GetOCPNCanvasWindow() is never null while the plugin is initialised (caller: any strip() use)
         strip_ = new ProgressStrip(GetOCPNCanvasWindow(), look_, ProgressStrip::Role::Job, &config_,
                                    config_.loadSettings().stripOnChart ? ProgressStrip::Host::Canvas
                                                                        : ProgressStrip::Host::Window);
@@ -197,6 +322,9 @@ void JobController::start(cg::ChartRecord record, cg::RunKind kind, bool overwri
         fills_.clear();
         written_.clear();
         pictureLines_.clear();
+        prevSnapshot_ = record_.snapshot;
+        prevModelRun_ = record_.modelRun;
+        newModelRun_.clear();
         lastError_.clear();
         finishedBytes_ = 0;
         // a Resume starts the bar where the job stopped; Top up, Update, an export and a weather chart (it
@@ -212,14 +340,31 @@ void JobController::start(cg::ChartRecord record, cg::RunKind kind, bool overwri
         quietTicks_ = 0;
         retry_ = {};
         userStopped_ = budgetStopped_ = false;
+        swapFrom_.clear();
         const Buttons closeOnly{{closeButtonText(), [this] { strip().Hide(); }}};
 
         const std::string iniPath = config_.jobsDir() + "/" + record_.id + "/job.ini";
         if (!wxFileName::FileExists(cg::fromUtf8(iniPath))) {
             record_.state = cg::ChartState::Failed;
             saveRecord();
+            if (batchNext(BatchEnd::Failed, false))
+                return;
             showResult(jobFileMissingText(), closeOnly);
             return;
+        }
+        if (weatherSwapOs() == cg::Os::Windows && record_.weather && !newChart_ &&
+            kind == cg::RunKind::Download && record_.files.size() == 1 && staleExists(record_.files[0]))
+            swapWeatherOutput(iniPath);
+        // A chart that is already on the list (Resume, Update, Top up) goes back to its folder; a new chart's
+        // folder is checked by the New chart page (its only caller), where it may differ from Settings.
+        if (!newChart_ && !record_.files.empty()) {
+            const wxString folder = wxFileName(cg::fromUtf8(record_.files.front())).GetPath();
+            const wxString refusal =
+                chartFolderRefusal(folder, cg::sameDir(cg::toUtf8(folder), config_.chartDir(cg::Settings{})));
+            if (!refusal.empty()) {
+                startFailed({}, refusal);
+                return;
+            }
         }
         std::string why;
         const auto cli = resolveCli(settings_, &why, cliDefaultPaths, cliPathEnv);
@@ -287,7 +432,7 @@ bool JobController::beginRun() {
     return false;
 }
 
-// StartFailed : a new chart becomes Interrupted, any other keeps the state it had.
+// StartFailed: a new chart becomes Interrupted, any other keeps the state it had.
 void JobController::startFailed(const std::string& why, const wxString& headline) {
     tick_.Stop();
     record_.state = newChart_ ? cg::ChartState::Interrupted : restoreState_;
@@ -295,13 +440,17 @@ void JobController::startFailed(const std::string& why, const wxString& headline
     if (!why.empty())
         messages_.push_back("error: " + why);
     setPhase(Phase::Idle);
-    showResult(headline.empty() ? outcomeHeadline(cg::Outcome::StartFailed, {}, {}, {}) : headline,
-               {{preferencesButtonText(),
-                 [this] {
-                     if (onPreferences)
-                         onPreferences();
-                 }},
-                {closeButtonText(), [this] { strip().Hide(); }}});
+    const wxString shown =
+        headline.empty() ? outcomeHeadline(cg::Outcome::StartFailed, {}, {}, {}) : headline;
+    const Buttons buttons{{preferencesButtonText(),
+                           [this] {
+                               if (onPreferences)
+                                   onPreferences();
+                           }},
+                          {closeButtonText(), [this] { strip().Hide(); }}};
+    if (batchNext(BatchEnd::NotStarted, true, shown, buttons)) // the CLI would be missing for every chart
+        return;
+    showResult(shown, buttons);
 }
 
 void JobController::onRecord(const cg::StdoutRecord& r) {
@@ -311,9 +460,11 @@ void JobController::onRecord(const cg::StdoutRecord& r) {
         fills_.push_back(*f);
     else if (const auto* w = std::get_if<cg::WrittenRecord>(&r))
         written_.push_back(*w);
-    else if (const auto* s = std::get_if<cg::SnapshotRecord>(&r))
+    else if (const auto* s = std::get_if<cg::SnapshotRecord>(&r)) {
+        newModelRun_ = s->modelRun; // the LAST snapshot record is the frame used
         addPictureLine(s->guid,
                        weatherPictureLine(cg::fromUtf8(cg::snapshotTimeText(s->time))).utf8_string());
+    }
 }
 
 // After a step back the CLI prints two snapshot records of one source; the LAST is the frame used (CLI
@@ -422,6 +573,8 @@ void JobController::stop() {
             record_.state = cg::ChartState::Interrupted;
             saveRecord();
             setPhase(Phase::Idle);
+            if (batchNext(BatchEnd::Failed, true))
+                break;
             showResult(outcomeHeadline(cg::Outcome::Interrupted, {}, {}, {}),
                        buttonsFor(cg::Outcome::Interrupted));
             break;
@@ -501,7 +654,7 @@ JobController::Buttons JobController::buttonsFor(cg::Outcome o) {
     }
 }
 
-// The result of a job whose child ended : record update, registration, hints, strip.
+// The result of a job whose child ended: record update, registration, hints, strip.
 void JobController::finishJob(cg::Outcome outcome) {
     tick_.Stop();
     cg::FillTotals fill;
@@ -516,20 +669,34 @@ void JobController::finishJob(cg::Outcome outcome) {
     std::vector<wxString> names;
     std::vector<std::string> files;
     std::int64_t bytes = 0;
+    std::string newSnapshot;
     for (const cg::WrittenRecord& w : written_) {
         const std::string path = cg::nativeSeparators(w.path); // the CLI prints '/' on Windows
         names.push_back(wxFileName(cg::fromUtf8(path)).GetName());
         files.push_back(path);
         bytes += w.bytes;
         if (!w.snapshot.empty()) // the last non-empty one: a seamark overlay's empty field leaves the base's
-            record_.snapshot = w.snapshot;
+            newSnapshot = record_.snapshot = w.snapshot;
+    }
+    // a weather update that took the picture the file already holds leaves OpenCPN's list alone
+    const bool samePicture = outcome == cg::Outcome::Done && record_.weather &&
+                             !cg::pictureChanged(prevSnapshot_, prevModelRun_, newSnapshot, newModelRun_);
+    if (!newModelRun_.empty() && !newSnapshot.empty()) // only with the file it belongs to
+        record_.modelRun = newModelRun_;
+    if (samePicture && !swapFrom_.empty() && !files.empty() && files[0] != swapFrom_) {
+        removeStaleFiles({files[0]}); // OpenCPN never listed the new name: nothing holds it
+        files = {swapFrom_};
     }
     if (!files.empty()) {
         record_.files = files;
         record_.bytes = bytes;
     }
     const bool budget = budgetStopped_ && outcome == cg::Outcome::Interrupted;
-    if (outcome == cg::Outcome::Done) {
+    // another run of this job holds the lock; nothing ran, the chart stays as it was
+    const bool locked = cg::runLocked(outcome, lastError_);
+    if (locked) {
+        record_.state = restoreState_;
+    } else if (outcome == cg::Outcome::Done) {
         if (!fills_.empty()) { // a build from saved tiles prints no fill records: its numbers stay
             record_.tiles = fill.tiles;
             record_.missing = fill.missing;
@@ -554,23 +721,36 @@ void JobController::finishJob(cg::Outcome outcome) {
         }
     }
     bool firstSuccess = false;
-    wxString headline =
-        budget ? budgetStopText(settings_.dataBudgetMb) : outcomeHeadline(outcome, fill, names, lastError_);
+    wxString headline = locked   ? runLockedText()
+                        : budget ? budgetStopText(settings_.dataBudgetMb)
+                                 : outcomeHeadline(outcome, fill, names, lastError_);
+    const bool swapped = outcome == cg::Outcome::Done && !swapFrom_.empty() && !record_.files.empty() &&
+                         record_.files[0] != swapFrom_;
+    if (swapped) { // the old file leaves the record; OpenCPN may still hold it
+        record_.stale.push_back(swapFrom_);
+        record_.stale = removeStaleFiles(record_.stale);
+    }
+    swapFrom_.clear();
     if (outcome == cg::Outcome::Done) {
-        if (settings_.registerCharts && !files.empty()) {
-            // one rescan of OpenCPN's chart folders plus the job's folders (a per-file add hangs 5.14+)
-            wxArrayString dirs = GetChartDBDirArrayString();
-            for (const std::string& f : files) {
-                const std::string dir = cg::parentDir(f);
-                bool listed = false;
-                for (const wxString& d : dirs)
-                    listed = listed || cg::sameDir(cg::toUtf8(d), dir);
-                if (!listed)
-                    dirs.Add(cg::fromUtf8(dir));
+        if (samePicture) {
+            cg::logLine("same weather picture; chart list not updated");
+        } else if (settings_.registerCharts && !files.empty() && inBatch_) {
+            batchFiles_.insert(batchFiles_.end(), files.begin(), files.end()); // one rescan at the batch end
+            batchIds_.push_back(record_.id);
+        } else if (settings_.registerCharts && !files.empty()) {
+            const wxArrayString dirs = rescanChartList(files);
+            if (!record_.stale.empty()) {
+                const std::size_t before = record_.stale.size();
+                record_.stale = removeStaleFiles(record_.stale);
+                if (record_.stale.size() < before) { // the list now holds a missing file: once more
+                    UpdateChartDBInplace(dirs, false, false);
+                    cg::logLine("chart list updated again (old weather file removed)");
+                }
+                if (!record_.stale.empty())
+                    record_.stale = dropStale(record_.stale); // no rescan: the call reloads the list itself
+                if (!record_.stale.empty())
+                    lead_ += staleWeatherText() + "\n";
             }
-            UpdateChartDBInplace(dirs, false, false);
-            cg::logLine(
-                wxString::Format("chart list updated (%d folders)", static_cast<int>(dirs.GetCount())));
         }
         if (!config_.firstSuccessShown()) {
             lead_ +=
@@ -581,7 +761,14 @@ void JobController::finishJob(cg::Outcome outcome) {
     }
     saveRecord();
     setPhase(Phase::Idle);
-    //: the weather chart runs next, unless the sailor ended this job
+    if (batchNext(locked                         ? BatchEnd::Busy
+                  : outcome != cg::Outcome::Done ? BatchEnd::Failed
+                  : samePicture                  ? BatchEnd::Unchanged
+                                                 : BatchEnd::Updated,
+                  userStopped_ || budgetStopped_ || outcome == cg::Outcome::Killed,
+                  budget ? headline : wxString()))
+        return;
+    // the weather chart runs next, unless the sailor ended this job
     if (next_ && !userStopped_ && !budgetStopped_ && outcome != cg::Outcome::Killed) {
         keptHeadline_ = headline;
         keptDetails_ = detailsText();
@@ -594,6 +781,118 @@ void JobController::finishJob(cg::Outcome outcome) {
     showResult(headline, buttonsFor(outcome));
     if (firstSuccess)
         strip().openDetails(true);
+}
+
+// One rescan of OpenCPN's chart folders plus the folders of `files` (a per-file add hangs 5.14+).
+wxArrayString JobController::rescanChartList(const std::vector<std::string>& files) {
+    wxArrayString dirs = GetChartDBDirArrayString();
+    for (const std::string& f : files) {
+        const std::string dir = cg::parentDir(f);
+        bool listed = false;
+        for (const wxString& d : dirs)
+            listed = listed || cg::sameDir(cg::toUtf8(d), dir);
+        if (!listed)
+            dirs.Add(cg::fromUtf8(dir));
+    }
+    UpdateChartDBInplace(dirs, false, false);
+    cg::logLine(wxString::Format("chart list updated (%d folders)", static_cast<int>(dirs.GetCount())));
+    rescanned_ = true;
+    return dirs;
+}
+
+void JobController::startBatch(std::vector<cg::ChartRecord> charts) {
+    cg::guarded("batch start", [&] {
+        if (busy() || closing_ || inBatch_) {
+            cg::logLine("job already running");
+            return;
+        }
+        if (charts.empty())
+            return;
+        batch_.assign(std::make_move_iterator(charts.begin()), std::make_move_iterator(charts.end()));
+        inBatch_ = true;
+        batchFiles_.clear();
+        batchIds_.clear();
+        failedNames_.clear();
+        nUpdated_ = nUnchanged_ = nFailed_ = nBusy_ = nNotStarted_ = 0;
+        cg::ChartRecord first = std::move(batch_.front());
+        batch_.pop_front();
+        start(std::move(first), cg::RunKind::Download, true);
+    });
+}
+
+// A chart of the batch ended (or could not start): count it; then the next chart, or the batch result.
+bool JobController::batchNext(BatchEnd how, bool stop, const wxString& reason, const Buttons& buttons) {
+    if (!inBatch_)
+        return false;
+    switch (how) {
+    case BatchEnd::Updated:
+        ++nUpdated_;
+        break;
+    case BatchEnd::Unchanged:
+        ++nUnchanged_;
+        break;
+    case BatchEnd::Failed:
+        ++nFailed_;
+        failedNames_.push_back(cg::fromUtf8(record_.name));
+        break;
+    case BatchEnd::Busy:
+        ++nBusy_;
+        break;
+    case BatchEnd::NotStarted:
+        ++nNotStarted_;
+        break;
+    }
+    if (stop || batch_.empty()) {
+        finishBatch(reason, buttons);
+        return true;
+    }
+    cg::ChartRecord next = std::move(batch_.front());
+    batch_.pop_front();
+    start(std::move(next), cg::RunKind::Download, true);
+    return true;
+}
+
+void JobController::finishBatch(const wxString& reason, const Buttons& buttons) {
+    inBatch_ = false;
+    if (!batchFiles_.empty()) {
+        const wxArrayString dirs = rescanChartList(batchFiles_);
+        // the earlier second pass: the old files OpenCPN held until the rescan
+        bool removed = false, left = false;
+        const std::vector<cg::ChartRecord> charts = config_.loadCharts();
+        for (const std::string& id : batchIds_) {
+            const auto it = std::ranges::find(charts, id, &cg::ChartRecord::id);
+            if (it == charts.end() || it->stale.empty())
+                continue;
+            cg::ChartRecord r = *it;
+            const std::size_t before = r.stale.size();
+            r.stale = removeStaleFiles(r.stale);
+            if (r.stale.size() < before) {
+                removed = true;
+                config_.saveChart(r);
+            }
+            left = left || !r.stale.empty();
+        }
+        if (removed) {
+            UpdateChartDBInplace(dirs, false, false);
+            cg::logLine("chart list updated again (old weather file removed)");
+        }
+        if (left)
+            lead_ += staleWeatherText() + "\n";
+    } else if (nUpdated_ == 0 && nUnchanged_ > 0) {
+        cg::logLine("same weather pictures; chart list not updated");
+    }
+    if (nNotStarted_ + static_cast<int>(batch_.size()) > 0)
+        cg::logLine(wxString::Format("%d weather charts not started",
+                                     nNotStarted_ + static_cast<int>(batch_.size())));
+    const int notUpdated = nNotStarted_ + static_cast<int>(batch_.size());
+    batch_.clear();
+    if (onChartsChanged)
+        onChartsChanged();
+    // a start failure or the budget stop: the reason headline above the counts, as a single update shows it
+    const wxString counts =
+        updateAllResultText(nUpdated_, nUnchanged_, nFailed_, nBusy_, notUpdated, failedNames_);
+    showResult(reason.empty() ? counts : reason + "\n" + counts,
+               buttons.empty() ? Buttons{{closeButtonText(), [this] { strip().Hide(); }}} : buttons);
 }
 
 void showOnChart(const cg::BBox& box, const AreaTool& area) {

@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// the My charts page inside the real MainDialog, against a
+// The My charts page inside the real MainDialog, against a
 // stand-in CLI (a small sh script in a temp directory, never the real CLI; the records it prints are the CLI
-// records of cli-requirements.md 2 and 3). Expected texts and arguments are the literals of the spec. The
-// popup menu
+// records). Expected texts and arguments are literals. The popup menu
 // ("More...") and the default Yes / No box need a user and are not driven: the tests call
-// MyChartsPanel::act, the one dispatch the buttons and the menu share, and the confirmDelete hook.
+// MyChartsPanel::act(), the one dispatch the buttons and the menu share, and the confirmDelete hook.
 // NOT covered: the menu items themselves, wxLaunchDefaultApplication (Show in folder), a CLI doing
 // a real top-up, sizes and colour schemes.
 #include "area_tool.h"
@@ -43,6 +42,7 @@
 #include <filesystem>
 #include <fstream>
 #include <functional>
+#include <map>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -82,7 +82,7 @@ if [ -f "$dir/out.$n" ]; then cat "$dir/out.$n"; fi
 if [ -f "$dir/err.$n" ]; then cat "$dir/err.$n" >&2; fi
 case $mode in
   wait) k=0; while [ $k -lt 1200 ]; do sleep 0.05; k=$((k + 1)); done ;;
-  feed) k=0 #  the test appends stderr lines by renaming a file `feed.<run>` into place
+  feed) k=0 # the test appends stderr lines by renaming a file `feed.<run>` into place
     while [ $k -lt 1200 ]; do
       if [ -f "$dir/feed.$n" ]; then cat "$dir/feed.$n" >&2; rm -f "$dir/feed.$n"; fi
       sleep 0.05; k=$((k + 1))
@@ -408,7 +408,37 @@ TEST_F(ChartsTest, ListsEveryDirectoryNewestFirstWithTextsAndButtonsOfTheTable) 
     EXPECT_EQ(pageButton(), "My charts (6)");
 }
 
-// Proof 1 (refresh): the page button and the list follow chartsChanged and the page being shown.
+// a Complete chart whose file is gone is shown as missing (the folder of a Flatpak sandbox, a deleted
+// file); one with all files, and one with no file known, stay Complete; Update stays in the menu.
+TEST_F(ChartsTest, ACompleteChartWhoseFileIsGoneIsShownAsMissing) {
+    const std::string there = (root_ / "my charts" / "there.mbtiles").string();
+    spit(there, "x");
+    auto lost = save("20261015-090000", "Lost", cg::ChartState::Complete);
+    lost.files = {there, (root_ / "my charts" / "\xD0\x9F gone.mbtiles").string()};
+    store_->saveChart(lost);
+    auto fine = save("20261016-090000", "Fine", cg::ChartState::Complete);
+    fine.files = {there};
+    store_->saveChart(fine);
+    save("20261017-090000", "Unknown", cg::ChartState::Complete);
+    auto part = save("20261018-090000", "Part", cg::ChartState::Missing);
+    part.missing = 3;
+    part.tiles = 10;
+    part.files = {(root_ / "my charts" / "part.mbtiles").string()};
+    store_->saveChart(part);
+    makeDialog();
+    const std::vector<Row> r = rows();
+    ASSERT_EQ(r.size(), 4u);
+    std::map<std::string, Row> byName;
+    for (const Row& row : r)
+        byName[row.texts[0]] = row;
+    EXPECT_EQ(byName["Unknown"].texts.back(), "Complete") << "no file listed";
+    EXPECT_EQ(byName["Fine"].texts.back(), "Complete");
+    EXPECT_EQ(byName["Lost"].texts.back(), "Chart file missing");
+    EXPECT_EQ(byName["Lost"].buttons, (Texts{"Show", "More..."}));
+    EXPECT_EQ(byName["Part"].texts.back(), "Chart file missing") << "a Missing chart too";
+}
+
+// Proof 1 (refresh): the page button and the list follow chartsChanged() and the page being shown.
 TEST_F(ChartsTest, ListAndPageButtonFollowChartsChangedAndTheShownPage) {
     makeDialog();
     EXPECT_EQ(pageButton(), "My charts (0)");
@@ -454,7 +484,7 @@ TEST_F(ChartsTest, ShowJumpsToTheCentreOfTheBoxAndNoOtherActionMovesTheView) {
 }
 
 // Proof 2: Resume (button), Top up and Build from saved tiles (menu actions) start the stored job with the
-// arguments of.x; the list shows the new state when the job ends.
+// arguments.x; the list shows the new state when the job ends.
 TEST_F(ChartsTest, ResumeTopUpAndBuildStartTheStoredJobAndTheListShowsTheEnd) {
     auto half = save("20261014-080000", "Half", cg::ChartState::Interrupted);
     auto part = save("20261015-080000", "Part", cg::ChartState::Missing);
@@ -463,10 +493,12 @@ TEST_F(ChartsTest, ResumeTopUpAndBuildStartTheStoredJobAndTheListShowsTheEnd) {
     store_->saveChart(part);
     save("20261016-080000", "Broken", cg::ChartState::Failed);
     makeDialog();
+    for (const char* f : {"half", "part", "broken"}) // the written files exist (else the row says so)
+        spit(root_ / "charts" / (std::string(f) + ".mbtiles"), "x");
 
-    scenario(half.id, 1, fill(500, 0) + written("/charts/half.mbtiles", 500, 9), 0);
-    scenario(part.id, 1, fill(1000, 0) + written("/charts/part.mbtiles", 1000, 9), 0);
-    scenario("20261016-080000", 1, written("/charts/broken.mbtiles", 3, 9), 0);
+    scenario(half.id, 1, fill(500, 0) + written((root_ / "charts" / "half.mbtiles").string(), 500, 9), 0);
+    scenario(part.id, 1, fill(1000, 0) + written((root_ / "charts" / "part.mbtiles").string(), 1000, 9), 0);
+    scenario("20261016-080000", 1, written((root_ / "charts" / "broken.mbtiles").string(), 3, 9), 0);
     ASSERT_EQ(rows().size(), 3u);
 
     EXPECT_EQ(rows()[0].texts.back(), "Failed");
@@ -524,7 +556,7 @@ TEST_F(ChartsTest, UpdateIsInTheMenuOfCompleteAndMissingRowsOnly) {
     ASSERT_TRUE(waitIdle());
 }
 
-// and 6: "1 month" on a fixed clock starts a job whose argv carries the date; Cancel starts
+// "1 month" on a fixed clock starts a job whose argv carries the date; Cancel starts
 // nothing and leaves the record; over the slow-mode budget the question comes first (No: nothing, no date);
 // the row's Resume of an interrupted update starts it again with the same date.
 TEST_F(ChartsTest, UpdateChoiceStartsTheJobWithTheDateCancelAndBudgetNoStartNothing) {
@@ -660,9 +692,9 @@ TEST_F(ChartsTest, WhileAJobRunsOnlyShowIsEnabledAndTheRowsFollowTheEnd) {
     EXPECT_TRUE(r[3].enabled[0]);
 }
 
-// Proof 2: Delete asks first (the text of the name with a quote and Cyrillic), No keeps
+// Proof 2: Delete asks first (the text, the name with a quote and Cyrillic), No keeps
 // everything and rescans nothing; Yes removes the existing files (one is missing) and the whole job
-// directory, THEN makes one UpdateChartDBInplace with the array GetChartDBDirArrayString returned
+// directory, THEN makes one UpdateChartDBInplace with the array GetChartDBDirArrayString() returned
 // (force and progress off); the list shrinks. Another chart is untouched. RemoveChartFromDBInPlace is never
 // called (checked in TearDown).
 TEST_F(ChartsTest, DeleteAsksThenRemovesTheFilesAndTheDirectoryThenRescansOnce) {
@@ -670,10 +702,13 @@ TEST_F(ChartsTest, DeleteAsksThenRemovesTheFilesAndTheDirectoryThenRescansOnce) 
     const std::string a = (charts / "\xD0\x9A \x27q.mbtiles").string(); // "К 'q.mbtiles" with a space
     const std::string b = (charts / "b.mbtiles").string();
     const std::string gone = (charts / "never written.mbtiles").string();
+    const std::string stale = (charts / "\xD0\x9A \x27q (2).mbtiles").string(); // Stale0
     spit(a, "a");
     spit(b, "b");
+    spit(stale, "s");
     auto doomed = save("20261015-090000", kCyr, cg::ChartState::Complete);
     doomed.files = {a, gone, b};
+    doomed.stale = {stale};
     store_->saveChart(doomed);
     spit(jobDir(doomed.id) / "args.1", "leftover");
     save("20261016-090000", "Keep", cg::ChartState::Complete);
@@ -682,7 +717,7 @@ TEST_F(ChartsTest, DeleteAsksThenRemovesTheFilesAndTheDirectoryThenRescansOnce) 
     ocpn_fake::chartDirs.Add("/charts/\xD0\x96 two");
     bool goneAtCall = false;
     ocpn_fake::onUpdate = [&] {
-        goneAtCall = !fs::exists(a) && !fs::exists(b) && !fs::exists(jobDir(doomed.id));
+        goneAtCall = !fs::exists(a) && !fs::exists(b) && !fs::exists(stale) && !fs::exists(jobDir(doomed.id));
     };
 
     std::vector<std::string> questions;
@@ -696,7 +731,7 @@ TEST_F(ChartsTest, DeleteAsksThenRemovesTheFilesAndTheDirectoryThenRescansOnce) 
     EXPECT_EQ(questions[0],
               "Delete \"" + kCyr + "\"? The chart is removed from OpenCPN and its files are deleted.");
     EXPECT_TRUE(ocpn_fake::updates.empty());
-    EXPECT_TRUE(fs::exists(a) && fs::exists(b) && fs::exists(jobDir(doomed.id)));
+    EXPECT_TRUE(fs::exists(a) && fs::exists(b) && fs::exists(stale) && fs::exists(jobDir(doomed.id)));
     EXPECT_EQ(rows().size(), 2u);
 
     answer = true;
@@ -708,6 +743,7 @@ TEST_F(ChartsTest, DeleteAsksThenRemovesTheFilesAndTheDirectoryThenRescansOnce) 
     EXPECT_FALSE(ocpn_fake::updates[0].progress);
     EXPECT_FALSE(fs::exists(a));
     EXPECT_FALSE(fs::exists(b));
+    EXPECT_FALSE(fs::exists(stale));
     EXPECT_FALSE(fs::exists(jobDir(doomed.id)));
     EXPECT_TRUE(fs::exists(jobDir("20261016-090000") / "chart.ini"));
     ASSERT_EQ(rows().size(), 1u);
@@ -745,7 +781,7 @@ TEST_F(ChartsTest, UnreadableDirectoryIsDeletedByItsButton) {
     EXPECT_EQ(pageButton(), "My charts (1)");
 }
 
-// ---- : the questions are modeless Question windows; the action happens only on the answer
+// ---- the questions are modeless Question windows; the action happens only on the answer
 // ----
 
 // Delete (a chart row and an unreadable row) with the DEFAULT seam: the call returns at once with the
@@ -894,7 +930,7 @@ TEST_F(ChartsTest, ADeleteAnswerAfterTheChartWentOrAJobStartedDoesNothing) {
 }
 
 // Update with the DEFAULT seams: the choice window (four radio buttons, OK / Cancel), then in slow mode over
-// the budget the question, then the start with the date taken from now AFTER the last answer.
+// the budget the question, then the start with the date taken from now() AFTER the last answer.
 TEST_F(ChartsTest, TheUpdateChoiceAndTheBudgetQuestionAreWindowsAndTheJobStartsAfterTheLastAnswer) {
     const auto chart = save("20261014-080000", kCyr, cg::ChartState::Complete, {8, 9}, 5'000'000);
     cg::Settings s = store_->loadSettings();
@@ -1170,6 +1206,65 @@ TEST_F(MyChartsWeatherTest, UpdateToLatestWeatherRunsWithoutReplaceAsksOverBudge
     EXPECT_EQ(argsOf(w.id, 1), runArgs(w.id, "run")); // ends with --overwrite: no --replace, no date
 }
 
+// The bottom row: "Update all weather charts" left of Close.
+TEST_F(MyChartsWeatherTest, UpdateAllWeatherIsShownOnlyWithAWeatherChartAsksOnceOverBudgetAndIsOffWhileBusy) {
+    const auto button = [&](const std::string& label) -> wxButton* {
+        std::vector<wxButton*> v;
+        collect(panel(), v);
+        for (wxButton* b : v)
+            if (u(b->GetLabel()) == label)
+                return b;
+        return nullptr;
+    };
+    save("20261016-010000", "Plain", cg::ChartState::Complete);
+    save("20261016-020000", "Running", cg::ChartState::Running);
+    makeDialog();
+    ASSERT_NE(button("Update all weather charts"), nullptr);
+    EXPECT_FALSE(button("Update all weather charts")->IsShown()); // no weather chart (Running does not count)
+    auto w1 = weather("20261016-050000", cg::ChartState::Complete, "2026-10-15T20:10:00Z", "c");
+    auto w2 = weather("20261016-060000", cg::ChartState::Missing, "2026-10-15T20:10:00Z", "c");
+    w1.bytes = 3'000'000;
+    w2.bytes = 4'000'000;
+    store_->saveChart(w1);
+    store_->saveChart(w2);
+    panel()->refresh();
+    wxButton* all = button("Update all weather charts");
+    wxButton* close = button("Close");
+    ASSERT_NE(close, nullptr);
+    EXPECT_TRUE(all->IsShown());
+    EXPECT_TRUE(all->IsEnabled());
+    EXPECT_LT(all->GetPosition().x, close->GetPosition().x);
+
+    std::vector<std::string> asked;
+    bool answer = false;
+    panel()->confirmBudget = [&](const wxString& q, std::function<void(bool)> a) {
+        asked.push_back(u(q));
+        a(answer);
+    };
+    cg::Settings s = store_->loadSettings();
+    s.slowConnection = true;
+    s.dataBudgetMb = 1;
+    store_->saveSettings(s);
+    click(all); // No
+    EXPECT_EQ(asked, (std::vector<std::string>{
+                         "This download is about 7.0 MB. Your limit is 1 MB. Download anyway?"}));
+    EXPECT_EQ(runs(w1.id), 0);
+    EXPECT_EQ(runs(w2.id), 0);
+
+    s.slowConnection = false;
+    store_->saveSettings(s);
+    scenario(w2.id, 1, "", 143, "wait"); // newest first: w2 is the first chart of the batch
+    click(all);
+    EXPECT_EQ(asked.size(), 1u);
+    ASSERT_TRUE(jobs_->busy());
+    ASSERT_TRUE(runUntil([&] { return runs(w2.id) == 1; }));
+    EXPECT_FALSE(button("Update all weather charts")->IsEnabled());
+    jobs_->stop();
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(runs(w1.id), 0); // Stop ended the batch
+    EXPECT_TRUE(button("Update all weather charts")->IsEnabled());
+}
+
 struct BarsTest : ChartsTest {
     // The row panels of the list, in order.
     std::vector<wxPanel*> rowPanels() {
@@ -1410,7 +1505,7 @@ TEST_F(BarsTest, TimerTicksUpdateTheLiveRowWithoutRebuildingAnyRow) {
     ASSERT_EQ(before.size(), 2u);
     ASSERT_TRUE(panel()->IsShownOnScreen());
     wxPanel* liveRow = before[0];
-    auto wordsWidth = [&] { // the live words: the last static text of the row (as rows.texts.back)
+    auto wordsWidth = [&] { // the live words: the last static text of the row (as rows().texts.back())
         std::vector<wxStaticText*> t;
         collect(liveRow, t);
         return t.empty() ? -1 : t.back()->GetSize().x;
@@ -1562,7 +1657,7 @@ TEST_F(BarsTest, FrozenBarFillIsToldFromTrackAndBodyInEveryScheme) {
     }
 }
 
-// Proof 9 (touch): every row button, Stop and Stopping... included, is at least minControlHeight high; the
+// Proof 9 (touch): every row button, Stop and Stopping... included, is at least minControlHeight() high; the
 // dialog keeps its size when unfinished rows (with their third line) are listed.
 TEST_F(BarsTest, TouchButtonsAreTallEnoughAndTheDialogKeepsItsSize) {
     ocpn_fake::touch = true;
@@ -1625,7 +1720,7 @@ TEST_F(BarsTest, StopKeepsItsNaturalWidthOutsideTouchMode) {
     EXPECT_LT(width, 48);
 }
 
-// Diagnostic (diag-delete-hang): Delete -> Yes through act and the Question's own button, then the idle
+// Diagnostic (diag-delete-hang): Delete -> Yes through act() and the Question's own button, then the idle
 // cycles (the old rows and the FrozenBar are destroyed there), with a watchdog that aborts a hang.
 TEST_F(BarsTest, DeleteYesOnEveryKindOfRowReturnsAndTheLoopGoesOn) {
     struct Dog {

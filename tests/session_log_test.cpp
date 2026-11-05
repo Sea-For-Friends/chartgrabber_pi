@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// cg::SessionLog : open, line format, flush, cap and roll.
+// Cg::SessionLog: open, line format, flush, cap and roll.
 #include "session_log.h"
 
 #include <gtest/gtest.h>
@@ -163,7 +163,7 @@ TEST_F(SessionLogRollTest, SecondRollReplacesTheRolledFileAndNeverMoreThanTwoFil
     EXPECT_EQ(current.substr(0, 10), "S H1\nS H2\n");
     EXPECT_EQ(rolled.substr(0, 10), "S H1\nS H2\n");
     EXPECT_NE(rolled.find("log continued from c.log.1"),
-              std::string::npos);                             // the.1 of the 2nd roll is a continued file
+              std::string::npos);                             // the .1 of the 2nd roll is a continued file
     EXPECT_NE(current.find("S line 9\n"), std::string::npos); // the newest line is never lost
 }
 

@@ -1,15 +1,15 @@
 cmake_minimum_required(VERSION 3.20)
 # Calendar version YYYY.MM.N: set only at a release; until then the next planned one.
-project(chartgrabber_pi VERSION 2026.10.7 LANGUAGES CXX)
+project(chartgrabber_pi VERSION 2026.11.1 LANGUAGES CXX)
 
 option(CG_BUILD_TESTS "Build the GoogleTest unit tests" ON)
-# Host tuple of the build host's OpenCPN, e.g. debian-x86_64 (see the README). Never "all":
+# Host tuple of the build host's OpenCPN, e.g. debian-x86_64: tools/vm.sh reads it in the VM. Never "all":
 # this wx-linked library must be refused on every other host. Empty is allowed here (a test-only build);
 # tools/tarball.sh refuses an empty one.
-set(CG_TARGET "" CACHE STRING "metadata.xml <target> : the host tuple, never all")
+set(CG_TARGET "" CACHE STRING "metadata.xml <target>: the host tuple, never all")
 string(TOLOWER "${CG_TARGET}" CG_TARGET_LOWER)
 if(CG_TARGET_LOWER STREQUAL "all")
-    message(FATAL_ERROR "CG_TARGET \"all\" is forbidden : the plugin links wxWidgets, whose ABI differs between "
+    message(FATAL_ERROR "CG_TARGET \"all\" is forbidden: the plugin links wxWidgets, whose ABI differs between "
         "distributions; use the host tuple of the"
         " build host's OpenCPN, e.g. debian-x86_64")
 endif()
@@ -34,7 +34,7 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Sanitizer builds (cmake -DCG_SANITIZE=address): applies to every target, own code and tests.
+# Sanitizer builds (tools/check.sh --asan): applies to every target, own code and tests.
 set(CG_SANITIZE "" CACHE STRING "Sanitizer build: empty or address (+undefined)")
 if(MSVC AND NOT CG_SANITIZE STREQUAL "")
     message(FATAL_ERROR "CG_SANITIZE is not supported with MSVC")
@@ -137,7 +137,7 @@ endif()
 string(REPLACE "/" "-" CG_TARGET_VERSION_FILE "${CG_TARGET_VERSION_FILE}")
 set(CG_TARBALL_NAME
     "chartgrabber_pi-${PROJECT_VERSION}-${CG_TARGET}-${CG_TARGET_VERSION_FILE}-${CG_TARGET_ARCH}")
-if(CG_TARGET STREQUAL "darwin-wx32") # M-3: macos-universal, or macos-<arch>
+if(CG_TARGET STREQUAL "darwin-wx32") # macos-universal, or macos-<arch>
     if(CG_TARGET_ARCH MATCHES "arm64" AND CG_TARGET_ARCH MATCHES "x86_64")
         set(CG_MAC_ARCH_NAME "universal")
     else()

@@ -10,12 +10,15 @@
 #include "my_charts_panel.h"
 #include "new_chart_panel.h"
 #include "progress_strip.h"
+#include "strip_place.h"
 
+#include <wx/display.h>
 #include <wx/intl.h>
 #include <wx/panel.h>
 #include <wx/sizer.h>
 
 #include <algorithm>
+#include <limits>
 
 #include <ocpn_plugin.h>
 
@@ -45,20 +48,19 @@ MainDialog::MainDialog(wxWindow* parent, ConfigStore& config, const Look& look, 
     column->Add(tabs, 0, wxALL, 8);
     column->Add(pages_, 1, wxEXPAND);
     SetSizer(column);
-    // Touch mode only : the whole dialog, the window manager's decoration included, fits 800 x 480;
-    // what the tab row takes, the New chart page does not have; its rows scroll instead.
-    if (look.minControlHeight() > 0) {
-        tabsHeight_ = tabs->CalcMin().y;
-        const int decoration = measuredDecoration();
-        capHeight(decoration > 0 ? decoration : FromDIP(40));
-        Bind(wxEVT_SIZE, [this](wxSizeEvent& e) { // GTK: the frame extents arrive after the window is mapped
-            e.Skip();
-            cg::guarded("dialog size", [&] {
-                if (const int d = measuredDecoration(); d > 0 && !closing_)
-                    capHeight(d);
-            });
+    // the whole dialog, the window manager's decoration included, fits the screen (800 x 480 in
+    // touch mode, the display's work area otherwise); what the tab row takes, the New chart page does not
+    // have; its rows scroll instead.
+    tabsHeight_ = tabs->CalcMin().y;
+    touch_ = look.minControlHeight() > 0;
+    applyCap();
+    Bind(wxEVT_SIZE, [this](wxSizeEvent& e) { // GTK: the frame extents arrive after the window is mapped
+        e.Skip();
+        cg::guarded("dialog size", [&] {
+            if (!closing_ && measuredDecoration() > 0)
+                applyCap();
         });
-    }
+    });
 
     newChartButton_->Bind(wxEVT_TOGGLEBUTTON, [this](wxCommandEvent&) {
         cg::guarded("new chart tab", [&] {
@@ -101,6 +103,7 @@ MainDialog::MainDialog(wxWindow* parent, ConfigStore& config, const Look& look, 
     });
     selectPage(0);
     CentreOnParent();
+    applyCap(); // the first placement is clamped before the first Show
 }
 
 // Title bar + frame as the toolkit reports it (GetSize minus GetClientSize); 0 while unknown: GTK knows the
@@ -111,12 +114,38 @@ int MainDialog::measuredDecoration() const {
     return std::max(GetSize().y - GetClientSize().y, 0);
 }
 
-void MainDialog::capHeight(int decoration) {
-    const int cap = FromDIP(480) - tabsHeight_ - 16 - decoration;
-    if (cap == cap_)
+// The decoration is the measured one, else the 40 DIP allowance; the work area is that of the display the
+// dialog is on, else the parent's (empty = unknown: no cap, no move).
+void MainDialog::applyCap() {
+    wxRect work;
+    int d = wxDisplay::GetFromWindow(this);
+    if (d == wxNOT_FOUND && GetParent())
+        d = wxDisplay::GetFromWindow(GetParent());
+    if (d != wxNOT_FOUND)
+        work = wxDisplay(static_cast<unsigned>(d)).GetClientArea();
+    const int decoration = measuredDecoration();
+    fitScreen(decoration > 0 ? decoration : FromDIP(40), work);
+}
+
+// The screen is 480 DIP in touch mode (or a smaller work area), else the work area; then the whole frame
+// (decoration included) is moved inside the work area, also when the cap did not change.
+void MainDialog::fitScreen(int decoration, const wxRect& work) {
+    const int screen = work.IsEmpty() ? 0 : touch_ ? std::min(FromDIP(480), work.height) : work.height;
+    const int cap =
+        screen > 0 ? screen - tabsHeight_ - 16 - decoration : std::numeric_limits<int>::max(); // no cap
+    if (cap != cap_) {
+        cap_ = cap;
+        newChart_->limitHeight(cap);
+    }
+    if (work.IsEmpty())
         return;
-    cap_ = cap;
-    newChart_->limitHeight(cap);
+    const wxPoint at = GetPosition();
+    const wxSize size = GetSize();
+    const cg::StripRect r =
+        cg::fitInWorkArea({at.x, at.y, size.x, size.y - measuredDecoration() + decoration},
+                          {work.x, work.y, work.width, work.height}, 0);
+    if (r.x != at.x || r.y != at.y)
+        Move(r.x, r.y);
 }
 
 MainDialog::~MainDialog() {

@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{F8736AA0-56B2-49E8-9D55-9EF7263BD128}",
+  "name": "SHOM buoyage (France)",
+  "group": "Seamarks and traffic",
+  "layer": true,
+  "url": "https://services.data.shom.fr/INSPIRE/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=BALISAGE_PYR_PNG_3857_WMTS&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Seamarks_SHOM_Buoyage",
+  "license": "© Shom — Licence Ouverte 2.0. Non certifié pour la navigation",
+  "maxConnections": 2,
+  "maxZoom": 17,
+  "navigationWarning": true
+}

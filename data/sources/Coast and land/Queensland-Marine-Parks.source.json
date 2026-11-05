@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "guid": "{7ECFB249-0CBD-40FD-8E79-A9C6217BA0B6}",
+  "name": "Queensland marine parks, moorings, reef markers",
+  "group": "Coast and land",
+  "layer": true,
+  "url": "https://spatial-gis.information.qld.gov.au/arcgis/services/Environment/ParksMarineProtectedAreas/MapServer/WMSServer?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=Great_Barrier_Reef_Coast_Marine_Park_zones30202,Moreton_Bay_Marine_Park_zones11630,Great_Sandy_Marine_Park_zones64240,QPWS_Reef_Protection_Markers__RPM_40119,QPWS_Moorings6676&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Coast_Queensland_Marine_Parks",
+  "license": "© State of Queensland (Department of Environment and Science), CC BY 4.0",
+  "maxConnections": 1,
+  "maxZoom": 16
+}

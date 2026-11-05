@@ -57,7 +57,7 @@ void sizeControls(wxWindow* w, int minHeight) {
     }
 }
 
-// A one-line text that never changes the dialog's size : ellipsized, width set by the layout.
+// A one-line text that never changes the dialog's size: ellipsized, width set by the layout.
 wxStaticText* statusLine(wxWindow* parent, const char* name) {
     auto* t = new wxStaticText(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
                                wxST_ELLIPSIZE_END | wxST_NO_AUTORESIZE, name);
@@ -172,7 +172,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent, ConfigStore& config, const Look
           "cannot remember its place; the option above keeps the strip on the chart."));
     stripNote_->Wrap(FromDIP(380));
     newRow(pane, paneColumn, wxEmptyString)->Add(stripNote_, 1, wxALIGN_CENTER_VERTICAL);
-    // The plugin's own log file : its path (empty when no file is written) and Debug.
+    // The plugin's own log file: its path (empty when no file is written) and Debug.
     const wxString logPath = cg::fromUtf8(cg::pluginLogPath());
     logField_ = new wxTextCtrl(pane, wxID_ANY, logPath, wxDefaultPosition, wxDefaultSize, wxTE_READONLY,
                                wxDefaultValidator, "logFile");
@@ -203,7 +203,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent, ConfigStore& config, const Look
     click(clear_, [this] { clearSavedTiles(); });
     const int minHeight = look.minControlHeight();
     minHeight_ = minHeight;
-    onAdvancedChanged(); // the collapsed header's touch height; refit follows at the end
+    onAdvancedChanged(); // the collapsed header's touch height; refit() follows at the end
     advanced_->Bind(wxEVT_COLLAPSIBLEPANE_CHANGED, [this](wxCollapsiblePaneEvent&) {
         cg::guarded("settings advanced", [&] { onAdvancedChanged(); });
     });
@@ -255,7 +255,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent, ConfigStore& config, const Look
 
 SettingsDialog::~SettingsDialog() {
     closing_ = true;
-    delete question_.get(); // its callback holds this dialog; immediate, not Destroy
+    delete question_.get(); // its callback holds this dialog; immediate, not Destroy()
     checkTimer_.Stop();
     runner_.reset(); // may pump events; its callbacks see closing_
     look_.unsubscribe(lookToken_);
@@ -283,7 +283,7 @@ std::string& SettingsDialog::key(PathKind kind) {
     return pending_.cliPath;
 }
 
-// With no chosen program: the bundled CLI, /usr/bin, else PATH; empty = none.
+// with no chosen program: the bundled CLI, /usr/bin, else PATH; empty = none.
 std::string SettingsDialog::automaticCli() const {
     std::string why;
     return resolveCli(cg::Settings{}, &why, cliDefaultPaths, cliPathEnv).value_or(std::string());
@@ -377,6 +377,13 @@ void SettingsDialog::changePath(PathKind kind) {
     if (!chosen)
         return;
     const std::string path = cg::toUtf8(*chosen);
+    if (kind == PathKind::Charts) { // a folder that cannot hold charts is refused, the old one stays
+        const wxString refusal = chartFolderRefusal(*chosen, cg::sameDir(path, defaultPath(kind)));
+        if (!refusal.empty()) {
+            chartsStatus_->SetLabel(refusal);
+            return;
+        }
+    }
     key(kind) = cg::sameDir(path, defaultPath(kind)) ? std::string() : path;
     showRow(kind);
 }
@@ -384,12 +391,10 @@ void SettingsDialog::changePath(PathKind kind) {
 // chartsStatus_: synchronous, no child process.
 void SettingsDialog::showChartsStatus() {
     const wxString folder = cg::fromUtf8(config_.chartDir(pending_));
-    wxString text;
-    if (!wxFileName::DirExists(folder)) {
+    wxString text = chartFolderRefusal(folder, pending_.chartDir.empty());
+    if (text.empty() && !wxFileName::DirExists(folder)) {
         text = _("The folder will be created at the first download.");
-    } else if (!wxFileName::IsDirWritable(folder)) {
-        text = _("This folder cannot be written. Choose another one.");
-    } else {
+    } else if (text.empty()) { // else: refused, the text says why
         wxDiskspaceSize_t freeBytes = 0;
         text = _("OpenCPN shows the charts from this folder.");
         if (wxGetDiskSpace(folder, nullptr, &freeBytes))
@@ -404,11 +409,15 @@ void SettingsDialog::showCacheSize() {
     clear_->Enable(cacheBytes_ > 0 && !busy_);
 }
 
-// Open folder: the sailor drops.zmp files in; a missing folder is created first.
+// Open folder: the sailor drops .zmp files in; a missing folder is created first.
 void SettingsDialog::openSourcesFolder() {
     const wxString folder = cg::fromUtf8(config_.sourcesDir(pending_));
-    if (!wxFileName::DirExists(folder) && !wxFileName::Mkdir(folder, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL))
-        cg::logLine(wxString::Format("cannot create %s", folder));
+    if (!wxFileName::DirExists(folder)) {
+        if (wxFileName::Mkdir(folder, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL))
+            scheduleCheck(); // the status line said "not found": check again now that it exists
+        else
+            cg::logLine(wxString::Format("cannot create %s", folder));
+    }
     openFolder(folder);
 }
 
@@ -437,7 +446,7 @@ void SettingsDialog::clearSavedTiles() {
                               wxString(), [clear](bool yes, bool) { clear(yes); });
 }
 
-// A download may start while the window is open : true when one runs now (the line and the button
+// A download may start while the window is open: true when one runs now (the line and the button
 // follow it).
 bool SettingsDialog::refreshBusy() {
     busy_ = jobBusy_ && jobBusy_();
@@ -499,7 +508,7 @@ void SettingsDialog::notReady(const wxString& cliText, const wxString& sourcesTe
         expandAdvanced();
 }
 
-// steps 1-5. One check at a time: a running one is terminated and its onExit starts this again.
+// One check at a time: a running one is terminated and its onExit starts this again.
 void SettingsDialog::startCheck() {
     if (closing_)
         return;

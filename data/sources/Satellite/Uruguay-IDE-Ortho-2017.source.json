@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{497CB539-3E59-4BEC-AD24-3DE6DD52A76F}",
+  "name": "IDE Uruguay orthophoto 2017-18 (Uruguay coast)",
+  "group": "Satellite",
+  "url": "https://mapas.ide.uy/geoserver-raster/gwc/service/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ortofotos:ortofoto_nacional&STYLE=raster&FORMAT=image/jpeg&TILEMATRIXSET=EPSG:3857&TILEMATRIX=EPSG:3857:{z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_Uruguay_IDE_Ortho_2017",
+  "license": "IDE Uruguay — Ortoimágenes 2017–2018, Licencia de Datos Abiertos – Uruguay; imagen reproyectada y teselada",
+  "maxConnections": 2,
+  "maxZoom": 19
+}

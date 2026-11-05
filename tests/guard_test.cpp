@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// and 4 : the two guard
+// The two guard
 // templates and the load-guard decision.
 #include "guard.h"
 #include "log_capture.h"

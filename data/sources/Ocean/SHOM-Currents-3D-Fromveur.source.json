@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{7F6A0B57-C94F-4B1D-AA06-C8A2A797BF78}",
+  "name": "SHOM surface currents, 3D model (Fromveur, Ushant)",
+  "group": "Ocean",
+  "layer": true,
+  "url": "https://services.data.shom.fr/INSPIRE/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=COURANTS_3D_FROMVEUR_SURF_WMTS_3857&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Ocean_SHOM_Currents_3D_Fromveur",
+  "license": "© Shom — Licence Ouverte 2.0. Non certifié pour la navigation",
+  "maxConnections": 2,
+  "maxZoom": 14,
+  "navigationWarning": true
+}

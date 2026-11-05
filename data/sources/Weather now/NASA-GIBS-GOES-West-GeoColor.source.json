@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "guid": "{A7EA159A-1A46-4B2D-95FD-5408E996A36E}",
+  "name": "NASA GOES-West GeoColor (Pacific, Americas)",
+  "group": "Weather now",
+  "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/GOES-West_ABI_GeoColor/default/{ver}/GoogleMapsCompatible_Level7/{z}/{y}/{x}.png",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Weather_GIBS_GOES_West_GeoColor",
+  "cacheType": 71,
+  "license": "Imagery: NASA GIBS (ESDIS); GOES ABI — NOAA",
+  "maxConnections": 2,
+  "maxZoom": 7,
+  "snapshot": {
+    "index": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/GOES-West_ABI_GeoColor/default/GoogleMapsCompatible_Level7/all/2026-11-01--2100-01-01.xml",
+    "type": "wmts-domain"
+  }
+}

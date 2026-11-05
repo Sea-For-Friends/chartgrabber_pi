@@ -1,0 +1,21 @@
+{
+  "format": 1,
+  "guid": "{336DC3A7-381C-4D77-BA3A-E063C5392F3F}",
+  "name": "FMI weather radar (Finland)",
+  "group": "Weather now",
+  "layer": true,
+  "url": "https://openwms.fmi.fi/geoserver/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=Radar:suomi_dbz_eureffin&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE&TIME={ver}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Weather_FMI_Radar_Finland",
+  "cacheType": 71,
+  "license": "Source: Finnish Meteorological Institute, CC BY 4.0",
+  "maxConnections": 2,
+  "maxZoom": 9,
+  "snapshot": {
+    "index": "https://openwms.fmi.fi/geoserver/Radar/suomi_dbz_eureffin/ows?service=WMS&version=1.3.0&request=GetCapabilities",
+    "type": "wms-default",
+    "item": "suomi_dbz_eureffin",
+    "pick": "nearest-now"
+  }
+}

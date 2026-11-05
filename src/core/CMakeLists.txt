@@ -10,6 +10,8 @@ geo_math.cpp
     session_log.cpp
     job_progress.cpp
     portable.cpp
+    chart_folder.cpp
+    plugin_conf.cpp
 )
 
 if(CG_CORE_SOURCES)

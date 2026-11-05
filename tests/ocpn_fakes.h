@@ -13,10 +13,10 @@
 class wxWindow;
 
 namespace ocpn_fake {
-extern wxString privateData; // GetpPrivateApplicationDataLocation
-extern bool privateDataNull; // true: GetpPrivateApplicationDataLocation returns nullptr (a test resets it)
-extern bool touch;           // IsTouchInterface_PlugIn
-extern double scale;         // GetOCPNGUIToolScaleFactor_PlugIn
+extern wxString privateData; // GetpPrivateApplicationDataLocation()
+extern bool privateDataNull; // true: GetpPrivateApplicationDataLocation() returns nullptr (a test resets it)
+extern bool touch;           // IsTouchInterface_PlugIn()
+extern double scale;         // GetOCPNGUIToolScaleFactor_PlugIn()
 // DimeWindow(w) counts, remembers w and marks w and every descendant with background (1,2,3) and foreground
 // (4,5,6) so a test can see a reset; GetGlobalColor counts its calls (a test resets them) and answers from
 // globalColors below (default: no colour).
@@ -29,15 +29,15 @@ extern wxWindow* dimeLast;
 } // namespace ocpn_fake
 
 namespace ocpn_fake {
-extern wxWindow* canvasWindow; // GetOCPNCanvasWindow; null = no canvas (the strip does not place itself)
-extern int chartbarHeight;     // GetChartbarHeight; 0 = chart bar hidden (a test resets it)
-extern double contentScale;    // OCPN_GetDisplayContentScaleFactor
+extern wxWindow* canvasWindow; // GetOCPNCanvasWindow(); null = no canvas (the strip does not place itself)
+extern int chartbarHeight;     // GetChartbarHeight(); 0 = chart bar hidden (a test resets it)
+extern double contentScale;    // OCPN_GetDisplayContentScaleFactor()
 struct Jump {
     int calls = 0;
     double lat = 0, lon = 0, scale = 0; // the last JumpToPosition
 };
 extern Jump jump;
-// GetChartDBDirArrayString returns chartDirs; UpdateChartDBInplace(dirs, force, progress) appends to
+// GetChartDBDirArrayString() returns chartDirs; UpdateChartDBInplace(dirs, force, progress) appends to
 // updates and returns true; onUpdate (if set) is called first.
 struct DbUpdate {
     wxArrayString dirs;
@@ -46,11 +46,13 @@ struct DbUpdate {
 extern wxArrayString chartDirs;
 extern std::vector<DbUpdate> updates;
 extern std::function<void()> onUpdate;
-// RemoveChartFromDBInPlace(path) in call order; returns 1. The plugin must never call it (hangs 5.14+).
+// RemoveChartFromDBInPlace(path) in call order (onRemove, if set, runs first); returns 1. Used only for a
+// Windows stale weather file on OpenCPN < 5.14; never for Delete.
 extern std::vector<wxString> removed;
+extern std::function<void()> onRemove;
 
-// Canvases: GetCanvasCount = canvases.size, GetCanvasByIndex(i) = canvases[i] (nullptr outside);
-// PluginGetFocusCanvas = focus; GetCanvasIndexUnderMouse = underMouse; RequestRefresh(w) appends to
+// Canvases: GetCanvasCount() = canvases.size(), GetCanvasByIndex(i) = canvases[i] (nullptr outside);
+// PluginGetFocusCanvas() = focus; GetCanvasIndexUnderMouse() = underMouse; RequestRefresh(w) appends to
 // refreshed. GetCanvasPixLL / GetCanvasLLPix are linear: 100 + 1 pixel = view_scale_ppm per degree, canvas
 // centre (100,100).
 extern std::vector<wxWindow*> canvases;
@@ -95,5 +97,5 @@ extern wxString dataDir; // GetPluginDataDir(name) (name is recorded in dataDirA
 extern wxString dataDirAsked;
 extern wxString svgAsked; // GetBitmapFromSVGFile(file, w, h): the last file and size
 extern std::pair<unsigned, unsigned> svgSize;
-extern wxFileConfig* config; // GetOCPNConfigObject
+extern wxFileConfig* config; // GetOCPNConfigObject()
 } // namespace ocpn_fake

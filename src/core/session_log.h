@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The plugin's own log file : stamp, clean text, cap and roll. std only, no wx;
+// The plugin's own log file: stamp, clean text, cap and roll. std only, no wx;
 // one instance, GUI thread only, no locking; never throws.
 #pragma once
 

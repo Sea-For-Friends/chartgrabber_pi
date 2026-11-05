@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "guid": "{3654F1F2-468C-4A2D-84E7-83741E281B08}",
+  "name": "IGN Argentina protected areas",
+  "group": "Coast and land",
+  "layer": true,
+  "url": "https://wms.ign.gob.ar/geoserver/ows?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=ign:area_protegida&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Coast_Argentina_IGN_Protected_Areas",
+  "license": "FUENTE: Instituto Geográfico Nacional de la República Argentina — Área protegida (WMS, leído 2026-11-05)",
+  "maxConnections": 1,
+  "maxZoom": 12
+}

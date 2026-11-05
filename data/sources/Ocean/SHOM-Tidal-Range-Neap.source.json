@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{B2E953DA-3B93-4651-88F1-DD4EAFC8CD5A}",
+  "name": "SHOM tidal range, neap tides (France)",
+  "group": "Ocean",
+  "layer": true,
+  "url": "https://services.data.shom.fr/INSPIRE/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=MARNAGE_ME_3857_WMTS&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Ocean_SHOM_Tidal_Range_Neap",
+  "license": "© Shom — Licence Ouverte 2.0. Non certifié pour la navigation",
+  "maxConnections": 2,
+  "maxZoom": 13,
+  "navigationWarning": true
+}

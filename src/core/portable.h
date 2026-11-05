@@ -52,7 +52,7 @@ bool isProgramFile(const std::string& path, Os os = kHostOs);
 bool hasExeSuffix(std::string_view name);
 // The automatic places of the CLI, in order, before PATH (section 8.2, 18.3). Posix:
 // joinPath(joinPath(pluginDataDir, "cli"), kDefaultCliName) when pluginDataDir is not empty (the CLI bundled
-// in the tarball, ), then "/usr/bin/" + kDefaultCliName (programFiles ignored). Windows:
+// in the tarball), then "/usr/bin/" + kDefaultCliName (programFiles ignored). Windows:
 // joinPath(joinPath(pluginDataDir, "cli"), exe) when pluginDataDir is not empty, then
 // joinPath(joinPath(programFiles, kCliWindowsFolder), exe) when programFiles is not empty; exe =
 // kDefaultCliName + ".exe".
