@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{17A4115B-0232-4DCD-9FDE-E33E6448CEE3}",
+  "name": "GSI aerial photo (Japan)",
+  "group": "Satellite",
+  "url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_Japan_GSI_Seamless_Photo",
+  "license": "Source: GSI Tiles (地理院タイル), seamless photo (全国最新写真（シームレス）), Geospatial Information Authority of Japan, https://maps.gsi.go.jp/development/ichiran.html; GRUS画像（© Axelspace） in some tiles; PDL 1.0",
+  "maxConnections": 2,
+  "maxZoom": 18
+}

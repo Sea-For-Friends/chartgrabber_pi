@@ -68,7 +68,9 @@ The 24 definitions are now `*.source.json` (format 1 of the CLI's sources guide)
 `params.txt` files by a key-by-key mapping that leaves no key over; `EPSG=3857` is the default and is not written. GUID, name,
 group and `NameInCache` are unchanged, so caches stay valid. The earlier entries above stay as history; wherever they say
 `.zmp` folder or `params.txt` read the `.source.json` file of the same name. sha256 of the 24 files (2026-11-05: the `license` of Esri World Imagery and both EMODnet Bathymetry files was edited locally after
-the licence check, see README; the three hashes below are of the edited files):
+the licence check, see README;
+2026-11-06: USGS Imagery (USA) got a `script` that leaves out Alaska and the Aleutians, see README; the four hashes below
+are of the edited files):
 
     8beeb987742fca43d06697ea4244a98c267c19b5e4b4dd8a1f799d995d968136  Coast and land/OpenTopoMap.source.json
     1131ccfc96c07725e0756e1f60a13fdd8d6e1fe33ac3623ee244f275cc0b418d  Depth/EMODnet-Bathymetry-Europe.source.json
@@ -82,7 +84,7 @@ the licence check, see README; the three hashes below are of the edited files):
     840e55af12729ea4893e83e483df55129bcf38b886167c319334b2b12f190db7  Ocean/NASA-GIBS-Sea-Surface-Temperature.source.json
     42d3ef7fb4d803d6e1acb01b4b50867c9ed82ba5375d4312b48fc44afff779d2  Satellite/Esri-World-Imagery.source.json
     c1f01a63c87680ec824c639a6b3620176029abd893b46bae75e685d95389603a  Satellite/Sentinel2-Cloudless-2025.source.json
-    5bb26718053b4d6f806f26336c5a75a440e789f888e03bf09d424465d1b4b181  Satellite/USGS-Imagery-USA.source.json
+    a9a4b0234ad0343e72e9cdd1c6572d3cbf4061f2b273720cab4fe0955d7277b4  Satellite/USGS-Imagery-USA.source.json
     c601025618b818669f208a95cd25a41e718e962bda1413a03b4b016c627ab5aa  Seamarks and traffic/EMODnet-Vessel-Density-Sailing.source.json
     8d9eee4a1667b4daee21f8f462ba17e83be2bba0f172452e15c7ce2d25eb343e  Seamarks and traffic/EMODnet-Vessel-Density.source.json
     55ac4b0805067db798fef86711acffde0a1111db846a6eedc64ef4312491a016  Seamarks and traffic/OpenSeaMap-Seamarks.source.json
@@ -228,3 +230,10 @@ Three new files (a fourth, the INEGI Mexico orthophoto, was dropped: the photos 
     05b176f92c647c801157f79fdf11e6efd6065d25826d09a1514d16ed995254b9  Satellite/Uruguay-IDE-Ortho-2017.source.json
     b4e203fa3f9f34c76ff567efcba30573cc5641acfbf8b3c5415937da139d946e  Satellite/Argentina-IGN-Aerial-Mosaics.source.json
     bcbc92a24a8dbd092da243a632a389802f21b783aacd31ef79c9a6bfaa23ab02  Coast and land/Argentina-IGN-Protected-Areas.source.json
+
+## 2026-11-06: Japan imagery
+
+One new file, written by this repository from the provider's terms (read 2026-11-06), in the same `.source.json` format as
+the others. Downloaded once with the CLI 2026.11.1 (one connection, a few tiles). sha256:
+
+    834e2bb933fbd6930ac2b900da77f9703e5f53d091c6a56519b0c225d81c24ff  Satellite/Japan-GSI-Seamless-Photo.source.json

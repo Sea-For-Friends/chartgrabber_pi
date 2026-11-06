@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.20)
 project(chartgrabber_pi VERSION 2026.11.1 LANGUAGES CXX)
 
 option(CG_BUILD_TESTS "Build the GoogleTest unit tests" ON)
-# Host tuple of the build host's OpenCPN, e.g. debian-x86_64: tools/vm.sh reads it in the VM. Never "all":
+# Host tuple of the build host's OpenCPN, e.g. debian-x86_64: the VM build reads it. Never "all":
 # this wx-linked library must be refused on every other host. Empty is allowed here (a test-only build);
 # tools/tarball.sh refuses an empty one.
 set(CG_TARGET "" CACHE STRING "metadata.xml <target>: the host tuple, never all")

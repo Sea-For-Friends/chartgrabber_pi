@@ -340,6 +340,64 @@ TEST_F(MapsContractTest, WithoutAnyMapsFolderTheCliRefusesWithExit3) {
     EXPECT_EQ(refused, 1) << r.tail(6);
 }
 
+// The shipped USGS definition leaves out Alaska and the Aleutians (the service shows a copyrighted
+// mosaic there): a download there asks the server for no tile and counts every tile missing, while
+// a box in Washington state asks (the dead proxy refuses: exit 4). No network is used.
+TEST_F(MapsContractTest, UsgsImageryAsksForNoTileInAlaskaAndForTilesElsewhere) {
+    const fs::path folder = tmp_ / "usgs";
+    fs::create_directories(folder);
+    fs::copy_file(fs::path(CG_SOURCE_DIR) / "data" / "sources" / "Satellite" / "USGS-Imagery-USA.source.json",
+                  folder / "USGS-Imagery-USA.source.json");
+    settings_.cliMaps = {folder.string()};
+    struct Place {
+        const char* name;
+        const char* bbox;
+        bool cut;
+    };
+    const Place places[] = {{"Sitka", "-135.345,57.050,-135.335,57.056", true},
+                            {"Adak", "-176.660,51.855,-176.640,51.865", true},
+                            {"Attu", "173.190,52.895,173.210,52.905", true},
+                            {"Seattle", "-122.340,47.605,-122.330,47.611", false}};
+    for (const Place& p : places) {
+        SCOPED_TRACE(p.name);
+        JobSpec j;
+        j.sourceGuid = "{E05EDD5E-C6C3-483C-8BA7-8DE1D9892ED8}";
+        j.areaKind = AreaKind::View;
+        const auto box = parseBBox(p.bbox);
+        ASSERT_TRUE(box);
+        j.bbox = *box;
+        j.zooms = {14};
+        auto a = estimateArguments(j, settings_);
+        a[0] = "download";
+        for (const char* extra : {"--threads=1", "--max-connection-errors=1", "--proxy=http://127.0.0.1:1"})
+            a.push_back(extra);
+        Result r;
+        ASSERT_TRUE(exec(r, a, false, 60000));
+        const auto fills = r.all<FillRecord>();
+        ASSERT_EQ(fills.size(), 1u) << r.tail(6);
+        EXPECT_EQ(fills[0].zoom, 14);
+        EXPECT_EQ(fills[0].tiles, 2);
+        EXPECT_EQ(fills[0].present, 0);
+        EXPECT_EQ(fills[0].markedMissing, 0);
+        EXPECT_EQ(fills[0].missing, 2);
+        int errors = 0;
+        bool noConnection = false;
+        for (const StderrLine& l : r.lines)
+            if (const auto* m = std::get_if<MessageLine>(&l); m && m->kind == MessageLine::Kind::Error) {
+                ++errors;
+                noConnection =
+                    noConnection || m->text.rfind("no connection to the server for 1 tiles in a row", 0) == 0;
+            }
+        if (p.cut) {
+            EXPECT_EQ(r.exitCode, 0) << r.tail(6);
+            EXPECT_EQ(errors, 0) << r.tail(6);
+        } else {
+            EXPECT_EQ(r.exitCode, 4) << r.tail(6);
+            EXPECT_TRUE(noConnection) << r.tail(6);
+        }
+    }
+}
+
 TEST_F(ContractTest, SourcesEstimateAndWhenAskedRunExport) {
     const auto zooms = parseZooms(env("CG_ZOOMS").value_or("0-2"));
     ASSERT_TRUE(zooms) << "CG_ZOOMS is not a zoom list";

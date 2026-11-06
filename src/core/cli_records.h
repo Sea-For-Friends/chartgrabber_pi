@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// CLI records (cli-requirements.md sections 2 and 3) and everything derived from them: line splitting, sums,
-// exit-code meaning, preflight, retry policy, source refusal. Never
-// throws.
+// CLI records (the lines the tile CLI prints on stdout and stderr) and everything derived from them: line
+// splitting, sums, exit-code meaning, preflight, retry policy, source refusal. Never throws.
 #pragma once
 
 #include "portable.h"

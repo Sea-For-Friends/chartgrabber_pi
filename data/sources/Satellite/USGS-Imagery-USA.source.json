@@ -8,5 +8,6 @@
   "ext": ".jpg",
   "nameInCache": "USGS_Imagery_USA",
   "license": "U.S. Geological Survey, public domain",
-  "maxConnections": 2
+  "maxConnections": 2,
+  "script": { "code": "function getUrl(tile, ctx) {\n  // Alaska and the Aleutians are left out: the service shows a copyrighted mosaic there, not public-domain imagery.\n  var s = tile.latBottom, n = tile.latTop, w = tile.lonLeft, e = tile.lonRight;\n  if (n > 54.5 && s < 71.5 && w < -129.2) return '';\n  if (n > 51.1 && s < 54.5 && w < -162.0) return '';\n  if (n > 51.3 && s < 53.1 && e > 172.3) return '';\n  return template(ctx.urlBase);\n}" }
 }

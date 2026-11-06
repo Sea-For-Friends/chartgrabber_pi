@@ -111,7 +111,7 @@ Chart Grabber does not run on OpenCPN for Android. Make the charts on a PC or a 
 
 ## Bundled charts
 
-81 sources come with the plugin, in seven groups (the menus under **Chart**).
+82 sources come with the plugin, in seven groups (the menus under **Chart**).
 
 | Group | Source | What it is for | Area |
 |---|---|---|---|
@@ -148,7 +148,7 @@ Chart Grabber does not run on OpenCPN for Android. Make the charts on a PC or a 
 | Depth | SHOM seabed type (France) | Sand, mud or rock: the holding ground for anchoring; not for navigation | French coasts |
 | Depth | Satellite-derived depth (Pacific islands, DEP) | Approximate depths from satellite over reefs and lagoons; not for navigation | Pacific islands |
 | Satellite | Sentinel-2 Cloudless 2025 (EOX) | Reef edges, banks, passes where charts are poor | Worldwide |
-| Satellite | USGS Imagery (USA) | Reef edges, banks and pass entrances in US waters | USA |
+| Satellite | USGS Imagery (USA) | Reef edges, banks and pass entrances in US waters, not Alaska | USA, not Alaska |
 | Satellite | IGN orthophoto 20 cm (France and overseas) | Anchorages, sand and weed patches, harbour approaches | France, Corsica, French Antilles and other overseas departments |
 | Satellite | PNOA orthophoto (Spain, Balearics, Canaries) | Calas and anchorages, harbour layout | Spain, Balearics, Canaries |
 | Satellite | PDOK aerial photo (Netherlands) | Wadden shoals and gullies, harbour entrances; two flights a year | Netherlands |
@@ -157,6 +157,7 @@ Chart Grabber does not run on OpenCPN for Android. Make the charts on a PC or a 
 | Satellite | theLIST orthophoto (Tasmania) | Aerial photo of Tasmanian anchorages; non-commercial use, tiles unaltered | Tasmania |
 | Satellite | IDE Uruguay orthophoto 2017-18 (Uruguay coast) | Sharp 32 cm photo of the whole Uruguayan shore: harbour entrances and anchorages | Uruguay, Río de la Plata |
 | Satellite | IGN Argentina aerial photo (Buenos Aires, Paraná, towns) | Sharp aerial photos of yacht-club approaches; patches only, draws from zoom 11 | Buenos Aires, Paraná, Necochea, Río Gallegos, Río Grande |
+| Satellite | GSI aerial photo (Japan) | Aerial photos of Japanese harbours, bays and reef edges; the newest photo per area | Japan, Okinawa |
 | Satellite | Esri World Imagery | Sharp satellite picture worldwide: anchorages, reefs and passes; use within Esri's terms | Worldwide |
 | Coast and land | OpenTopoMap | Land relief along the shore: what gives shelter, where squalls come down; light use at the server's request | Worldwide |
 | Coast and land | IDEIB Posidonia and protected seabed (Balearics) | Posidonia meadows and the Decree 25/2018 zones where anchoring is regulated; informative | Balearics |
@@ -237,7 +238,7 @@ CHS NONNA-10: downloading accepts the CHS NONNA Licence; a chart file you make f
 
 ## Your own sources
 
-- The 81 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
+- The 82 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
 - Add your own `.zmp` source folders to `Charts/Chart sources` in your home folder (Settings, **Chart sources**, **Open folder** creates it), or pick another folder with **Change...**. They are read after the bundled ones.
 - Sources that need a key are not bundled: put the source folder there and enter your key where its file says `KEY`.
 

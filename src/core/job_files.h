@@ -116,7 +116,7 @@ std::vector<ChartRecord> weatherBatch(const std::vector<ChartRecord>& charts);
 std::optional<std::string> alternateWeatherFile(const std::string& current,
                                                 const std::function<bool(const std::string&)>& exists,
                                                 Os os = kHostOs);
-// ---- job.ini (§8.1) ----
+// ---- job.ini ----
 // `text` with the value of the line starting "Out=" replaced by `out` and, when `overlayOut` is not empty,
 // the value of the line starting "OverlayOut=" replaced by it; every other byte unchanged; CR/LF in a value
 // become a space (8.1). nullopt when there is no "Out=" line, or `overlayOut` is not empty and there is no

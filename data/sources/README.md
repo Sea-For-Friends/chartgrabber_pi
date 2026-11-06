@@ -1,11 +1,11 @@
 # Shipped chart-source definitions
 
-Eighty-one JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
+Eighty-two JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
 copied from the SAS.Planet map catalogue; the GUID and `NameInCache` are reused only for the three services the
 catalogue also has (OpenSeaMap seamarks, Esri World Imagery, OpenTopoMap), so an existing tile cache stays valid.
 The folder name is the menu group (the `group` value of the definitions); seven groups, below. The definition
-files are CC0-1.0 (see `LICENSE`). The terms of each source were read before it was added (between 2026-10-15 and 2026-11-05; the
-date is given where a section needs it), and every source was downloaded once with the Chart Grabber CLI (2026.10.8 to 2026.10.14; one connection, a few tiles,
+files are CC0-1.0 (see `LICENSE`). The terms of each source were read before it was added (between 2026-10-15 and 2026-11-06; the
+date is given where a section needs it), and every source was downloaded once with the Chart Grabber CLI (2026.10.8 to 2026.11.1; one connection, a few tiles,
 one or two zoom levels) to check that it works. The folder `data/sources` is passed to the CLI first; a sailor's own
 folder (Preferences) is passed after it.
 
@@ -292,8 +292,8 @@ SHOM serves each survey as its own WMTS layer and its WMS refuses layer lists, s
 
 ## Satellite
 
-Imagery of all eleven below. Google, Bing and Esri high-resolution imagery cannot be shipped (see "Not shipped"):
-Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not single coral heads; the national orthophotos (France, Spain, the Netherlands, Uruguay, Argentina) are far sharper but cover only their own waters.
+Imagery of all twelve below. Google, Bing and Esri high-resolution imagery cannot be shipped (see "Not shipped"):
+Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not single coral heads; the national orthophotos (France, Spain, the Netherlands, Uruguay, Argentina, Japan) are far sharper but cover only their own waters.
 
 ### Sentinel-2 Cloudless 2025 (EOX)
 - GUID `{92122135-6B15-4800-AA9E-3E48C556DA17}`
@@ -310,6 +310,7 @@ Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not singl
 - Terms: https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits - "USGS-authored or produced data
   and information are considered to be in the U.S. Public Domain".
 - Attribution: U.S. Geological Survey, public domain
+- Not Alaska: over Alaska and the Aleutians the service shows a 2020 mosaic whose images say "(C) COPYRIGHT 2020 Maxar Technologies, Inc." (read 2026-11-06), not public-domain imagery. The definition's script asks for no tile that touches one of three boxes: 180° W to 129.2° W, 54.5° N to 71.5° N; 180° W to 162.0° W, 51.1° N to 54.5° N; 172.3° E to 180°, 51.3° N to 53.1° N. These tiles count as missing, and a chart wholly inside the boxes is not made. The boxes also take the Yukon, the British Columbia coast north of 54.5° N, eastern Chukotka, and at zoom 4 and below the large tiles that reach into a box.
 
 ### IGN orthophoto 20 cm (France and overseas)
 - GUID `{5BFDF522-5EC4-4C7C-A7DB-BB1B827C2622}`
@@ -374,6 +375,13 @@ Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not singl
 - Terms: WMTS `AccessConstraints` "Se permite buscar, acceder, solicitar, recibir, copiar, analizar, reprocesar, reutilizar y redistribuir libremente la información publicada por este servicio según el Artículo 2 de la Ley 27.275 …"; IGN terms: cite "FUENTE: Instituto Geográfico Nacional de la República Argentina" and the data date, do not alter the data, share it free of charge.
 - Attribution: FUENTE: Instituto Geográfico Nacional de la República Argentina — mosaicos de vuelos 2011–2022. Max zoom 19.
 - Coverage: photogrammetric flights only: Buenos Aires and the Río de la Plata shore, the Paraná, Necochea, Río Gallegos, Río Grande; elsewhere an empty tile.
+
+### GSI aerial photo (Japan)
+- GUID `{17A4115B-0232-4DCD-9FDE-E33E6448CEE3}` (base chart)
+- Service: XYZ `https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg` (GSI Tiles, layer "seamless photo", 全国最新写真（シームレス）), JPEG
+- Terms: GSI tile list (https://maps.gsi.go.jp/development/ichiran.html): use under the GSI Content Terms, credit "地理院タイル" or "国土地理院", link to the tile list, tiles with GRUS imagery credit "GRUS画像（© Axelspace）"; reading tiles in software needs no application. GSI Content Terms (https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html): Public Data License 1.0 (compatible with CC BY 4.0: copy, transmit, adapt, commercial use, with the credit; an edited copy must say so and must not look like GSI's own). Photo tiles are not basic survey results, so no Survey Act application (https://www.gsi.go.jp/LAW/2930-index.html). Read 2026-11-06.
+- Attribution: Source: GSI Tiles (地理院タイル), seamless photo (全国最新写真（シームレス）), Geospatial Information Authority of Japan, https://maps.gsi.go.jp/development/ichiran.html; GRUS画像（© Axelspace） in some tiles; PDL 1.0. Max zoom 18.
+- Coverage: Japan; Okinawa seen, the outer islands not checked. Notes: the newest photo per area, dates not stated; some tiles are Landsat-8 or GRUS satellite imagery. GSI's standard and pale maps are not used (they are basic survey results).
 
 ### Grey source: Esri World Imagery
 

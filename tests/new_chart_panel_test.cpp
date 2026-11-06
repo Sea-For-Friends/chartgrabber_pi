@@ -3801,7 +3801,7 @@ TEST_F(DetailWarningTest, TheQuestionFitsEightHundredByFourEightyInTouchMode) {
 
 // ---- Weather on top ----
 // The stand-in prints the lines of the real CLI 2026.11.1 `sources` output (tests/fixtures/cli-2026.11.1/
-// sources-bundled-all.stdout, 81 rows) unless a case edits one line; every edit is named at its
+// sources-bundled-all.stdout, 82 rows) unless a case edits one line; every edit is named at its
 // test.
 
 const char* const kRainViewer = "{1A696D82-F258-41A4-BCD6-7648D9E08DE2}";

@@ -2,7 +2,7 @@
 // JobController and showOnChart, against a stand-in
 // CLI. The stand-in is a small sh script written into a temp directory (never the real CLI): it saves its
 // arguments, prints the stdout / stderr text the test put next to the job file, then exits with the given
-// code or waits for a signal. The records it prints are the CLI records of cli-requirements.md 2 and 3; the
+// code or waits for a signal. The records it prints are the CLI records (stdout and stderr); the
 // error texts are the CLI's. The real CLI is not used here: the proofs that need it are manual.
 // A window test: it lives in cg_gui_tests and skips (and says so) without a display.
 //

@@ -1,0 +1,14 @@
+# LeakSanitizer suppressions for tools/check.sh --asan. ONLY third-party libraries, never a symbol or file of this
+# repository: a leak of ours must stay visible.
+# libfontconfig: font cache built by wx/GTK/Pango start-up in the window-test binary, never freed at exit
+# (log of an early window-test run: ~1023 objects, all frames in libfontconfig.so.1).
+leak:libfontconfig.so
+# g_malloc (the libglib allocator frame only, NOT the whole library: LSan matches any frame of a stack and
+# every glib main-loop handler has libglib frames, so a library-wide line hid leaks of ours): 2 objects / 92
+# bytes whose stack the fast unwinder cuts at g_malloc (GTK libraries have no
+# frame pointers). With ASAN_OPTIONS=fast_unwind_on_malloc=0 the same leak shows libfontconfig / libpango frames and
+# the suppression above already covers it (the first window test that shows a strip or a dialog).
+leak:g_malloc
+# libGLX_mesa: Mesa's GLX loader state (3 allocations / ~108 kB, every frame in libGLX_mesa.so.0) of the first GL
+# window under xvfb-run in the x86-64 VM; never freed at exit (ProgressStrip.ResultButtonMayShowResultOnSameStrip).
+leak:libGLX_mesa.so

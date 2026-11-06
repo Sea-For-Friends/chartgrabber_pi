@@ -128,18 +128,18 @@ TEST(CliRecordsStdout, SourceEmptyGroupAndExtraFields) {
 }
 
 // the captured `sources` answers of the pinned CLI. Bundled
-// data/sources after 81 rows (four weather sources more, CHS chart,
+// data/sources after 82 rows (four weather sources more, CHS chart,
 // CHS NONNA-10, IGN, PNOA, PDOK, four Coast and land overlays, nine SHOM
 // depth layers, seven more depth layers, nine SHOM layers, four more Satellite
 // layers and the IH Portugal chart, eight more Weather now sources, four more Ocean
 // currents and waves, one of those Satellite layers removed, four more sources, the
-// INEGI row removed), the flag is 1 for exactly the forty sources of the groups `Nautical charts` (Norway,
-// Finland, NOAA chart, CHS chart, IH Portugal chart) and `Depth` (EMODnet Europe and World, GEBCO, BlueTopo,
-// CHS NONNA-10, the nine SHOM layers, the seven more layers) and of the two overlays IDEIB Posidonia and
-// EMODnet seagrass, nine more SHOM layers (buoyage, wrecks, navigation rules, tidal ranges, tidal
-// stream, 3D currents, tide zones), the two STOFS layers (surge water level, peak water level) and the\n//
-// NOAA OFS currents, and 0 for the other 42. A sailor-folder definition with NavigationWarning=1 gets the
-// flag too; the plain bundled one does not.
+// INEGI row removed, one more Satellite source (Japan)), the flag is 1 for exactly the forty sources of the
+// groups `Nautical charts` (Norway, Finland, NOAA chart, CHS chart, IH Portugal chart) and `Depth` (EMODnet
+// Europe and World, GEBCO, BlueTopo, CHS NONNA-10, the nine SHOM layers, the seven more layers) and of the
+// two overlays IDEIB Posidonia and EMODnet seagrass, nine more SHOM layers (buoyage, wrecks, navigation
+// rules, tidal ranges, tidal stream, 3D currents, tide zones), the two STOFS layers (surge water level, peak
+// water level) and the\n// NOAA OFS currents, and 0 for the other 42. A sailor-folder definition with
+// NavigationWarning=1 gets the flag too; the plain bundled one does not.
 TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
     const auto flags = [](const char* file) {
         std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.1/" + file, std::ios::binary);
@@ -154,7 +154,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
         return out;
     };
     const auto all = flags("sources-bundled-all.stdout");
-    ASSERT_EQ(all.size(), 81u);
+    ASSERT_EQ(all.size(), 82u);
     const std::set<std::string> flagged = {
         "{25DBA489-D484-4A13-B65D-ABA8967FF3DA}", // Norway sea chart
         "{8A9C3A53-0512-4401-A6D3-050E08934949}", // Finland sea chart
@@ -206,7 +206,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
 }
 
 // the regrouped bundled set as the pinned CLI lists it. Seven groups with these counts
-// (Nautical charts 5, Seamarks and traffic 6, Depth 21, Satellite 11,
+// (Nautical charts 5, Seamarks and traffic 6, Depth 21, Satellite 12,
 // Coast and land 6, Weather now 18, Ocean 14 with eight
 // snapshots (NASA sea surface temperature and sea ice, NOAA RTOFS east and west, NOAA OFS, three Copernicus)
 // and the six static SHOM layers, and every snapshot is in Weather now or Ocean (twenty-six); the six static
@@ -237,9 +237,9 @@ TEST(Records, BundledSetGroupsAndSnapshots) {
         }
     }
     const std::map<std::string, int> expected = {
-        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 21}, {"Satellite", 11},
+        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 21}, {"Satellite", 12},
         {"Coast and land", 6},  {"Weather now", 18},         {"Ocean", 14}};
-    EXPECT_EQ(rows, 81);
+    EXPECT_EQ(rows, 82);
     EXPECT_EQ(groups, expected);
     EXPECT_EQ(snapshots, 26);
 }
@@ -329,7 +329,33 @@ TEST(Records, R0017SourcesOfThePinnedRelease) {
     EXPECT_EQ(byGuid.count("{1615753E-78C3-4D38-8305-005C4B00CC7D}"), 0u) << "INEGI Mexico, removed";
 }
 
-// the shipped folder holds the 81 bundled definitions; the removed INEGI file is gone.
+// The Japan aerial photo as the pinned CLI lists it: verdict ok, EPSG 3857, a static base map of
+// Satellite, max zoom 18, no navigation flag, and the licence line of its definition byte for byte
+// (kanji, full-width brackets and the copyright sign).
+TEST(Records, JapanAerialPhotoOfThePinnedRelease) {
+    std::map<std::string, SourceRecord> byGuid;
+    for (const auto& line : fixtureLines("sources-bundled-all.stdout")) {
+        const SourceRecord s = std::get<SourceRecord>(*parseStdoutLine(line));
+        byGuid.emplace(s.guid, s);
+    }
+    const auto it = byGuid.find("{17A4115B-0232-4DCD-9FDE-E33E6448CEE3}");
+    ASSERT_NE(it, byGuid.end());
+    const SourceRecord& s = it->second;
+    EXPECT_EQ(s.name, "GSI aerial photo (Japan)");
+    EXPECT_EQ(s.verdict, "ok");
+    EXPECT_EQ(s.epsg, 3857);
+    EXPECT_EQ(s.kind, "map");
+    EXPECT_EQ(s.group, "Satellite");
+    EXPECT_EQ(s.refresh, "static");
+    EXPECT_EQ(s.maxZoom, 18);
+    EXPECT_FALSE(s.navigationWarning);
+    EXPECT_EQ(s.license,
+              "Source: GSI Tiles (地理院タイル), seamless photo (全国最新写真（シームレス）), Geospatial "
+              "Information Authority of Japan, https://maps.gsi.go.jp/development/ichiran.html; "
+              "GRUS画像（© Axelspace） in some tiles; PDL 1.0");
+}
+
+// the shipped folder holds the 82 bundled definitions; the removed INEGI file is gone.
 TEST(Records, ShippedSourceFiles) {
     int shipped = 0;
     bool inegi = false;
@@ -341,7 +367,7 @@ TEST(Records, ShippedSourceFiles) {
         }
         inegi = inegi || name == "Mexico-INEGI-Ortho.source.json";
     }
-    EXPECT_EQ(shipped, 81);
+    EXPECT_EQ(shipped, 82);
     EXPECT_FALSE(inegi);
 }
 

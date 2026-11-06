@@ -6,7 +6,7 @@
 # program and every *.so / *.so.* (macOS: every file whose `file -b` starts with Mach-O) 755, the rest 644. Exit 2: name off the pattern, platform not fitting <target>/<target-arch> of metadata.xml,
 # no top-level executable chart-grabber-cli[.exe] (Windows: a regular file, exec bit not needed), any symlink, a chart-grabber.conf or portable.txt (file or folder, any depth: the CLI would go portable), or no NOTICE, LICENSE, licenses/. The bundled program is never run.
 # The two BUILT-FROM.txt lines "cli: <dir name>" and "cli-content-sha256: <hex>" go to stderr (the release record takes them).
-# The target/version/arch of metadata.xml are fixed at configure time (tools/vm.sh reads the tuple in the VM):
+# The target/version/arch of metadata.xml are fixed at configure time (the VM build reads the tuple):
 #   cmake -S . -B build -DCG_TARGET=debian-arm64 -DCG_TARGET_VERSION=n/a -DCG_TARGET_ARCH=arm64
 # Exit 2 when the build's <target> is empty or "all" (a wx-linked library never claims all).
 # Exit 2 also when data/sources is missing, holds no .zmp entry or no top-level
@@ -14,7 +14,7 @@
 # Packages carry no documents: beside data/ only a short README.md (GitHub links); every .md/.txt/.adoc/.html under data/ is dropped.
 # Byte-reproducible: the same build dir and the same commit give the same sha256. Every entry gets the
 # mtime SOURCE_DATE_EPOCH (default: the commit time of HEAD in this tree; a tree without git needs the variable,
-# tools/vm.sh passes it), owner 0:0, sorted names, fixed modes (dirs 755, files 644, the library 755), gzip -n.
+# the VM build passes it), owner 0:0, sorted names, fixed modes (dirs 755, files 644, the library 755), gzip -n.
 # A <target> starting with msvc: <build>/chartgrabber_pi.dll, entries metadata.xml, plugins/chartgrabber_pi.dll (755),
 # plugins/chartgrabber_pi/data/ (the same icons and sources-<version>/).
 # A <target> darwin-wx32: <build>/libchartgrabber_pi.dylib, entries metadata.xml,
@@ -24,7 +24,7 @@
 # A <target> starting with flatpak-: no usr/; lib/opencpn/libchartgrabber_pi.so (755),
 # share/opencpn/plugins/chartgrabber_pi/{data,cli}/ (a Flatpak OpenCPN's import, 5.10.2 model/src/plugin_handler.cpp:549-578).
 # Fits: <target-arch> x86_64 takes linux-x86_64, aarch64 takes linux-arm64, anything else is refused. Plain Linux: linux-<arch> (armhf too).
-# The Linux tarball is built inside the VM of its architecture; the Windows one is packed on the host by tools/vm.sh from the DLL
+# The Linux tarball is built inside the VM of its architecture; the Windows one is packed on the host by the VM build from the DLL
 # fetched from plugin-win10 and the data of the synced commit.
 set -euo pipefail
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
@@ -45,7 +45,7 @@ out=$(cd "$out" && pwd)
 
 target=$(sed -n 's|.*<target>\(.*\)</target>.*|\1|p' "$build/metadata.xml" 2>/dev/null | head -1 || true)
 # Windows: <target> msvc*: the DLL of the Visual Studio build, layout plugins/ (the Plugin Manager import moves *.dll to bin\
-# and plugins/ to share\, 5.10.2 model/src/plugin_handler.cpp:515-535); tools/vm.sh packs it on the host from the fetched files.
+# and plugins/ to share\, 5.10.2 model/src/plugin_handler.cpp:515-535); the VM build packs it on the host from the fetched files.
 win=0 mac=0 flat=0
 [[ $target == flatpak-* ]] && flat=1
 [[ ${target,,} == msvc* ]] && win=1
