@@ -47,7 +47,7 @@ The [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) 20
 It is kept in the plugin folder of OpenCPN. A CLI you choose yourself in the plugin's Settings is used instead.
 The Linux file needs the graphics libraries `libopengl0`, `libglx0` and `libegl1`; OpenCPN's own package from Debian 12, Debian 13 or Ubuntu 24.04 installs them, a hand-built OpenCPN may not (Arch and CachyOS: `libglvnd`).
 
-Chart Grabber is not in OpenCPN's plugin catalog yet. Once it is listed, you can install and update it from the Plugin Manager; until then, and on Arch and CachyOS, use **Import plugin...** as above.
+Chart Grabber is in OpenCPN's **Beta** plugin catalog for every system above except Arch and CachyOS; the [user guide](docs/user-guide.md#install-from-the-opencpn-beta-catalog) shows how to switch to it. Installed from the catalog, the plugin is offered as **Update** in the Plugin Manager when a new version comes out. On Arch and CachyOS use **Import plugin...** as above.
 
 ### Updating from 2026.10.4 or older
 
