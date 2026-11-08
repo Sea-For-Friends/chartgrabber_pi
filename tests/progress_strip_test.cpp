@@ -344,7 +344,8 @@ TEST_F(StripWrapTest, TheControlsCarryDilgColoursAtDuskAndNightAndNothingByDay) 
 // The body colour reaches the screen: the strip's own pixel (inside the column border, no child covers it)
 // is the body colour while the canvas under it paints pure magenta. This does NOT prove the paint handler
 // runs: under Xvfb GTK fills the panel itself once SetBackgroundColour is set, so the test is green with
-// the handler removed (measured). The handler rests on the VM record (F1F0EE, OpenGL on and off).
+// the handler removed (measured). The handler was checked on a real display (colour F1F0EE, OpenGL on and
+// off).
 TEST_F(StripWrapTest, TheStripPaintsItsBodyOverTheCanvas) {
     canvas_->SetBackgroundStyle(wxBG_STYLE_PAINT);
     canvas_->Bind(wxEVT_PAINT, [](wxPaintEvent& e) { // no fixture pointer: the frame outlives the test

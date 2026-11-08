@@ -50,7 +50,7 @@ namespace {
 
 namespace fs = std::filesystem;
 
-// Texts of the spec, as literals.
+// The expected texts, as literals.
 const char* const kOutside = "The area is too far north or south (beyond 85 degrees).";
 const char* const kAntimeridian =
     "The area crosses the 180 degree meridian. Make two charts, one on each side.";

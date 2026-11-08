@@ -70,7 +70,7 @@ public:
                 delete wxApp::GetInstance();
             else if (wxDisplay::GetCount() < 1) {
                 // A display server with no output (monitor off): every top-level window asserts in
-                // wxDisplay::GetClientArea (P7 landing, 2026-10-15). The window tests skip.
+                // wxDisplay::GetClientArea. The window tests skip.
                 std::fprintf(stderr, "wx_env: the display has no output: window tests are NOT run\n");
                 g_noOutput = true;
             }

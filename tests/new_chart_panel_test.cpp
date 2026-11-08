@@ -2410,7 +2410,7 @@ TEST_F(DownloadTest, ChangesAreDebouncedAndOneRunGetsTheLastInputs) {
     EXPECT_NE(sources_->estimateArgv()[1].find(" --zooms 9-11"), std::string::npos);
     EXPECT_GE(took, std::chrono::milliseconds(380)) << "the debounce is 400 ms";
     // No wall-clock upper bound (it would depend on the host load): the run having started and the estimate
-    // having ended within waitEstimate()'s timeout is what U-03 needs; the debounce itself is the lower
+    // having ended within waitEstimate()'s timeout is what matters; the debounce itself is the lower
     // bound.
 }
 

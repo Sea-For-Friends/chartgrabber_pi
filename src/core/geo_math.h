@@ -21,13 +21,13 @@ inline constexpr double kMaxLat = 85.0511;
 
 enum class AreaError { OutsideMercator, CrossesAntimeridian, Empty, TooFewRoutePoints };
 
-// Corners in any order; section 6.4.
+// Corners in any order.
 std::expected<BBox, AreaError> normalizeBox(LatLon a, LatLon b);
-// Section 6.3: fewer than two points, or longitudes spanning more than 180 degrees.
+// Refuses fewer than two points, or longitudes spanning more than 180 degrees.
 std::expected<void, AreaError> checkRoute(const std::vector<LatLon>& points);
 // Bounds of the points, grown by half the corridor width (corridorNm is the total width, nautical miles).
 BBox routeBounds(const std::vector<LatLon>& points, double corridorNm);
-// Section 6.5: zoom level of a view with the given scale (pixels per metre, ground) at centerLat.
+// Zoom level of a view with the given scale (pixels per metre, ground) at centerLat.
 double viewZoom(double viewScalePpm, double centerLat);
 // Web Mercator tile count of the box at zoom (rows x columns); an edge exactly on a tile
 // boundary counts one extra row/column (a safe over-count).
@@ -37,7 +37,7 @@ std::int64_t bboxTileCount(const BBox& box, int zoom);
 double scaleDenominator(int zoom, double lat, double dpi = 96);
 // "1:2.3M", "1:290k", "1:4.5k", "1:900" (two significant digits).
 std::string formatScale(double denominator);
-// Passage 8-11, Coastal 12-14, Approach 15-16, Harbour 17-18 (ux section 4).
+// Passage 8-11, Coastal 12-14, Approach 15-16, Harbour 17-18.
 std::pair<int, int> bandZooms(Band b);
 // Contiguous: the bands from the lowest to the highest ticked band (ticked ones included).
 std::vector<int> zoomsForBands(const std::set<Band>& ticked);

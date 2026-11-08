@@ -16,10 +16,9 @@ struct StripAnchor {
     StripCorner corner = StripCorner::BottomLeft;
     int dx = 0, dy = 0;
 };
-inline constexpr int kStripMargin = 8;    // DIP; also the clamp margin
-inline constexpr int kStripDefaultDx = 8; // DIP
-inline constexpr int kStripDefaultDy =
-    32; // DIP above the chart bar: clears OpenCPN's scale bar (section 9.1)
+inline constexpr int kStripMargin = 8;         // DIP; also the clamp margin
+inline constexpr int kStripDefaultDx = 8;      // DIP
+inline constexpr int kStripDefaultDy = 32;     // DIP above the chart bar: clears OpenCPN's scale bar
 inline constexpr int kStripMinWidth = 320;     // DIP
 inline constexpr int kStripMinTextWidth = 260; // DIP: the headline never gets less
 

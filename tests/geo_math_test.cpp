@@ -162,7 +162,7 @@ TEST(BboxTileCount, EdgeOnTileBoundaryCountsExtra) {
     EXPECT_EQ(bboxTileCount(BBox{0.0, 0.0, 90.0, 45.0}, 1), 2);
 }
 
-// ---- scaleDenominator / formatScale (ux section 4) ----
+// ---- scaleDenominator / formatScale ----
 
 TEST(FormatScale, EquatorLabels) {
     EXPECT_EQ(formatScale(scaleDenominator(8, 0)), "1:2.3M");

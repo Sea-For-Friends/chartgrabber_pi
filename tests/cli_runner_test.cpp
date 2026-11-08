@@ -915,7 +915,7 @@ TEST(ProbeCli, CachedPerPathSizeAndModificationTime) {
     EXPECT_EQ(log->messages.size(), 4u);
 }
 
-// ---- stdout lines are CR records or nothing, stderr lines are parsed one by one --
+// ---- stdout lines are CLI records or nothing, stderr lines are parsed one by one --
 namespace {
 std::string describe(const StdoutRecord& r) {
     if (const auto* w = std::get_if<WrittenRecord>(&r)) {

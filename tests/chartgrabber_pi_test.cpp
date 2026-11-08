@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The toolbar tool of ChartGrabberPi against the recording
-// fakes of ocpn_fakes.cpp. The expected file names and call order are the literals of the spec.
+// fakes of ocpn_fakes.cpp. The expected file names and call order are the literals of the plugin interface.
 #include "chartgrabber_pi.h"
 #include "config_store.h"
 #include "job_controller.h"
