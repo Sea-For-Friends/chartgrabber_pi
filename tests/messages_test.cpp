@@ -293,7 +293,7 @@ TEST(MessagesOutcome, RefusalTextBranches) {
 }
 
 // The refusals of the cache and of an area that is too large. The first and third lines are the captured ones
-// (tests/fixtures/ cli-2026.11.1/run-cache-refused.stderr, estimate-area-too-large.stderr); the "cannot open
+// (tests/fixtures/cli-2026.11.1/run-cache-refused.stderr, estimate-area-too-large.stderr); the "cannot open
 // the cache" forms are HAND-MADE from core v2026.10.6 src/cg/app/job_checks.cpp (the capture produced the
 // other form).
 TEST(MessagesOutcome, TheCacheAndAreaSizeRefusals) {

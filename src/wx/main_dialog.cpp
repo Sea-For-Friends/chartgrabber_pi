@@ -108,7 +108,7 @@ MainDialog::MainDialog(wxWindow* parent, ConfigStore& config, const Look& look, 
 
 // Title bar + frame as the toolkit reports it (GetSize minus GetClientSize); 0 while unknown: GTK knows the
 // frame extents only after the window manager has mapped the window. Until then the constructor uses an
-// allowance of 40 DIP (a title bar and a frame of a usual window manager; xfwm4 in the VM: see the record),
+// allowance of 40 DIP (a title bar and a frame of a usual window manager, e.g. xfwm4),
 // and the size event after the first Show replaces it with the measured value.
 int MainDialog::measuredDecoration() const {
     return std::max(GetSize().y - GetClientSize().y, 0);

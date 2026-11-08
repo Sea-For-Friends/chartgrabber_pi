@@ -23,7 +23,7 @@ enum class AreaError { OutsideMercator, CrossesAntimeridian, Empty, TooFewRouteP
 
 // Corners in any order.
 std::expected<BBox, AreaError> normalizeBox(LatLon a, LatLon b);
-// Fewer than two points, or longitudes spanning more than 180 degrees.
+// Refuses fewer than two points, or longitudes spanning more than 180 degrees.
 std::expected<void, AreaError> checkRoute(const std::vector<LatLon>& points);
 // Bounds of the points, grown by half the corridor width (corridorNm is the total width, nautical miles).
 BBox routeBounds(const std::vector<LatLon>& points, double corridorNm);
