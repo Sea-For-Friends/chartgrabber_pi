@@ -87,7 +87,7 @@ enum class SourcesStatus { Checking, CliNotReady, BundledMissing, RunFailed, Fou
 enum class FolderState { Missing, Empty, Holds };
 wxString sourcesStatusText(SourcesStatus status, int records = 0, FolderState folder = FolderState::Empty);
 
-// Texts of section 7.5 (Download) and section 11 (Settings) that are not part of the functions above.
+// Texts of the Download and Settings pages that are not part of the functions above.
 wxString estimatingText();
 wxString enterNameText();
 wxString cannotWriteText(const wxString& path);

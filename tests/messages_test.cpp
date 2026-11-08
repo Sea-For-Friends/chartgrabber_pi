@@ -292,9 +292,10 @@ TEST(MessagesOutcome, RefusalTextBranches) {
         EXPECT_EQ(u(refusalText(in)), text) << in;
 }
 
-// the S-15 and S-16 refusals. The first and third lines are the captured ones (tests/fixtures/
-// cli-2026.11.1/run-cache-refused.stderr, estimate-area-too-large.stderr); the "cannot open the cache"
-// forms are HAND-MADE from core v2026.10.6 src/cg/app/job_checks.cpp (the capture produced the other form).
+// The refusals of the cache and of an area that is too large. The first and third lines are the captured ones
+// (tests/fixtures/ cli-2026.11.1/run-cache-refused.stderr, estimate-area-too-large.stderr); the "cannot open
+// the cache" forms are HAND-MADE from core v2026.10.6 src/cg/app/job_checks.cpp (the capture produced the
+// other form).
 TEST(MessagesOutcome, TheCacheAndAreaSizeRefusals) {
     const std::string cache =
         "The folder for saved tiles cannot be used. Choose another one under Advanced in Preferences (Saved "
@@ -383,7 +384,7 @@ TEST(MessagesSettingsStatus, CliStatusTextsOfSection112) {
               "Chart Grabber CLI does not work: \xD0\x81 broke");
 }
 
-// the rows of the sources table of section 11.2, word for word.
+// the rows of the sources status table, word for word.
 TEST(MessagesSettingsStatus, SourcesStatusTextsOfSection112) {
     constexpr FolderState kHolds = FolderState::Holds;
     EXPECT_EQ(u(sourcesStatusText(SourcesStatus::Checking, 5, kHolds)), "Looking for chart sources...");

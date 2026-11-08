@@ -26,9 +26,9 @@ struct Settings {
     std::string cliDataDir;  // only in the cliSettings copy: --datadir=DIR for every run; empty: not passed
     std::string chartDir;    // empty: <home>/Charts/ChartGrabber
     std::string proxy;       // empty: not passed
-    int threads = 2;         // 1 in slow mode (ux section 5)
-    double corridorNm = 2.0; // total width (app-cli Q-5)
-    bool slowConnection = false; // ux F2: 1 thread, no auto-retry, budget on
+    int threads = 2;         // 1 in slow mode
+    double corridorNm = 2.0; // total width
+    bool slowConnection = false; // 1 thread, no auto-retry, budget on
     int dataBudgetMb = 100;      // applies only when slowConnection
     bool registerCharts = true;
     bool stripOnChart = false;    // key StripOnChart: the progress strip is a child of the chart canvas

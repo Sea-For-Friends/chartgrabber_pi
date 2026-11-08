@@ -17,7 +17,7 @@
 
 namespace cg {
 
-inline constexpr int kSupportedEpsg = 3857; // the CLI refuses every other projection (app-cli 1.7 S-5)
+inline constexpr int kSupportedEpsg = 3857; // the CLI refuses every other projection
 
 struct SourceRecord {
     std::string guid, kind, name, contentType;
@@ -56,7 +56,7 @@ struct WrittenRecord {
     std::string snapshot; // field 5: ISO time of the picture the file holds; empty = none
 };
 struct SnapshotRecord {
-    std::string guid, time, version; // the picture a run took (CR section 2)
+    std::string guid, time, version; // the picture a run took
     std::string modelRun;            // field 4: ISO UTC run of the model; empty when absent
 };
 using StdoutRecord =

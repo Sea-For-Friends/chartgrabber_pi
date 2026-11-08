@@ -66,7 +66,7 @@ cap usage-bad-zooms "$P" "${EST[@]}" --zooms=x
 cap usage-unknown-option "$P" "${EST[@]}" --zooms=9-12 --nonsense=1
 
 # The run / weather records the tests read (network, polite: small areas, low zooms; times change per capture).
-# All use --maps <repo>/data/sources. The two jobs below are job.ini files as the plugin writes them (spec 8.1).
+# All use --maps <repo>/data/sources. The two jobs below are job.ini files as the plugin writes them.
 RUNMAPS=("--maps=$SRC")
 SEA='{AB8A8685-AEC6-4E16-80DA-DC4AC37E4777}'
 RAIN='{1A696D82-F258-41A4-BCD6-7648D9E08DE2}'

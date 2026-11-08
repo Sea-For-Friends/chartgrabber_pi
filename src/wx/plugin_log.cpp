@@ -55,7 +55,7 @@ wxString envValue(const char* name) {
 
 std::string libraryText() {
 #ifdef __WINDOWS__
-    // ponytail: GetModuleHandleExW(FROM_ADDRESS) + GetModuleFileNameW when the UAT log needs the DLL path
+    // TODO: GetModuleHandleExW(FROM_ADDRESS) + GetModuleFileNameW when the log needs the DLL path
     return "library unknown";
 #else
     Dl_info info{};

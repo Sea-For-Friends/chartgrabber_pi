@@ -38,19 +38,19 @@ std::string nativeSeparators(std::string_view path, Os os = kHostOs);
 // is the root: "/x" -> "/", "C:\x" -> "C:\"; no separator -> "".
 std::string parentDir(std::string_view path, Os os = kHostOs);
 // Equal after removing ONE trailing separator from each (not from a root "/" or "C:\"). Windows also maps
-// '/' to '\' and compares ASCII letters case-insensitively (non-ASCII compared as bytes: ponytail, NTFS
+// '/' to '\' and compares ASCII letters case-insensitively (non-ASCII compared as bytes, although NTFS
 // folds more).
 bool sameDir(std::string_view a, std::string_view b, Os os = kHostOs);
 // Windows paths only: the volume of each ("X:" letter case-insensitive, or "\\server\share" /
 // "//server/share" ASCII case-insensitive, separators mapped) is non-empty and equal. Used for the disk check
-// of section 7.4 on Windows.
+// of a download on Windows.
 bool sameVolume(std::string_view a, std::string_view b);
 // A program file: a regular file AND (Posix: access(X_OK) == 0; Windows: the name ends in ".exe",
 // ASCII case-insensitive; no PATHEXT). The Posix branch is compiled only without _WIN32 (unistd.h).
 bool isProgramFile(const std::string& path, Os os = kHostOs);
 // True when the name ends in ".exe" (ASCII case-insensitive). Used by findOnPath to add the suffix once.
 bool hasExeSuffix(std::string_view name);
-// The automatic places of the CLI, in order, before PATH (section 8.2, 18.3). Posix:
+// The automatic places of the CLI, in order, before PATH. Posix:
 // joinPath(joinPath(pluginDataDir, "cli"), kDefaultCliName) when pluginDataDir is not empty (the CLI bundled
 // in the tarball), then "/usr/bin/" + kDefaultCliName (programFiles ignored). Windows:
 // joinPath(joinPath(pluginDataDir, "cli"), exe) when pluginDataDir is not empty, then

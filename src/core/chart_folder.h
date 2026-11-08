@@ -17,8 +17,8 @@ struct Sandbox {
 };
 
 // The folders of a `filesystems=` value that are read-write and absolute: "home" -> home, "host" -> "/",
-// "/abs[:rw|:create]" as is; "~/x" -> home/x; ":ro", "!x" and the xdg-* names are skipped (ponytail: an xdg-*
-// grant outside home is refused; add them when a sailor needs one).
+// "/abs[:rw|:create]" as is; "~/x" -> home/x; ":ro", "!x" and the xdg-* names are skipped (an xdg-*
+// grant outside home is refused; TODO: support them when a sailor needs one).
 std::vector<std::string> flatpakGranted(std::string_view infoText, std::string_view home);
 
 // Reads `infoPath` (/.flatpak-info): present -> flatpak = true. A missing file gives flatpak = false.

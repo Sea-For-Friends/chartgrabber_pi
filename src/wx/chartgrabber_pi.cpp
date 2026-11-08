@@ -108,7 +108,7 @@ int ChartGrabberPi::Init() {
             _("Download a chart of an area for use offline"), nullptr, -1, 0, this);
         areaTool_ = std::make_unique<AreaTool>([l = look_.get()] { return l->outline(); },
                                                [l = look_.get()] { return l->touch(); });
-        if (config_) { // OpenCPN ended during a job last time: never auto-resumed (ux F4)
+        if (config_) { // OpenCPN ended during a job last time: never auto-resumed
             for (cg::ChartRecord r : config_->loadCharts()) {
                 if (r.state != cg::ChartState::Running)
                     continue;

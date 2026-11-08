@@ -15,12 +15,12 @@ namespace cg {
 
 namespace {
 
-constexpr double kEarthCircumferenceM = 40075016.686; // Web Mercator world width in metres (section 6.5)
-constexpr double kTileSizePx = 256.0;                 // Web Mercator tile size (section 6.5)
+constexpr double kEarthCircumferenceM = 40075016.686; // Web Mercator world width in metres
+constexpr double kTileSizePx = 256.0;                 // Web Mercator tile size
 constexpr double kEquatorMetresPerPixelZ0 = 156543.034;
 constexpr double kMetresPerInch = 0.0254;
 constexpr double kMetresPerNauticalMile = 1852.0;
-constexpr double kMetresPerDegreeLat = 111320.0; // section 6.3: latitude degrees = m / 111 320
+constexpr double kMetresPerDegreeLat = 111320.0; // latitude degrees = m / 111 320
 
 double toRadians(double degrees) {
     return degrees * std::numbers::pi / 180.0;
