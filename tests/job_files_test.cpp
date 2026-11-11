@@ -339,7 +339,10 @@ TEST(Locale, NumbersUseDotUnderGermanLocale) {
     std::setlocale(LC_ALL, old.c_str());
     EXPECT_NE(ini.find("BBox=-1.50000000,50.25000000,2.12500000,51.00000000\n"), std::string::npos);
     EXPECT_EQ(ini.find("1,5"), std::string::npos);
-    EXPECT_EQ(est[7], "2.0");
+    const auto flag = std::find(est.begin(), est.end(), "--corridor-nm");
+    ASSERT_NE(flag, est.end()) << "estimateArguments has no --corridor-nm";
+    ASSERT_NE(flag + 1, est.end());
+    EXPECT_EQ(*(flag + 1), "2.0");
 }
 
 TEST(DisplayCommand, QuotesSpaceAndApostrophe) {
