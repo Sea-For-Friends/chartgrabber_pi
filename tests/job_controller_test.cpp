@@ -108,9 +108,9 @@ done
 dir=$(dirname "$ini")
 n=$(cat "$dir/runs" 2>/dev/null || echo 0)
 n=$((n + 1))
-echo $n > "$dir/runs"
 printf '%s\n' "$@" > "$dir/args.$n"
 printf '%s\n' "${LC_ALL-unset}" > "$dir/lcall.$n"
+echo $n > "$dir/runs" # last: a test that waits for the count then reads args.$n and lcall.$n
 mode=$(cat "$dir/mode.$n" 2>/dev/null)
 case $mode in
   wait) trap 'exit 143' TERM ;;
