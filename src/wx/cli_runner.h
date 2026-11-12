@@ -51,12 +51,17 @@ public:
     static constexpr int kDefaultStopGraceMs = 10000;
     int stopGraceMs() const { return stopGraceMs_; }
     void setStopGraceMs(int ms) { stopGraceMs_ = ms; }
+    // For tests only: the next start() sees the child's end (raw exit code) as already reported inside
+    // wxExecute.
+    void setEndDuringNextStart(int raw) { testEnd_ = raw; }
 
 private:
     void onTimer(wxTimerEvent&);
     void onEnd(wxProcessEvent& event);
     void drain();
     void graceCheck();
+    bool childReaped() const;
+    void endRun(int raw);
     void finish(int exitCode);
     void onStdoutLine(std::string_view line);
     void onStderrLine(std::string_view line);
@@ -74,8 +79,11 @@ private:
     int destructorWaitMs_ = kDefaultDestructorWaitMs;
     int stopGraceMs_ = kDefaultStopGraceMs;
     std::chrono::steady_clock::time_point stopDeadline_;
-    bool killed_ = false;   // the grace kill ran for this run
-    bool killSent_ = false; // kill() ran for this run: Windows reports our kill as -1 (normalizeExit)
+    bool killed_ = false; // the grace kill ran for this run
+    std::optional<int> testEnd_;
+    bool starting_ = false;        // inside wxExecute: wx may report the end before start() returns
+    std::optional<int> startExit_; // that end (raw exit code), finished by the next timer tick
+    bool killSent_ = false;        // kill() ran for this run: Windows reports our kill as -1 (normalizeExit)
 };
 
 // The automatic places of the CLI before PATH on this system.

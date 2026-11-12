@@ -1124,6 +1124,26 @@ TEST_F(CliLogTest, TheProxyValueIsRedactedInEveryCopyOfAChildLineButTheParserKee
     EXPECT_TRUE(has("debug: cli out: connection to user:secret@proxy.example:3128 failed"));
 }
 
+// wx can report the end of a child that ends at once inside wxExecute, before start() returned: the end is
+// remembered and the run finishes with that code, once, and the runner is free for the next start.
+TEST_F(CliRunnerTest, AnEndReportedInsideStartFinishesTheRunWithThatCode) {
+    Capture cap;
+    CliRunner runner;
+    runner.setEndDuringNextStart(7);
+    std::string error;
+    ASSERT_TRUE(runner.start(sh("exit 5"), cap.callbacks(), &error)) << error;
+    EXPECT_TRUE(runner.running()) << "finished by the loop, not inside start()";
+    EXPECT_EQ(cap.exits, 0);
+    ASSERT_TRUE(runUntil([&] { return cap.exits > 0; }, 20000));
+    runFor(300);
+    EXPECT_EQ(cap.exits, 1);
+    EXPECT_EQ(cap.exitCode, 7);
+    EXPECT_FALSE(runner.running());
+    ASSERT_TRUE(runner.start(sh("exit 4"), cap.callbacks(), &error)) << error;
+    ASSERT_TRUE(runUntil([&] { return cap.exits > 1; }, 20000));
+    EXPECT_EQ(cap.exitCode, 4);
+}
+
 // a child that ignores the line is killed once the grace has passed (exit -9), by the timer
 // and by stopAndWait; the kill is logged once.
 TEST_F(CliLogTest, AChildThatIgnoresTheStopLineIsKilledAfterTheGrace) {
