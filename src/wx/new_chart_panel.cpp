@@ -56,7 +56,7 @@ constexpr std::int64_t kHarbourMaxTiles = 20000;                             // 
 constexpr int kEstimateDebounceMs = 400;
 constexpr int kPageWidth = 800;       // DIP: the page's width on the 800 x 480 screen
 constexpr int kMinScrollHeight = 100; // DIP: the rows keep at least this height beside the footer
-constexpr int kRowMargins = 60;       // px: borders and the scroll bar around the rows
+constexpr int kRowMargins = 40;       // px: borders and the scroll bar around the rows
 constexpr int kThreadsMax = 4;        // Advanced threads 1-4
 
 // The two bundled sources whose files carry termsOfUseWarning (OpenTopoMap, Esri): a fact of the source, not
@@ -228,7 +228,7 @@ NewChartPanel::NewChartPanel(wxWindow* parent, ConfigStore& config, const Look& 
     chartRow->Add(caption(_("Chart")), 0, wxALIGN_CENTER_VERTICAL);
     chartRow->Add(sourceChoice_, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
     chartRow->Add(moreSources_, 0, wxALIGN_CENTER_VERTICAL);
-    column_->Add(chartRow, 0, wxEXPAND | wxALL, 6);
+    column_->Add(chartRow, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 6);
     // the favourites file is missing or damaged: first note under the Chart row.
     favWarning_ = new wxStaticText(body_, wxID_ANY, wxString());
     const wxString favUrl = cg::fromUtf8(cg::favouriteSourcesUrl(cg::kPluginVersionString));
