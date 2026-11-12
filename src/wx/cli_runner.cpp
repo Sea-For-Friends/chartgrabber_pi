@@ -18,6 +18,7 @@
 #include <wx/wfstream.h>
 
 #include <algorithm>
+#include <cerrno>
 #include <chrono>
 #include <cstdint> // ocpn_plugin.h uses uint8_t / uint64_t without including it
 #include <cstdlib>
@@ -33,6 +34,8 @@
 #include <csignal>
 #include <fcntl.h>
 #include <pthread.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #endif
 
 namespace {
@@ -127,6 +130,7 @@ bool CliRunner::start(const std::vector<std::string>& argv, Callbacks cb, std::s
     auto* process = new wxProcess(this);
     process->Redirect();
     long pid;
+    starting_ = true;
     {
         wxLogNull quiet; // a failure is reported through *error, not as a dialog
 #ifdef __WINDOWS__
@@ -145,7 +149,13 @@ bool CliRunner::start(const std::vector<std::string>& argv, Callbacks cb, std::s
         pid = wxExecute(raw.data(), wxEXEC_ASYNC, process);
 #endif
     }
+    starting_ = false;
+    if (testEnd_) {
+        startExit_ = testEnd_;
+        testEnd_.reset();
+    }
     if (pid == 0) {
+        startExit_.reset();
         delete process;
         return fail(wxString::Format(_("Cannot start %s."), text[0]));
     }
@@ -270,18 +280,44 @@ bool CliRunner::stopAndWait(int timeoutMs) {
 
 void CliRunner::onTimer(wxTimerEvent&) {
     cg::guarded("runner timer", [this] {
+        if (startExit_) {      // wx ended the child inside wxExecute: finish it here, not inside start()
+            if (childReaped()) // wx has let go of its wxProcess
+                endRun(*startExit_);
+            return;
+        }
         drain();
         graceCheck();
     });
 }
 
+// True once wx has waited for the child (nothing left to wait for); always true on Windows.
+bool CliRunner::childReaped() const {
+#ifdef __WINDOWS__
+    return true;
+#else
+    siginfo_t info{};
+    return waitid(P_PID, static_cast<id_t>(pid_), &info, WEXITED | WNOHANG | WNOWAIT) == -1 &&
+           errno == ECHILD;
+#endif
+}
+
 void CliRunner::onEnd(wxProcessEvent& event) {
     cg::guarded("runner end", [&] {
-        if (!process_) { // not ours any more (Detach race)
-            return;
+        if (!process_) {
+            if (starting_) // wx ended the child inside wxExecute: the timer finishes it
+                startExit_ = event.GetExitCode();
+            return; // else not ours any more (Detach race)
         }
+        if (startExit_) // the end is already remembered: the timer finishes the run
+            return;
+        endRun(event.GetExitCode());
+    });
+}
+
+void CliRunner::endRun(int raw) {
+    startExit_.reset();
+    cg::guarded("runner end", [&] {
         drain();
-        const int raw = event.GetExitCode();
         const int code = cg::normalizeExit(raw, cg::kHostOs, killSent_);
 #ifdef __WINDOWS__
         if (code != raw) // an NTSTATUS crash code stays visible
