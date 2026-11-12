@@ -445,9 +445,9 @@ TEST_F(DialogTest, FitScreenMovesTheFrameInsideTheWorkAreaWhateverTheCap) {
     dialog_->Move(0, 0);
     dialog_->fitScreen(deco, work);
     EXPECT_EQ(dialog_->GetPosition(), wxPoint(100, 60));
-    dialog_->Move(130, 70);
+    dialog_->Move(105, 65); // the page's width depends on the font: stay inside with room to spare
     dialog_->fitScreen(deco, work);
-    EXPECT_EQ(dialog_->GetPosition(), wxPoint(130, 70)) << "inside: not moved";
+    EXPECT_EQ(dialog_->GetPosition(), wxPoint(105, 65)) << "inside: not moved";
     dialog_->Move(1500, 900); // the same cap again
     dialog_->fitScreen(deco, work);
     EXPECT_LE(dialog_->GetPosition().x + dialog_->GetSize().x, 900);
