@@ -20,6 +20,7 @@
 #include <wx/stattext.h>
 #include <wx/timer.h>
 
+#include <algorithm>
 #include <functional>
 #include <string>
 #include <vector>
@@ -93,7 +94,11 @@ public:
             out.push_back(u(list_->GetItemText(i, 0)));
         return out;
     }
-    std::string detail() const { return u(detail_->GetLabel()); }
+    std::string detail() const { // the label breaks long text at the dialog width: compare it as one line
+        std::string s = u(detail_->GetLabel());
+        std::replace(s.begin(), s.end(), '\n', ' ');
+        return s;
+    }
     std::string note(long row) const { return u(list_->GetItemText(row, 1)); }
     bool okEnabled() const { return dlg_.FindWindow(wxID_OK)->IsEnabled(); }
     // ---- user actions

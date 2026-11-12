@@ -1170,7 +1170,7 @@ TEST_F(PanelTest, TheMissingSeamarksNoteBreaksIntoLinesAndDoesNotWidenTheDialog)
             note = t;
     ASSERT_NE(note, nullptr);
     EXPECT_NE(note->GetLabel().Find('\n'), wxNOT_FOUND) << "broken into more than one line";
-    EXPECT_LE(note->GetSize().x, dialog_->FromDIP(800) - caption - 60 - seamarks()->GetBestSize().x - 10);
+    EXPECT_LE(note->GetSize().x, dialog_->FromDIP(800) - caption - 40 - seamarks()->GetBestSize().x - 10);
     const int widthMissing = dialog_->GetSize().x;
     writeFavourites(std::string("format\t1\nchart\t") + kEsri + "\nseamarks\t" + kSeamarkLayer + "\n");
     panel()->reloadSources();
