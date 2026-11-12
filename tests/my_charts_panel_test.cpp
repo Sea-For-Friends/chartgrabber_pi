@@ -72,8 +72,8 @@ done
 dir=$(dirname "$ini")
 n=$(cat "$dir/runs" 2>/dev/null || echo 0)
 n=$((n + 1))
-echo $n > "$dir/runs"
 printf '%s\n' "$@" > "$dir/args.$n"
+echo $n > "$dir/runs" # last: a test that waits for the count then reads args.$n
 mode=$(cat "$dir/mode.$n" 2>/dev/null)
 case $mode in
   wait|feed) trap 'exit 143' TERM ;;
