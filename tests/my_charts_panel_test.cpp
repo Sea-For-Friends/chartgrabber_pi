@@ -83,8 +83,9 @@ if [ -f "$dir/err.$n" ]; then cat "$dir/err.$n" >&2; fi
 case $mode in
   wait) k=0; while [ $k -lt 1200 ]; do sleep 0.05; k=$((k + 1)); done ;;
   feed) k=0 # the test appends stderr lines by renaming a file `feed.<run>` into place
+    # take the file away before reading it: the test may put the next one under the same name at once
     while [ $k -lt 1200 ]; do
-      if [ -f "$dir/feed.$n" ]; then cat "$dir/feed.$n" >&2; rm -f "$dir/feed.$n"; fi
+      if mv "$dir/feed.$n" "$dir/feed.$n.take" 2>/dev/null; then cat "$dir/feed.$n.take" >&2; rm -f "$dir/feed.$n.take"; fi
       sleep 0.05; k=$((k + 1))
     done ;;
 esac
