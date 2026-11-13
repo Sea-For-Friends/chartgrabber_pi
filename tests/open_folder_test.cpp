@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // open_folder.cpp: under Flatpak the sailor hears about a failed xdg-open; elsewhere nothing changes. The
 // xdg-open is a small script in a temp folder that is the only entry of PATH. Not covered: a real portal or
-// file manager (checked by hand in a Flatpak lab clone).
+// file manager (checked by hand in a Flatpak sandbox).
 #include "chart_folder.h"
 #include "open_folder.h"
 #include "wx_env.h"
