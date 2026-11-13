@@ -1735,6 +1735,21 @@ void NewChartPanel::beginDownload(bool overwrite) {
         followUp.state = cg::ChartState::Running;
         jobs_.queueAfter(followUp);
     }
+    // The replaced chart is the same file: drop the old records only once the new job runs, so a refused
+    // start keeps them. A record is replaced when it shares an output file; another folder never does.
+    if (overwrite && jobs_.busy()) {
+        std::vector<std::string> outputs = record.files;
+        if (weather)
+            outputs.insert(outputs.end(), followUp.files.begin(), followUp.files.end());
+        for (const cg::ChartRecord& old : config_.loadCharts()) {
+            if (old.id == record.id || old.id == followUp.id)
+                continue;
+            if (std::ranges::any_of(old.files, [&](const std::string& f) {
+                    return std::ranges::find(outputs, f) != outputs.end();
+                }))
+                config_.deleteChartDir(old.id);
+        }
+    }
     if (onStarted)
         onStarted();
 }
