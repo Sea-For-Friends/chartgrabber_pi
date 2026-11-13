@@ -4277,6 +4277,161 @@ TEST_F(PanelWeatherTest, DownloadMakesTheChartAndAWeatherChartThatRunsRightAfter
     EXPECT_EQ(last.weatherGuid, kRainViewer);
 }
 
+// Answering Yes at "Replace it?" leaves one My charts row per replaced file, never two. The old
+// record goes only once the new job runs; a record of another folder or name is never the replaced one.
+TEST_F(PanelWeatherTest, P0255_ReplacingAChartDropsTheOldRecordOfTheSameFilesOnlyOnceTheNewJobRuns) {
+    const std::string base = chartFolder() + "/T.mbtiles";
+    const std::string over = chartFolder() + "/T - Seamarks.mbtiles";
+    const std::string wx = chartFolder() + "/T - Weather.mbtiles";
+    const std::string other = (root_ / "other folder" / "T.mbtiles").string();
+    const std::string unrelated = chartFolder() + "/U.mbtiles";
+    struct Old {
+        const char* id;
+        std::vector<std::string> files;
+    };
+    struct Row {
+        const char* name;
+        std::vector<Old> seeded;
+        const char* onDisk; // file name in the chart folder, what makes the page ask; none: no question
+        bool seamarks, weather, yes, cliGone;
+        std::vector<std::string> survivors; // ids of the seeded records still listed
+        size_t newJobs;                     // job directories made by this press
+    };
+    const std::vector<Row> rows = {
+        {"base file, Yes: the old row is gone",
+         {{"20200101-000001", {base}}},
+         "T.mbtiles",
+         false,
+         false,
+         true,
+         false,
+         {},
+         1},
+        {"base file, No: the old row stays and nothing starts",
+         {{"20200101-000001", {base}}},
+         "T.mbtiles",
+         false,
+         false,
+         false,
+         false,
+         {"20200101-000001"},
+         0},
+        {"same name, other folder: not the replaced one",
+         {{"20200101-000001", {other}}},
+         "T.mbtiles",
+         false,
+         false,
+         true,
+         false,
+         {"20200101-000001"},
+         1},
+        {"another chart keeps its row",
+         {{"20200101-000001", {base}}, {"20200101-000002", {unrelated}}},
+         "T.mbtiles",
+         false,
+         false,
+         true,
+         false,
+         {"20200101-000002"},
+         1},
+        {"only the seamarks file is shared",
+         {{"20200101-000001", {over}}},
+         "T - Seamarks.mbtiles",
+         true,
+         false,
+         true,
+         false,
+         {},
+         1},
+        {"the weather chart and the chart are both replaced",
+         {{"20200101-000001", {base}}, {"20200101-000002", {wx}}},
+         "T.mbtiles",
+         false,
+         true,
+         true,
+         false,
+         {},
+         2},
+        {"only the weather file exists: the chart row is not touched",
+         {{"20200101-000001", {unrelated}}, {"20200101-000002", {wx}}},
+         "T - Weather.mbtiles",
+         false,
+         true,
+         true,
+         false,
+         {"20200101-000001"},
+         2},
+        {"no file on disk, no question: the old row of a deleted file stays",
+         {{"20200101-000001", {base}}},
+         nullptr,
+         false,
+         false,
+         false,
+         false,
+         {"20200101-000001"},
+         1},
+        {"a start that is refused keeps the old row",
+         {{"20200101-000001", {base}}},
+         "T.mbtiles",
+         false,
+         false,
+         true,
+         true,
+         {"20200101-000001"},
+         1},
+    };
+    for (const Row& row : rows) {
+        SCOPED_TRACE(row.name);
+        fs::remove_all(jobsRoot());
+        fs::remove_all(chartFolder());
+        fs::create_directories(chartFolder());
+        if (row.onDisk)
+            std::ofstream(fs::path(chartFolder()) / row.onDisk) << "x";
+        for (const Old& old : row.seeded) {
+            cg::ChartRecord r;
+            r.id = old.id;
+            r.name = "T";
+            r.files = old.files;
+            r.state = cg::ChartState::Complete;
+            store_->saveChart(r);
+        }
+        useFixture();
+        sources_->holdRun(true);
+        store_->setDisclaimerShown();
+        saveLast([&](ConfigStore::LastChoice& c) {
+            c.seamarks = row.seamarks;
+            c.weather = row.weather;
+            c.weatherGuid = kRainViewer;
+        });
+        makeDialog();
+        waitEstimate();
+        typeInto(nameField(), "T");
+        waitEstimate();
+        if (row.cliGone)
+            fs::remove(fs::path(sources_->cli()));
+        waitForTheStartOfASecond();
+        Answerer answers(std::vector<Answerer::Answer>{{row.yes}});
+        download();
+        ASSERT_EQ(answers.shown.size(), row.onDisk ? 1u : 0u);
+        if (row.onDisk) {
+            EXPECT_EQ(answers.shown[0], kReplace);
+        }
+        std::set<std::string> listed;
+        for (const fs::path& d : jobDirs())
+            listed.insert(d.filename().string());
+        EXPECT_EQ(listed.size(), row.survivors.size() + row.newJobs) << "one row per chart, no double";
+        for (const Old& old : row.seeded) {
+            const bool kept =
+                std::find(row.survivors.begin(), row.survivors.end(), old.id) != row.survivors.end();
+            EXPECT_EQ(listed.count(old.id), kept ? 1u : 0u) << old.id;
+        }
+        EXPECT_EQ(store_->loadCharts().size(), listed.size());
+        sources_->holdRun(false);
+        destroyDialog();
+        fs::remove(sources_->dir() / "run.log");
+    }
+}
+
 // Proof 6: the second directory cannot be made -> both gone, nothing started. A FILE named like the second
 // job's id (`<stamp>-2`) takes the place of the directory (a test cannot chmod a directory the page has not
 // made yet); the test starts in the middle of a second so both ids share one stamp.
