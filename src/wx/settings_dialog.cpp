@@ -7,6 +7,7 @@
 #include "job_files.h"
 #include "look.h"
 #include "messages.h"
+#include "open_folder.h"
 #include "plugin_log.h"
 #include "portable.h"
 #include "sources_folder.h"
@@ -99,10 +100,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent, ConfigStore& config, const Look
             return std::nullopt;
         return path;
     };
-    openFolder = [](const wxString& folder) {
-        if (!wxLaunchDefaultApplication(folder))
-            cg::logLine(wxString::Format("cannot open %s", folder));
-    };
+    openFolder = [](const wxString& folder) { cg::openFolderInFileManager(folder); };
 
     // One caption column of common width.
     for (const wxString& c : {_("Chart sources"), _("Connection"), _("Saved tiles"), _("Save charts in"),

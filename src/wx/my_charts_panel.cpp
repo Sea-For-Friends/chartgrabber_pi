@@ -6,6 +6,7 @@
 #include "job_controller.h"
 #include "look.h"
 #include "messages.h"
+#include "open_folder.h"
 #include "plugin_log.h"
 #include "wx_util.h"
 
@@ -592,8 +593,7 @@ void MyChartsPanel::updateAllWeather() {
 void MyChartsPanel::showFile(const cg::ChartRecord& chart) {
     const wxString folder = chart.files.empty() ? cg::fromUtf8(config_.chartDir(config_.loadSettings()))
                                                 : wxFileName(cg::fromUtf8(chart.files.front())).GetPath();
-    if (!wxLaunchDefaultApplication(folder))
-        cg::logWarning(wxString::Format("cannot open %s", folder));
+    cg::openFolderInFileManager(folder);
 }
 
 void MyChartsPanel::deleteChart(const std::string& id) {

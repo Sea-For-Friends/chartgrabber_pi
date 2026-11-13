@@ -42,6 +42,7 @@ set(CG_GUI_TEST_SOURCES
     question_test.cpp
     plugin_log_test.cpp
     close_during_job_test.cpp
+    open_folder_test.cpp
 )
 
 if(CG_TEST_SOURCES)
@@ -93,6 +94,7 @@ if(CG_GUI_TEST_SOURCES)
         ${CMAKE_SOURCE_DIR}/src/wx/chartgrabber_pi.cpp
         ${CMAKE_SOURCE_DIR}/src/wx/question.cpp
         ${CMAKE_SOURCE_DIR}/src/wx/plugin_log.cpp
+        ${CMAKE_SOURCE_DIR}/src/wx/open_folder.cpp
     )
     target_include_directories(cg_gui_tests SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/api ${wxWidgets_INCLUDE_DIRS})
     target_include_directories(cg_gui_tests PRIVATE ${CMAKE_SOURCE_DIR}/src/wx)
