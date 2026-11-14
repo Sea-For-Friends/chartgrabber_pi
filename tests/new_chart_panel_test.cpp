@@ -4390,7 +4390,7 @@ TEST_F(PanelWeatherTest, P0255_ReplacingAChartDropsTheOldRecordOfTheSameFilesOnl
         for (const Old& old : row.seeded) {
             cg::ChartRecord r;
             r.id = old.id;
-            r.name = "T";
+            r.name.assign(1, 'T');
             r.files = old.files;
             r.state = cg::ChartState::Complete;
             store_->saveChart(r);
