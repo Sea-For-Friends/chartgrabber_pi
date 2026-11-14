@@ -753,6 +753,68 @@ TEST_F(JobTest, RegistrationIsOneRescanOfListedFoldersPlusTheJobsFolders) {
     }
 }
 
+// The folders of the written files are also saved in OpenCPN's [ChartDirectories] (a rescan alone is lost at
+// the next start on 5.14): one entry per new folder in record order, nothing for a folder the config lists or
+// for a folder only OpenCPN's in-memory list holds, nothing without written files.
+TEST_F(JobTest, RescanSavesTheJobsFoldersInTheOpenCpnConfig) {
+    store_->setFirstSuccessShown();
+    struct Row {
+        const char* name;
+        std::vector<std::string> inMemory; // GetChartDBDirArrayString()
+        std::vector<std::string> saved;    // [ChartDirectories] before, as stored
+        std::vector<std::string> files;
+        std::vector<std::string> expect; // [ChartDirectories] values after, in key order
+        int logLines;
+    };
+    const std::vector<Row> rows = {
+        {"new folder", {}, {}, {"/charts/a.mbtiles"}, {"/charts^"}, 1},
+        {"two files, one folder", {}, {}, {"/charts/a.mbtiles", "/charts/b.mbtiles"}, {"/charts^"}, 1},
+        {"two folders", {}, {}, {"/p/a.mbtiles", "/q/b.mbtiles"}, {"/p^", "/q^"}, 2},
+        {"already saved", {}, {"/charts^77"}, {"/charts/a.mbtiles"}, {"/charts^77"}, 0},
+        {"saved with a slash", {}, {"/charts/^"}, {"/charts/a.mbtiles"}, {"/charts/^"}, 0},
+        {"OpenCPN's own folders are not copied", {"/x"}, {}, {"/charts/a.mbtiles"}, {"/charts^"}, 1},
+        {"one of two saved", {}, {"/p^"}, {"/p/a.mbtiles", "/q/b.mbtiles"}, {"/p^", "/q^"}, 1},
+        {"odd path",
+         {},
+         {},
+         {"/ch a'rts/\xd0\x9c\xd0\xbe\xd1\x80\xd0\xb5/a.mbtiles"},
+         {"/ch a'rts/\xd0\x9c\xd0\xbe\xd1\x80\xd0\xb5^"},
+         1},
+        {"no files", {}, {}, {}, {}, 0},
+    };
+    int n = 0;
+    for (const Row& row : rows) {
+        SCOPED_TRACE(row.name);
+        ocpn_fake::updates.clear();
+        ocpn_fake::chartDirs.Clear();
+        for (const auto& d : row.inMemory)
+            ocpn_fake::chartDirs.Add(wxString::FromUTF8(d));
+        config_->DeleteGroup("/ChartDirectories");
+        int i = 1;
+        for (const auto& v : row.saved)
+            config_->Write(wxString::Format("/ChartDirectories/ChartDir%d", i++), wxString::FromUTF8(v));
+        auto r = makeRecord(std::string("20261016-11000") + std::to_string(n++));
+        std::string out;
+        for (const auto& f : row.files)
+            out += written(kBase, f, 4, 9);
+        scenario(r.id, 1, out, "", 0);
+        LogCollector log;
+        start(r);
+        ASSERT_TRUE(waitIdle());
+        std::vector<std::string> got;
+        config_->SetPath("/ChartDirectories");
+        wxString key;
+        long cookie = 0;
+        for (bool more = config_->GetFirstEntry(key, cookie); more; more = config_->GetNextEntry(key, cookie))
+            got.push_back(config_->Read(key).ToStdString(wxConvUTF8));
+        config_->SetPath("/");
+        EXPECT_EQ(got, row.expect);
+        EXPECT_EQ(std::count(log.messages.begin(), log.messages.end(),
+                             "ChartGrabber: chart folder saved in the OpenCPN config"),
+                  row.logLines);
+    }
+}
+
 // Proof 2: missing tiles -> the headline with the numbers, chart.ini State missing with Tiles / Missing.
 TEST_F(JobTest, MissingTilesGiveTheMissingStateAndTheNumbers) {
     store_->setFirstSuccessShown();
