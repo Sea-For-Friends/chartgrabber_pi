@@ -110,17 +110,18 @@ void JobController::cleanupStaleAtStart() {
 void JobController::onStaleTimer(wxTimerEvent&) {
     if (closing_)
         return;
+    bool freed = false; // this tick removed a file: OpenCPN's list must be rescanned even after a job rescan
     for (cg::ChartRecord r : config_.loadCharts()) {
         if (r.stale.empty() || (busy() && r.id == record_.id))
             continue;
         std::vector<std::string> left = dropStale(r.stale);
         if (left == r.stale)
             continue;
-        staleRemoved_ = true;
+        staleRemoved_ = freed = true;
         r.stale = std::move(left);
         config_.saveChart(r);
     }
-    if (!staleRemoved_ || rescanned_)
+    if (!freed && (!staleRemoved_ || rescanned_))
         return;
     cg::guarded("stale rescan", [] {
         UpdateChartDBInplace(GetChartDBDirArrayString(), false, false);
@@ -748,8 +749,10 @@ void JobController::finishJob(cg::Outcome outcome) {
                 }
                 if (!record_.stale.empty())
                     record_.stale = dropStale(record_.stale); // no rescan: the call reloads the list itself
-                if (!record_.stale.empty())
+                if (!record_.stale.empty()) {
                     lead_ += staleWeatherText() + "\n";
+                    staleTimer_.StartOnce(120000); // retry the held file like after a batch
+                }
             }
         }
         if (!config_.firstSuccessShown()) {
@@ -872,18 +875,23 @@ void JobController::finishBatch(const wxString& reason, const Buttons& buttons) 
             cg::ChartRecord r = *it;
             const std::size_t before = r.stale.size();
             r.stale = removeStaleFiles(r.stale);
-            if (r.stale.size() < before) {
+            const bool freed = r.stale.size() < before;
+            if (freed)
                 removed = true;
+            if (!r.stale.empty())
+                r.stale = dropStale(r.stale); // still held: no rescan, the call reloads the list itself
+            if (freed || r.stale.size() < before)
                 config_.saveChart(r);
-            }
             left = left || !r.stale.empty();
         }
         if (removed) {
             UpdateChartDBInplace(dirs, false, false);
             cg::logLine("chart list updated again (old weather file removed)");
         }
-        if (left)
+        if (left) {
             lead_ += staleWeatherText() + "\n";
+            staleTimer_.StartOnce(120000); // retry the held files like after a start
+        }
     } else if (nUpdated_ == 0 && nUnchanged_ > 0) {
         cg::logLine("same weather pictures; chart list not updated");
     }
