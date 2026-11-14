@@ -2834,6 +2834,8 @@ TEST_F(SwapTest, ADropThatDoesNotReleaseTriesBothSpellingsOnceAndKeepsTheStaleLi
     EXPECT_EQ(chart(r.id).stale, (std::vector<std::string>{planned("W.mbtiles")}));
     EXPECT_NE(chartIniText(r.id).find("Stale0=" + planned("W.mbtiles") + "\n"), std::string::npos);
     EXPECT_NE(detailsText().find("Chart Grabber removes it later."), std::string::npos);
+    ASSERT_TRUE(jc().staleTimer_.IsRunning()); // the retry, like after a batch
+    EXPECT_EQ(jc().staleTimer_.GetInterval(), 120000);
 }
 
 TEST_F(SwapTest, AHeldFileAtStartIsDroppedWhenTheTimerFiresAndTheRecordOfARunningJobIsSkipped) {
@@ -3289,6 +3291,104 @@ TEST_F(BatchSwapTest, FilesStillHeldAfterTheRescanAddTheRestartLineOnce) {
     EXPECT_EQ(ocpn_fake::updates.size(), 1u);
     EXPECT_EQ(chart(a.id).stale.size(), 1u);
     EXPECT_EQ(count(detailsText(), u(staleWeatherText())), 1u);
+}
+
+// On 5.14+ (no drop) a file held after the batch rescan is removed by the 120 s retry, which rescans again
+// so the file leaves OpenCPN's chart list.
+TEST_F(BatchSwapTest, P0262TheRetryAfterABatchRescansWhenItRemovesAHeldFile) {
+    auto a = wchart(1), b = wchart(2);
+    picture(a.id, 1, true);
+    picture(b.id, 1, true);
+    batch({a, b});
+    ASSERT_TRUE(waitIdle());
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u);
+    ASSERT_TRUE(jc().staleTimer_.IsRunning());
+    for (int k : {1, 2})
+        fs::permissions(folder() / dirName(k), fs::perms::owner_write, fs::perm_options::add);
+    wxTimerEvent ev(jc().staleTimer_);
+    jc().onStaleTimer(ev);
+    EXPECT_FALSE(fs::exists(planned("d1/W.mbtiles")));
+    EXPECT_FALSE(fs::exists(planned("d2/W.mbtiles")));
+    EXPECT_EQ(ocpn_fake::updates.size(), 2u);
+    EXPECT_TRUE(ocpn_fake::removed.empty());
+    jc().onStaleTimer(ev); // nothing left to free: no further rescan
+    EXPECT_EQ(ocpn_fake::updates.size(), 2u);
+}
+
+// A file OpenCPN 5.10-5.13 still lists after the batch rescan is dropped from its chart list like a single
+// update's, then removed; the record is saved and nothing is left to retry.
+TEST_F(BatchSwapTest, P0262HeldOldFilesAreDroppedFromTheChartListAtTheBatchEnd) {
+    auto a = wchart(1), b = wchart(2);
+    picture(a.id, 1, true);
+    picture(b.id, 1, true);
+    staleDropAllowed() = true;
+    int calls = 0;
+    ocpn_fake::onRemove = [&] { // the drop releases one folder per call
+        fs::permissions(folder() / dirName(++calls), fs::perms::owner_write, fs::perm_options::add);
+    };
+    batch({a, b});
+    ASSERT_TRUE(waitIdle());
+    ASSERT_EQ(ocpn_fake::removed.size(), 2u);
+    EXPECT_EQ(ocpn_fake::removed[0].ToStdString(wxConvUTF8), planned("d1/W.mbtiles"));
+    EXPECT_EQ(ocpn_fake::removed[1].ToStdString(wxConvUTF8), planned("d2/W.mbtiles"));
+    EXPECT_FALSE(fs::exists(planned("d1/W.mbtiles")));
+    EXPECT_FALSE(fs::exists(planned("d2/W.mbtiles")));
+    EXPECT_TRUE(chart(a.id).stale.empty());
+    EXPECT_TRUE(chart(b.id).stale.empty());
+    EXPECT_EQ(chartIniText(a.id).find("Stale"), std::string::npos);
+    EXPECT_EQ(chartIniText(b.id).find("Stale"), std::string::npos);
+    EXPECT_EQ(detailsText().find("restarted"), std::string::npos);
+    EXPECT_EQ(detailsText().find("Chart Grabber removes it later."), std::string::npos);
+    EXPECT_FALSE(jc().staleTimer_.IsRunning());
+}
+
+// A drop that does not release keeps the file, the Stale line, the lead text once and arms the 120 s retry;
+// the retry then drops it.
+TEST_F(BatchSwapTest, P0262AFileTheDropCannotReleaseArmsTheRetryAndTheTimerRemovesIt) {
+    auto a = wchart(1), b = wchart(2);
+    picture(a.id, 1, true);
+    picture(b.id, 1, true);
+    staleDropAllowed() = true;
+    batch({a, b});
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(ocpn_fake::removed.size(), 2u);
+    EXPECT_TRUE(fs::exists(planned("d1/W.mbtiles")));
+    EXPECT_EQ(chart(a.id).stale, (std::vector<std::string>{planned("d1/W.mbtiles")}));
+    EXPECT_NE(chartIniText(b.id).find("Stale0=" + planned("d2/W.mbtiles") + "\n"), std::string::npos);
+    EXPECT_EQ(count(detailsText(), u(staleWeatherText())), 1u);
+    ASSERT_TRUE(jc().staleTimer_.IsRunning());
+    EXPECT_EQ(jc().staleTimer_.GetInterval(), 120000);
+    EXPECT_TRUE(jc().staleTimer_.IsOneShot());
+    jc().staleTimer_.Stop();
+    for (int k : {1, 2})
+        fs::permissions(folder() / dirName(k), fs::perms::owner_write, fs::perm_options::add);
+    wxTimerEvent ev(jc().staleTimer_);
+    jc().onStaleTimer(ev);
+    EXPECT_FALSE(fs::exists(planned("d1/W.mbtiles")));
+    EXPECT_TRUE(chart(a.id).stale.empty());
+    EXPECT_TRUE(chart(b.id).stale.empty());
+}
+
+// Where the drop is not allowed (OpenCPN 5.14+ hangs it) the chart list is never touched, but the retry is
+// armed.
+TEST_F(BatchSwapTest, P0262WhereTheDropIsNotAllowedNothingIsDroppedButTheRetryIsArmed) {
+    auto a = wchart(1);
+    picture(a.id, 1, true);
+    staleDropAllowed() = false;
+    batch({a});
+    ASSERT_TRUE(waitIdle());
+    EXPECT_TRUE(ocpn_fake::removed.empty());
+    EXPECT_EQ(chart(a.id).stale.size(), 1u);
+    EXPECT_TRUE(jc().staleTimer_.IsRunning());
+}
+
+// Nothing held: no retry is armed.
+TEST_F(BatchSwapTest, P0262NoRetryTimerWhenNoFileIsLeft) {
+    auto a = wchart(1);
+    picture(a.id, 1, false);
+    batch({a});
+    ASSERT_TRUE(waitIdle());
+    EXPECT_FALSE(jc().staleTimer_.IsRunning());
 }
 
 } // namespace
