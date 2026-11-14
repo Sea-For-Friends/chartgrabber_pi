@@ -67,6 +67,8 @@ inline constexpr int kWeatherZoomCap = 9; // highest zoom ever asked of a weathe
 std::optional<int> zoomLimit(const SourceRecord& r);
 // Exit 4's text: lastError starts with "cannot take the snapshot of " (byte compare).
 bool isSnapshotFailure(std::string_view lastError);
+// Exit 4's text: lastError starts with "the server refused " (byte compare).
+bool isServerRefusal(std::string_view lastError);
 // Seconds since 1970-01-01 UTC of "yyyy-MM-ddTHH:mm:ssZ" or "yyyy-MM-dd" (midnight); anything else nullopt.
 std::optional<std::int64_t> snapshotEpoch(std::string_view iso);
 // "2026-10-15T20:10:00Z" -> "2026-10-15 20:10 UTC"; any other text unchanged.

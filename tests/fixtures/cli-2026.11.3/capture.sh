@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Re-creates every file of this directory from the pinned CLI 2026.11.1 (see README.md). NOT run by the gate.
+# Re-creates every file of this directory from the pinned CLI 2026.11.3 (see README.md). NOT run by the gate.
 # Usage: capture.sh [--all] SCRATCH_DIR   (an empty directory of yours; HOME, cache, datadir, folders live in it)
 # By default the kept NETWORK captures (KEEP below: live sizes and times, read as literals by 9 tests) are NOT overwritten
 # when their files exist; --all rewrites them too.
-# Environment: CG_CLI = the chart-grabber-cli 2026.11.1 binary (core tag v2026.11.1, abbe831b4db3), built out of tree.
+# Environment: CG_CLI = the chart-grabber-cli 2026.11.3 binary (core tag v2026.11.3, 786a824e7676), built out of tree.
 set -u
 ALL=0
 [ "${1:-}" = --all ] && { ALL=1; shift; }
@@ -195,3 +195,29 @@ FIRST=$!
 sleep 4
 cap run-refused-busy "$P" run --job "$S/B-job.ini" --format=tsv --progress=lines "${RUNMAPS[@]}" "${BC[@]}"
 wait "$FIRST"
+
+# CLI 2026.11.3: a server that refuses every tile (HTTP 403) is reported as a refusal, not as a lost connection.
+# A local stub answers 403 to every GET; the scratch definition points at it. Stopped by its PID.
+mkdir -p "$S/F"
+cat >"$S/F/Refusing.source.json" <<'EOJ'
+{
+  "format": 1,
+  "guid": "{6E3B1D2A-9C4F-4F7B-8A51-2D0C7E9B4F13}",
+  "name": "Refusing server",
+  "group": "Test",
+  "url": "http://127.0.0.1:8766/{z}/{x}/{y}.png",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Refusing_Server",
+  "maxConnections": 1
+}
+EOJ
+python3 -I "$OUT/refusing_server.py" &
+STUB=$!
+for _ in $(seq 50); do curl -s -o /dev/null http://127.0.0.1:8766/ && break; sleep 0.1; done
+REF=(run --source='{6E3B1D2A-9C4F-4F7B-8A51-2D0C7E9B4F13}' --bbox=-1.6,50.6,-1.0,50.9 --threads=1 --format=tsv --progress=lines
+    --maps "$S/F" "--datadir=$S/data")
+cap run-server-refused-all "$P" "${REF[@]}" --zooms=8 "--cache=$S/F-cache-all" "--out=$S/out/refused-all.mbtiles"
+cap run-server-refused-streak "$P" "${REF[@]}" --zooms=10 --max-connection-errors=2 "--cache=$S/F-cache-streak" \
+    "--out=$S/out/refused-streak.mbtiles"
+kill "$STUB"

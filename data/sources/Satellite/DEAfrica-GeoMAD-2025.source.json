@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{027DCBF5-2DF0-4F4A-92FA-361EF8150212}",
+  "name": "Satellite mosaic 2025 (Africa, DE Africa)",
+  "group": "Satellite",
+  "url": "https://ows.digitalearth.africa/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=gm_s2_annual&STYLE=simple_rgb&FORMAT=image/png&TILEMATRIXSET=WholeWorld_WebMercator&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&TIME=2025-01-01",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Satellite_DEAfrica_GeoMAD_2025",
+  "license": "Contains modified Copernicus Sentinel data 2025, processed by Digital Earth Africa. CC BY 4.0",
+  "maxConnections": 2,
+  "maxZoom": 14
+}

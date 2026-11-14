@@ -242,8 +242,29 @@ TEST(MessagesOutcome, FixedHeadlinesOfSection93) {
         EXPECT_EQ(u(outcomeHeadline(o, none, {}, "ignored")), text) << static_cast<int>(o);
 }
 
-// exit 4 whose last error is the CLI's snapshot line (a real line, tests/fixtures/cli-2026.11.1/
+// exit 4 whose last error is the CLI's snapshot line (a real line, tests/fixtures/cli-2026.11.3/
 // run-weather-snapshot-failed.stderr) gives the weather text; any other last error keeps the landed one.
+// exit 4 whose last error is a captured server refusal
+// (tests/fixtures/cli-2026.11.3/run-server-refused-*.stderr) says so; a snapshot failure keeps its own text
+// and a line that only looks similar keeps the landed one.
+TEST(MessagesOutcome, AServerRefusalHasItsOwnHeadline) {
+    const char* refusal =
+        "The server of this chart source refused the download. Try again later or choose another chart "
+        "source; your progress is saved.";
+    EXPECT_EQ(u(outcomeHeadline(cg::Outcome::DownloadIncomplete, {}, {},
+                                "the server refused all 4 requested tiles: HTTP 403")),
+              refusal);
+    EXPECT_EQ(u(outcomeHeadline(cg::Outcome::DownloadIncomplete, {}, {},
+                                "the server refused 2 tiles in a row: HTTP 403")),
+              refusal);
+    EXPECT_EQ(u(outcomeHeadline(cg::Outcome::DownloadIncomplete, {}, {},
+                                "The server refused all 4 requested tiles: HTTP 403")),
+              "The download did not complete; your progress is saved.");
+    EXPECT_EQ(
+        u(outcomeHeadline(cg::Outcome::DownloadIncomplete, {}, {}, "cannot take the snapshot of \"x\": y")),
+        "Could not get the latest weather picture. Try again later.");
+}
+
 TEST(MessagesOutcome, ASnapshotFailureHasItsOwnHeadline) {
     EXPECT_EQ(u(outcomeHeadline(cg::Outcome::DownloadIncomplete, {}, {},
                                 "cannot take the snapshot of \"RainViewer radar (worldwide, current)\": no "
@@ -293,7 +314,7 @@ TEST(MessagesOutcome, RefusalTextBranches) {
 }
 
 // The refusals of the cache and of an area that is too large. The first and third lines are the captured ones
-// (tests/fixtures/cli-2026.11.1/run-cache-refused.stderr, estimate-area-too-large.stderr); the "cannot open
+// (tests/fixtures/cli-2026.11.3/run-cache-refused.stderr, estimate-area-too-large.stderr); the "cannot open
 // the cache" forms are HAND-MADE from core v2026.10.6 src/cg/app/job_checks.cpp (the capture produced the
 // other form).
 TEST(MessagesOutcome, TheCacheAndAreaSizeRefusals) {
@@ -316,7 +337,7 @@ TEST(MessagesOutcome, TheCacheAndAreaSizeRefusals) {
     EXPECT_EQ(u(startViewText()), "This is OpenCPN's starting view. Move the chart to your area first.");
     // the captured BerkeleyDB line also holds ": cannot open the cache: ", so its check comes first.
     // the line is the captured fixture, made a lastError the way the runner does.
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.1/run-cache-berkeleydb.stderr",
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.3/run-cache-berkeleydb.stderr",
                      std::ios::binary);
     std::string line;
     ASSERT_TRUE(std::getline(in, line));
@@ -429,6 +450,9 @@ TEST(MessagesRegistration, Texts) {
     EXPECT_EQ(u(jobFileMissingText()),
               "The download settings of this chart are missing. Delete the chart and make it again.");
     EXPECT_EQ(u(snapshotFailedText()), "Could not get the latest weather picture. Try again later.");
+    EXPECT_EQ(u(serverRefusedText()),
+              "The server of this chart source refused the download. Try again later or choose another chart "
+              "source; your progress is saved.");
     EXPECT_EQ(u(weatherPictureLine("2026-10-16 06:40 UTC")), "Weather picture: 2026-10-16 06:40 UTC");
 }
 
@@ -534,6 +558,7 @@ TEST(MessagesAscii, EveryFixedTextIsAscii) {
                                        clearSavedTilesQuestion(5000000, "/c"),
                                        jobFileMissingText(),
                                        snapshotFailedText(),
+                                       serverRefusedText(),
                                        weatherPictureLine("2026-10-16 06:40 UTC"),
                                        enterNameText(),
                                        areaErrorText(cg::AreaError::OutsideMercator),
@@ -847,6 +872,7 @@ TEST(MessagesSweep, NoTextOfMessagesHSaysMapOrTileProgramAndAllAreAscii) {
           firstSuccessHint(),
           jobFileMissingText(),
           snapshotFailedText(),
+          serverRefusedText(),
           weatherPictureLine("2026-10-16 06:40 UTC"),
           stoppingText(),
           stopButtonText(),

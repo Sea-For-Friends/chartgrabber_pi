@@ -1,11 +1,11 @@
 # Shipped chart-source definitions
 
-Eighty-two JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
+Eighty-three JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
 copied from the SAS.Planet map catalogue; the GUID and `NameInCache` are reused only for the three services the
 catalogue also has (OpenSeaMap seamarks, Esri World Imagery, OpenTopoMap), so an existing tile cache stays valid.
 The folder name is the menu group (the `group` value of the definitions); seven groups, below. The definition
 files are CC0-1.0 (see `LICENSE`). The terms of each source were read before it was added (between 2026-10-15 and 2026-11-06; the
-date is given where a section needs it), and every source was downloaded once with the Chart Grabber CLI (2026.10.8 to 2026.11.1; one connection, a few tiles,
+date is given where a section needs it), and every source was downloaded once with the Chart Grabber CLI (2026.10.8 to 2026.11.3; one connection, a few tiles,
 one or two zoom levels) to check that it works. The folder `data/sources` is passed to the CLI first; a sailor's own
 folder (Preferences) is passed after it.
 
@@ -292,7 +292,7 @@ SHOM serves each survey as its own WMTS layer and its WMS refuses layer lists, s
 
 ## Satellite
 
-Imagery of all twelve below. Google, Bing and Esri high-resolution imagery cannot be shipped (see "Not shipped"):
+Imagery of all thirteen below. Google, Bing and Esri high-resolution imagery cannot be shipped (see "Not shipped"):
 Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not single coral heads; the national orthophotos (France, Spain, the Netherlands, Uruguay, Argentina, Japan) are far sharper but cover only their own waters.
 
 ### Sentinel-2 Cloudless 2025 (EOX)
@@ -382,6 +382,13 @@ Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not singl
 - Terms: GSI tile list (https://maps.gsi.go.jp/development/ichiran.html): use under the GSI Content Terms, credit "地理院タイル" or "国土地理院", link to the tile list, tiles with GRUS imagery credit "GRUS画像（© Axelspace）"; reading tiles in software needs no application. GSI Content Terms (https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html): Public Data License 1.0 (compatible with CC BY 4.0: copy, transmit, adapt, commercial use, with the credit; an edited copy must say so and must not look like GSI's own). Photo tiles are not basic survey results, so no Survey Act application (https://www.gsi.go.jp/LAW/2930-index.html). Read 2026-11-06.
 - Attribution: Source: GSI Tiles (地理院タイル), seamless photo (全国最新写真（シームレス）), Geospatial Information Authority of Japan, https://maps.gsi.go.jp/development/ichiran.html; GRUS画像（© Axelspace） in some tiles; PDL 1.0. Max zoom 18.
 - Coverage: Japan; Okinawa seen, the outer islands not checked. Notes: the newest photo per area, dates not stated; some tiles are Landsat-8 or GRUS satellite imagery. GSI's standard and pale maps are not used (they are basic survey results).
+
+### Satellite mosaic 2025 (Africa, DE Africa)
+- GUID `{027DCBF5-2DF0-4F4A-92FA-361EF8150212}` (base chart)
+- Service: WMTS `https://ows.digitalearth.africa/wmts` (key-value GetTile), layer `gm_s2_annual`, style `simple_rgb`, `TIME=2025-01-01`, matrix set `WholeWorld_WebMercator` (XYZ grid, 0..14), PNG
+- Terms: DE Africa GeoMAD specification (https://docs.digitalearthafrica.org/en/latest/data_specs/GeoMAD_specs.html): "CC BY Attribution 4.0 International License", credit "Contains modified Copernicus Sentinel data …, processed by Digital Earth Africa."; WMTS `Fees`/`AccessConstraints` none. The external datasets on the same WMTS (WorldCover and others) are not used: they keep their own terms. Read 2026-11-06.
+- Attribution: Contains modified Copernicus Sentinel data 2025, processed by Digital Earth Africa. CC BY 4.0. Max zoom 14.
+- Coverage: Africa and its islands (layer extent -27.86 to 65.67 E, -48.31 to 39.00 N); not the Maldives, Chagos or Sri Lanka. Notes: annual 2025 median, 10 m; the twin of the Pacific DEP mosaic.
 
 ### Grey source: Esri World Imagery
 
