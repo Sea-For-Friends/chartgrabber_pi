@@ -1534,15 +1534,15 @@ TEST_F(JobTest, GivenFoldersPassThroughUnchanged) {
     EXPECT_EQ(store_->loadSettings().cacheDir, cache);
 }
 
-// ---- the records of --progress=lines (CLI 2026.11.1), captured in tests/fixtures/cli-2026.11.1/
+// ---- the records of --progress=lines (CLI 2026.11.3), captured in tests/fixtures/cli-2026.11.3/
 
 namespace {
 const std::string kEsri = "{7B743985-BC5F-4AB6-8915-AC5DBBB8F552}";
 const std::string kMarks = "{AB8A8685-AEC6-4E16-80DA-DC4AC37E4777}";
 
-// A capture of the pinned CLI 2026.11.1 with the scratch directory of its capture replaced by /scr.
+// A capture of the pinned CLI 2026.11.3 with the scratch directory of its capture replaced by /scr.
 std::string fixtureNew(const std::string& name) {
-    std::string t = slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.11.1" / name);
+    std::string t = slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.11.3" / name);
     EXPECT_FALSE(t.empty()) << name;
     for (std::size_t at; (at = t.find("$SCRATCH")) != std::string::npos;)
         t.replace(at, 8, "/scr");
@@ -1711,14 +1711,14 @@ TEST_F(JobTest, AProgressRecordWithAnEmptyGuidKeepsTheJobRunningAndTheNextRecord
     ASSERT_TRUE(waitIdle(10000));
 }
 
-// the real stderr of the pinned 2026.11.1 CLI. A run (the plugin's command) puts the CLI's
+// the real stderr of the pinned 2026.11.3 CLI. A run (the plugin's command) puts the CLI's
 // navigation notice into Details exactly once, after the phase lines and before the first tile; an export
 // capture of the same job holds none. Nothing in the plugin matches the wording: the line is shown as it
 // came.
 TEST_F(JobTest, TheCliNavigationNoticeReachesDetailsOnceForARunAndNotForAnExport) {
     store_->setFirstSuccessShown();
     const auto capture = [](const char* name) {
-        return slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.11.1" / name);
+        return slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.11.3" / name);
     };
     const std::string notice =
         "warning: \"EMODnet Bathymetry (world)\": not for navigation. This source is not an "
@@ -1989,7 +1989,7 @@ TEST_F(JobTest, TheSixtiethTickSavesDoneQuietly) {
 }
 
 // ---- the weather follow-up, the picture's time, the snapshot failure text.
-// The weather records are the captured lines of the pinned CLI 2026.11.1 (tests/fixtures/cli-2026.11.1/,
+// The weather records are the captured lines of the pinned CLI 2026.11.3 (tests/fixtures/cli-2026.11.3/,
 // read from the files, `$SCRATCH` replaced by /scr); only the first job's lines are made by hand (a normal
 // chart).
 
@@ -1998,7 +1998,7 @@ const std::string kRain = "{1A696D82-F258-41A4-BCD6-7648D9E08DE2}";
 const std::string kRainName = "RainViewer radar (worldwide, current)";
 
 std::string fixtureWeather(const std::string& name) {
-    std::string t = slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.11.1" / name);
+    std::string t = slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.11.3" / name);
     EXPECT_FALSE(t.empty()) << name;
     for (std::size_t at; (at = t.find("$SCRATCH")) != std::string::npos;)
         t.replace(at, 8, "/scr");
@@ -2876,13 +2876,13 @@ TEST_F(SamePictureTest, AnUpdateRescansOnlyForANewPictureAndKeepsTheRecordsFile)
     }
 }
 
-// The snapshot line is the captured one of CLI 2026.11.1, verbatim: field 4 is the model run.
+// The snapshot line is the captured one of CLI 2026.11.3, verbatim: field 4 is the model run.
 TEST_F(SamePictureTest, TheCapturedSnapshotLineOfCli20261101CarriesTheModelRun) {
     weatherSwapOs() = cg::Os::Posix;
     std::string snap;
     {
         std::istringstream in(
-            slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.11.1" / "run-rtofs-snapshot.stdout"));
+            slurp(fs::path(CG_FIXTURES_DIR) / "cli-2026.11.3" / "run-rtofs-snapshot.stdout"));
         for (std::string l; std::getline(in, l);)
             if (l.rfind("snapshot\t", 0) == 0)
                 snap = l + "\n";

@@ -202,8 +202,11 @@ wxString outcomeHeadline(cg::Outcome o, const cg::FillTotals& fill, const std::v
     case cg::Outcome::StorageError:
         return _("Cannot save tiles: the disk is full or cannot be written.");
     case cg::Outcome::DownloadIncomplete:
-        return cg::isSnapshotFailure(lastError) ? snapshotFailedText()
-                                                : _("The download did not complete; your progress is saved.");
+        if (cg::isSnapshotFailure(lastError))
+            return snapshotFailedText();
+        if (cg::isServerRefusal(lastError))
+            return serverRefusedText();
+        return _("The download did not complete; your progress is saved.");
     case cg::Outcome::Refused:
         return refusalText(lastError);
     case cg::Outcome::ExportFailed:
@@ -287,6 +290,12 @@ wxString jobFileMissingText() {
 
 wxString snapshotFailedText() {
     return _("Could not get the latest weather picture. Try again later.");
+}
+
+wxString serverRefusedText() {
+    return _("The server of this chart source refused the download. Try again later or choose another chart "
+             "source; "
+             "your progress is saved.");
 }
 
 wxString weatherPictureLine(const wxString& time) {

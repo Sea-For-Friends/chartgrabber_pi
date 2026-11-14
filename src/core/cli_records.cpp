@@ -241,6 +241,10 @@ bool isSnapshotFailure(std::string_view lastError) {
     return lastError.starts_with("cannot take the snapshot of ");
 }
 
+bool isServerRefusal(std::string_view lastError) {
+    return lastError.starts_with("the server refused ");
+}
+
 std::optional<std::int64_t> snapshotEpoch(std::string_view iso) {
     if (iso.size() != 10 && iso.size() != 20) {
         return std::nullopt;
