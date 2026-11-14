@@ -214,7 +214,10 @@ cat >"$S/F/Refusing.source.json" <<'EOJ'
 EOJ
 python3 -I "$OUT/refusing_server.py" &
 STUB=$!
-for _ in $(seq 50); do curl -s -o /dev/null http://127.0.0.1:8766/ && break; sleep 0.1; done
+trap 'kill "$STUB" 2>/dev/null' EXIT
+up=
+for _ in $(seq 50); do curl -s -o /dev/null http://127.0.0.1:8766/ && { up=1; break; }; sleep 0.1; done
+[ -n "$up" ] || { echo "stub did not start" >&2; exit 1; }
 REF=(run --source='{6E3B1D2A-9C4F-4F7B-8A51-2D0C7E9B4F13}' --bbox=-1.6,50.6,-1.0,50.9 --threads=1 --format=tsv --progress=lines
     --maps "$S/F" "--datadir=$S/data")
 cap run-server-refused-all "$P" "${REF[@]}" --zooms=8 "--cache=$S/F-cache-all" "--out=$S/out/refused-all.mbtiles"

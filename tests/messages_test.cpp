@@ -242,8 +242,6 @@ TEST(MessagesOutcome, FixedHeadlinesOfSection93) {
         EXPECT_EQ(u(outcomeHeadline(o, none, {}, "ignored")), text) << static_cast<int>(o);
 }
 
-// exit 4 whose last error is the CLI's snapshot line (a real line, tests/fixtures/cli-2026.11.3/
-// run-weather-snapshot-failed.stderr) gives the weather text; any other last error keeps the landed one.
 // exit 4 whose last error is a captured server refusal
 // (tests/fixtures/cli-2026.11.3/run-server-refused-*.stderr) says so; a snapshot failure keeps its own text
 // and a line that only looks similar keeps the landed one.
@@ -265,6 +263,8 @@ TEST(MessagesOutcome, AServerRefusalHasItsOwnHeadline) {
         "Could not get the latest weather picture. Try again later.");
 }
 
+// exit 4 whose last error is the CLI's snapshot line (a real line, tests/fixtures/cli-2026.11.3/
+// run-weather-snapshot-failed.stderr) gives the weather text; any other last error keeps the landed one.
 TEST(MessagesOutcome, ASnapshotFailureHasItsOwnHeadline) {
     EXPECT_EQ(u(outcomeHeadline(cg::Outcome::DownloadIncomplete, {}, {},
                                 "cannot take the snapshot of \"RainViewer radar (worldwide, current)\": no "
