@@ -1,6 +1,6 @@
 # Shipped chart-source definitions
 
-Eighty-three JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
+Eighty-six JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
 copied from the SAS.Planet map catalogue; the GUID and `NameInCache` are reused only for the three services the
 catalogue also has (OpenSeaMap seamarks, Esri World Imagery, OpenTopoMap), so an existing tile cache stays valid.
 The folder name is the menu group (the `group` value of the definitions); seven groups, below. The definition
@@ -10,7 +10,7 @@ one or two zoom levels) to check that it works. The folder `data/sources` is pas
 folder (Preferences) is passed after it.
 
 The two groups `Nautical charts` and `Depth` carry `"navigationWarning": true`: they are tile pictures, not charts to navigate
-by. Kartverket and Traficom say "not for navigation" themselves. Sources outside these two groups whose provider says "not for navigation" carry the flag too.
+by. Kartverket and Traficom say "not for navigation" themselves. Sources outside these two groups whose provider says "not for navigation", or calls its map a draft, carry the flag too.
 
 ## Nautical charts
 
@@ -292,8 +292,8 @@ SHOM serves each survey as its own WMTS layer and its WMS refuses layer lists, s
 
 ## Satellite
 
-Imagery of all thirteen below. Google, Bing and Esri high-resolution imagery cannot be shipped (see "Not shipped"):
-Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not single coral heads; the national orthophotos (France, Spain, the Netherlands, Uruguay, Argentina, Japan) are far sharper but cover only their own waters.
+Imagery of all fifteen below. Google, Bing and Esri high-resolution imagery cannot be shipped (see "Not shipped"):
+Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not single coral heads; the national orthophotos (France, Spain, the Netherlands, Uruguay, Argentina, Japan, Hong Kong, Madeira) are far sharper but cover only their own waters.
 
 ### Sentinel-2 Cloudless 2025 (EOX)
 - GUID `{92122135-6B15-4800-AA9E-3E48C556DA17}`
@@ -390,6 +390,20 @@ Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not singl
 - Attribution: Contains modified Copernicus Sentinel data 2025, processed by Digital Earth Africa. CC BY 4.0. Max zoom 14.
 - Coverage: Africa and its islands (layer extent -27.86 to 65.67 E, -48.31 to 39.00 N); not the Maldives, Chagos or Sri Lanka. Notes: annual 2025 median, 10 m; the twin of the Pacific DEP mosaic.
 
+### LandsD aerial photo (Hong Kong)
+- GUID `{6E6A0E91-A076-4651-A530-F7C579910F34}` (base chart)
+- Service: XYZ `https://mapapi.hkmapservice.gov.hk/gs/api/v1.0.0/xyz/imagery/WGS84/{z}/{x}/{y}.png` (Lands Department Imagery Map API; `WGS84` in the path is the Web Mercator tile scheme), PNG, one connection
+- Terms: CSDI Portal Terms and Conditions of Use (https://portal.csdi.gov.hk/csdi-webpage/doc/TNC): browse, download, distribute and reproduce the data for commercial and non-commercial purposes free of charge, naming the Government and the CSDI Portal as the source and acknowledging the Government's ownership. Imagery Map API page (https://portal.csdi.gov.hk/csdi-webpage/apidoc/ImageryMapAPI): copyright notice "Aerial Photograph from Lands Department" and, for the satellite images, "(Satellite Images from Landsat)"; no "large amount of requests within a short period". The page also asks for the Lands Department logo on the map face; OpenCPN draws no logo on chart tiles, so the credit is given in this line, the source information and the user guide. Read 2026-11-06.
+- Attribution: Aerial Photograph from Lands Department; Guangdong-Hong Kong-Macao Greater Bay Area Satellite Image 2024 (Satellite Images from Landsat). © Government of the Hong Kong SAR; source: the Government and the CSDI Portal (https://portal.csdi.gov.hk). Max zoom 19.
+- Coverage: Hong Kong; Landsat imagery of the region at low zooms. Notes: the service gives no photo date; the tiles show the Kai Tak stadium roof closed and the Cross Bay Link (opened December 2022) built, so 2023 or later. The old domain mapapi.geodata.gov.hk is not used (it ends on 15 March 2027).
+
+### DROTe orthophoto 2018-19 (Madeira, Porto Santo)
+- GUID `{CAF750A4-01B2-4EB9-A7BE-01E6E98535A7}` (base chart)
+- Service: WMS 1.3.0 `https://geoportal-irig.madeira.gov.pt/mapproxy/base/service`, layer `drote_ortos2018_ortos_2018`, EPSG:3857, JPEG, one connection (the service's WMTS has no Web Mercator tile set)
+- Terms: iRIG catalogue record "Ortofotomapas à escala 1:2000 da Região Autónoma da Madeira - 2018/2019" (id 4387e6ca-0962-4872-b558-6203ae24eace, https://geoportal-irig.madeira.gov.pt/geonetwork): "Acesso público sem restrições"; "Licença Creative Commons – Atribuição (CC-BY-4.0). Deverá atribuir créditos com inclusão de texto “Informação geográfica cedida pela Direção Regional do Ordenamento do Território” ou “© DROTe” ou “Fonte: DROTe”." WMS capabilities `Fees`/`AccessConstraints` "none". Read 2026-11-06. The 2023 layer of the same service is not used: no licence record was found for it.
+- Attribution: © DROTe — Informação geográfica cedida pela Direção Regional do Ordenamento do Território; Ortofotomapas 1:2000 2018/2019, CC BY 4.0. Max zoom 19.
+- Coverage: Madeira, Porto Santo, Desertas and Selvagens (record); Funchal and Porto Santo marinas seen. Notes: 10 cm, flown 3 October 2018 to 19 June 2019.
+
 ### Grey source: Esri World Imagery
 
 This source carries a `termsOfUseWarning` key: the program prints a terms-of-use warning before downloading from it. The
@@ -439,6 +453,13 @@ provider's terms may not allow downloading tiles for offline use; reading the te
 - Terms: WMS `AccessConstraints` (the Ley 27.275 clause, as for the IGN aerial photo); IGN terms as above.
 - Attribution: FUENTE: Instituto Geográfico Nacional de la República Argentina — Área protegida (WMS, leído 2026-11-05). Max zoom 12.
 - Coverage: national and provincial protected areas of Argentina, on land and at sea.
+
+### NOAA NCCOS seabed habitat map (Saipan)
+- GUID `{8098ECA8-1D3C-4448-8E5E-A77D18E1F5F9}` (overlay layer), `"navigationWarning": true`
+- Service: ArcGIS MapServer export `https://gis.ngdc.noaa.gov/arcgis/rest/services/nccos/Saipan_ShallowWaterHabitat/MapServer/export` by tile box (`bbox={bbox}`, `bboxSR` and `imageSR` 3857, 256 × 256 transparent PNG), layer 37 "Benthic Habitat Map" only (the default layers draw nothing), one connection. The service has no tile cache and no WMS.
+- Terms: service item information, `licenseInfo`: "These data and related items have no restriction on their use. However, these products are draft and have not been formally disseminated by NOAA. They do not represent any agency determination, view, or policy, and users assume all risk when using this data." (https://gis.ngdc.noaa.gov/arcgis/rest/services/nccos/Saipan_ShallowWaterHabitat/MapServer/info/iteminfo?f=pjson). Read 2026-11-06. The flag is set because the map is a draft.
+- Attribution: NOAA National Centers for Coastal Ocean Science (NCCOS), Saipan shallow-water benthic habitat map (field data 2018-2022); no restriction on use; draft product, not for navigation. Max zoom 17.
+- Coverage: Saipan's west lagoon and reefs and a patch west of them (145.59-145.80 E, 15.12-15.30 N). Colours (the service legend): pale yellow bare sand; olive sand with algae and seagrass; green and dark green seagrass on sand; orange coral reef (live and dead); blue pavement; brown coral rubble; red artificial. Notes: field data 2018-11 to 2022-04 (NCEI accession 0291792); 87 % overall accuracy (service text). The Guam service has no class map and is not used.
 
 ### Grey source: OpenTopoMap
 

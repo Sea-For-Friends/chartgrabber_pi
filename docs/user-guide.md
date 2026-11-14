@@ -111,7 +111,7 @@ Chart Grabber does not run on OpenCPN for Android. Make the charts on a PC or a 
 
 ## Bundled charts
 
-83 sources come with the plugin, in seven groups (the menus under **Chart**).
+86 sources come with the plugin, in seven groups (the menus under **Chart**).
 
 | Group | Source | What it is for | Area |
 |---|---|---|---|
@@ -159,6 +159,8 @@ Chart Grabber does not run on OpenCPN for Android. Make the charts on a PC or a 
 | Satellite | IGN Argentina aerial photo (Buenos Aires, Paraná, towns) | Sharp aerial photos of yacht-club approaches; patches only, draws from zoom 11 | Buenos Aires, Paraná, Necochea, Río Gallegos, Río Grande |
 | Satellite | GSI aerial photo (Japan) | Aerial photos of Japanese harbours, bays and reef edges; the newest photo per area | Japan, Okinawa |
 | Satellite | Satellite mosaic 2025 (Africa, DE Africa) | Cloud-free satellite picture of African coasts, islands and reefs, 10 m | Africa and its islands |
+| Satellite | LandsD aerial photo (Hong Kong) | Sharp aerial photo of Hong Kong anchorages, typhoon shelters and marina entrances; 2023 or newer | Hong Kong |
+| Satellite | DROTe orthophoto 2018-19 (Madeira, Porto Santo) | Sharp 10 cm photo of Madeira and Porto Santo harbours, marinas and anchorages, flown 2018-19 | Madeira, Porto Santo |
 | Satellite | Esri World Imagery | Sharp satellite picture worldwide: anchorages, reefs and passes; use within Esri's terms | Worldwide |
 | Coast and land | OpenTopoMap | Land relief along the shore: what gives shelter, where squalls come down; light use at the server's request | Worldwide |
 | Coast and land | IDEIB Posidonia and protected seabed (Balearics) | Posidonia meadows and the Decree 25/2018 zones where anchoring is regulated; informative | Balearics |
@@ -166,6 +168,7 @@ Chart Grabber does not run on OpenCPN for Android. Make the charts on a PC or a 
 | Coast and land | EMODnet MPAs and Natura 2000 (European seas) | Marine protected areas and Natura 2000 sites; check the local rules | European seas |
 | Coast and land | Queensland marine parks, moorings, reef markers | State marine park zones, public moorings and reef protection markers; not federal GBR zoning | Queensland coast |
 | Coast and land | IGN Argentina protected areas | National and provincial protected areas on land and at sea; check the local rules | Argentina |
+| Coast and land | NOAA NCCOS seabed habitat map (Saipan) | Where sand, seagrass, coral and pavement lie in Saipan's lagoon, for picking a sand patch to anchor; a draft map, not for navigation | Saipan |
 | Weather now | DWD weather radar (Germany, North Sea and western Baltic coasts) | Rain showers coming your way, new every 5 min | German coasts |
 | Weather now | EUMETSAT MTG GeoColour (Europe, Africa, Atlantic; clouds day and night) | Clouds and fronts day and night, new every 10 min | Europe, Africa, Atlantic |
 | Weather now | EUMETSAT H SAF precipitation rate H60B (Europe, Africa, Atlantic) | Where it is raining now, new every 15 min | Europe, Africa, Atlantic |
@@ -203,6 +206,10 @@ Croatia DGU orthophoto is planned, added on request.
 
 CHS NONNA-10: downloading accepts the CHS NONNA Licence; a chart file you make from it and pass on must carry the notice of its clause 7 with your name.
 
+LandsD aerial photo (Hong Kong): Aerial Photograph from Lands Department, © Government of the Hong Kong SAR, through the CSDI Portal; low zooms show Landsat imagery (Greater Bay Area Satellite Image 2024).
+
+NOAA NCCOS seabed habitat map (Saipan) colours: pale yellow bare sand, olive sand with algae and seagrass, green seagrass, orange coral reef, blue pavement, brown coral rubble, red artificial. A draft NOAA map from field data of 2018-2022; not for navigation.
+
 - **Not for navigation**: everything in the Nautical charts and Depth groups is a picture of a chart or of depths, not a chart to navigate by.
 - **Satellite**: Sentinel-2 (10 m) and USGS show reef edges, banks and passes, not single coral heads.
 - **Greyed out**: Esri World Imagery, because Esri's terms say its imagery is "not intended to be used to export tiles for offline"; OpenTopoMap, because its server asks for no mass downloads. Reading and following the terms is your responsibility.
@@ -239,7 +246,7 @@ CHS NONNA-10: downloading accepts the CHS NONNA Licence; a chart file you make f
 
 ## Your own sources
 
-- The 83 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
+- The 86 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
 - Add your own `.zmp` source folders to `Charts/Chart sources` in your home folder (Settings, **Chart sources**, **Open folder** creates it), or pick another folder with **Change...**. They are read after the bundled ones.
 - Sources that need a key are not bundled: put the source folder there and enter your key where its file says `KEY`.
 

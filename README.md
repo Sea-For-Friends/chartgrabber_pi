@@ -83,7 +83,7 @@ Checksums are on the release page. All releases: [plugin](https://github.com/Sea
 
 ## Chart sources
 
-The plugin ships 83 chart sources in `data/sources/` as `*.source.json` files (the CLI's JSON format), in seven groups that the New chart page shows as menus. Each was
+The plugin ships 86 chart sources in `data/sources/` as `*.source.json` files (the CLI's JSON format), in seven groups that the New chart page shows as menus. Each was
 tried with the tile program and a real small download. Details, terms and credits per source: `data/sources/README.md`.
 
 | Group | What it is for a sailor |
