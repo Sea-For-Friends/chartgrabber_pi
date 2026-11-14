@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{6E6A0E91-A076-4651-A530-F7C579910F34}",
+  "name": "LandsD aerial photo (Hong Kong)",
+  "group": "Satellite",
+  "url": "https://mapapi.hkmapservice.gov.hk/gs/api/v1.0.0/xyz/imagery/WGS84/{z}/{x}/{y}.png",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Satellite_Hong_Kong_LandsD_Aerial_Photo",
+  "license": "Aerial Photograph from Lands Department; Guangdong-Hong Kong-Macao Greater Bay Area Satellite Image 2024 (Satellite Images from Landsat). © Government of the Hong Kong SAR; source: the Government and the CSDI Portal (https://portal.csdi.gov.hk)",
+  "maxConnections": 1,
+  "maxZoom": 19
+}

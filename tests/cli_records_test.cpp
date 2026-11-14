@@ -128,18 +128,19 @@ TEST(CliRecordsStdout, SourceEmptyGroupAndExtraFields) {
 }
 
 // the captured `sources` answers of the pinned CLI. Bundled
-// data/sources after 82 rows (four weather sources more, CHS chart,
+// data/sources after 85 rows (four weather sources more, CHS chart,
 // CHS NONNA-10, IGN, PNOA, PDOK, four Coast and land overlays, nine SHOM
 // depth layers, seven more depth layers, nine SHOM layers, four more Satellite
 // layers and the IH Portugal chart, eight more Weather now sources, four more Ocean
 // currents and waves, one of those Satellite layers removed, four more sources, the
-// INEGI row removed, one more Satellite source (Japan)), the flag is 1 for exactly the forty sources of the
-// groups `Nautical charts` (Norway, Finland, NOAA chart, CHS chart, IH Portugal chart) and `Depth` (EMODnet
-// Europe and World, GEBCO, BlueTopo, CHS NONNA-10, the nine SHOM layers, the seven more layers) and of the
-// two overlays IDEIB Posidonia and EMODnet seagrass, nine more SHOM layers (buoyage, wrecks, navigation
-// rules, tidal ranges, tidal stream, 3D currents, tide zones), the two STOFS layers (surge water level, peak
-// water level) and the\n// NOAA OFS currents, and 0 for the other 42. A sailor-folder definition with
-// NavigationWarning=1 gets the flag too; the plain bundled one does not.
+// INEGI row removed, one more Satellite source (Japan), two more Satellite sources (Hong Kong, Madeira) and
+// one Coast and land overlay (Saipan)), the flag is 1 for exactly the forty-one sources of the groups
+// `Nautical charts` (Norway, Finland, NOAA chart, CHS chart, IH Portugal chart) and `Depth` (EMODnet Europe
+// and World, GEBCO, BlueTopo, CHS NONNA-10, the nine SHOM layers, the seven more layers) and of the three
+// overlays IDEIB Posidonia, EMODnet seagrass and NOAA NCCOS Saipan, nine more SHOM layers (buoyage, wrecks,
+// navigation rules, tidal ranges, tidal stream, 3D currents, tide zones), the two STOFS layers (surge water
+// level, peak water level) and the\n// NOAA OFS currents, and 0 for the other 44. A sailor-folder definition
+// with NavigationWarning=1 gets the flag too; the plain bundled one does not.
 TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
     const auto flags = [](const char* file) {
         std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.1/" + file, std::ios::binary);
@@ -154,7 +155,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
         return out;
     };
     const auto all = flags("sources-bundled-all.stdout");
-    ASSERT_EQ(all.size(), 82u);
+    ASSERT_EQ(all.size(), 85u);
     const std::set<std::string> flagged = {
         "{25DBA489-D484-4A13-B65D-ABA8967FF3DA}", // Norway sea chart
         "{8A9C3A53-0512-4401-A6D3-050E08934949}", // Finland sea chart
@@ -168,6 +169,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
         "{B645CE30-A8D2-4B40-9E04-6823908F8EF3}", // CHS NONNA-10
         "{0C31D17C-5FAB-4A03-AC03-16BD45326219}", // IDEIB Posidonia
         "{51385452-EFA1-4B30-8D8A-606F7F35DF54}", // EMODnet seagrass
+        "{8098ECA8-1D3C-4448-8E5E-A77D18E1F5F9}", // NOAA NCCOS seabed habitat map (Saipan)
         "{967427CF-72EC-45F3-8DBA-0CCCC8762CE2}", // SHOM Litto3D lidar depth, Martinique 2016
         "{426323EC-65E1-493F-A2FA-DAB5D02E0D62}", // SHOM Litto3D lidar depth, Guadeloupe 2016
         "{C72F0919-06A3-4653-A452-02241CB692C0}", // SHOM Litto3D lidar depth, Saint-Martin 2019
@@ -206,8 +208,8 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
 }
 
 // the regrouped bundled set as the pinned CLI lists it. Seven groups with these counts
-// (Nautical charts 5, Seamarks and traffic 6, Depth 21, Satellite 12,
-// Coast and land 6, Weather now 18, Ocean 14 with eight
+// (Nautical charts 5, Seamarks and traffic 6, Depth 21, Satellite 14,
+// Coast and land 7, Weather now 18, Ocean 14 with eight
 // snapshots (NASA sea surface temperature and sea ice, NOAA RTOFS east and west, NOAA OFS, three Copernicus)
 // and the six static SHOM layers, and every snapshot is in Weather now or Ocean (twenty-six); the six static
 // Ocean records are the SHOM layers.
@@ -237,9 +239,9 @@ TEST(Records, BundledSetGroupsAndSnapshots) {
         }
     }
     const std::map<std::string, int> expected = {
-        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 21}, {"Satellite", 12},
-        {"Coast and land", 6},  {"Weather now", 18},         {"Ocean", 14}};
-    EXPECT_EQ(rows, 82);
+        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 21}, {"Satellite", 14},
+        {"Coast and land", 7},  {"Weather now", 18},         {"Ocean", 14}};
+    EXPECT_EQ(rows, 85);
     EXPECT_EQ(groups, expected);
     EXPECT_EQ(snapshots, 26);
 }
@@ -329,6 +331,57 @@ TEST(Records, R0017SourcesOfThePinnedRelease) {
     EXPECT_EQ(byGuid.count("{1615753E-78C3-4D38-8305-005C4B00CC7D}"), 0u) << "INEGI Mexico, removed";
 }
 
+// The Hong Kong and Madeira photos and the Saipan habitat layer as the pinned CLI lists them: verdict ok,
+// EPSG 3857, static, the kind, group, max zoom and navigation flag of each (Saipan is a draft map: flagged),
+// and the name and licence line of its definition byte for byte.
+TEST(Records, HongKongMadeiraSaipanSourcesOfThePinnedRelease) {
+    struct Row {
+        const char* guid;
+        const char* name;
+        const char* kind;
+        const char* group;
+        int maxZoom;
+        bool flag;
+        const char* license;
+    };
+    const Row rows[] = {
+        {"{6E6A0E91-A076-4651-A530-F7C579910F34}", "LandsD aerial photo (Hong Kong)", "map", "Satellite", 19,
+         false,
+         "Aerial Photograph from Lands Department; Guangdong-Hong Kong-Macao Greater Bay Area Satellite "
+         "Image "
+         "2024 (Satellite Images from Landsat). © Government of the Hong Kong SAR; source: the Government "
+         "and "
+         "the CSDI Portal (https://portal.csdi.gov.hk)"},
+        {"{CAF750A4-01B2-4EB9-A7BE-01E6E98535A7}", "DROTe orthophoto 2018-19 (Madeira, Porto Santo)", "map",
+         "Satellite", 19, false,
+         "© DROTe — Informação geográfica cedida pela Direção Regional do Ordenamento do Território; "
+         "Ortofotomapas 1:2000 2018/2019, CC BY 4.0"},
+        {"{8098ECA8-1D3C-4448-8E5E-A77D18E1F5F9}", "NOAA NCCOS seabed habitat map (Saipan)", "layer",
+         "Coast and land", 17, true,
+         "NOAA National Centers for Coastal Ocean Science (NCCOS), Saipan shallow-water benthic habitat map "
+         "(field data 2018-2022); no restriction on use; draft product, not for navigation"},
+    };
+    std::map<std::string, SourceRecord> byGuid;
+    for (const auto& line : fixtureLines("sources-bundled-all.stdout")) {
+        const SourceRecord s = std::get<SourceRecord>(*parseStdoutLine(line));
+        byGuid.emplace(s.guid, s);
+    }
+    for (const Row& r : rows) {
+        const auto it = byGuid.find(r.guid);
+        ASSERT_NE(it, byGuid.end()) << r.guid;
+        const SourceRecord& s = it->second;
+        EXPECT_EQ(s.name, r.name);
+        EXPECT_EQ(s.verdict, "ok") << s.name;
+        EXPECT_EQ(s.epsg, 3857) << s.name;
+        EXPECT_EQ(s.kind, r.kind) << s.name;
+        EXPECT_EQ(s.group, r.group) << s.name;
+        EXPECT_EQ(s.refresh, "static") << s.name;
+        EXPECT_EQ(s.maxZoom, r.maxZoom) << s.name;
+        EXPECT_EQ(s.navigationWarning, r.flag) << s.name;
+        EXPECT_EQ(s.license, r.license) << s.name;
+    }
+}
+
 // The Japan aerial photo as the pinned CLI lists it: verdict ok, EPSG 3857, a static base map of
 // Satellite, max zoom 18, no navigation flag, and the licence line of its definition byte for byte
 // (kanji, full-width brackets and the copyright sign).
@@ -355,7 +408,7 @@ TEST(Records, JapanAerialPhotoOfThePinnedRelease) {
               "GRUS画像（© Axelspace） in some tiles; PDL 1.0");
 }
 
-// the shipped folder holds the 82 bundled definitions; the removed INEGI file is gone.
+// the shipped folder holds the 85 bundled definitions; the removed INEGI file is gone.
 TEST(Records, ShippedSourceFiles) {
     int shipped = 0;
     bool inegi = false;
@@ -367,7 +420,7 @@ TEST(Records, ShippedSourceFiles) {
         }
         inegi = inegi || name == "Mexico-INEGI-Ortho.source.json";
     }
-    EXPECT_EQ(shipped, 82);
+    EXPECT_EQ(shipped, 85);
     EXPECT_FALSE(inegi);
 }
 

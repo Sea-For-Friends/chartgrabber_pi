@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{CAF750A4-01B2-4EB9-A7BE-01E6E98535A7}",
+  "name": "DROTe orthophoto 2018-19 (Madeira, Porto Santo)",
+  "group": "Satellite",
+  "url": "https://geoportal-irig.madeira.gov.pt/mapproxy/base/service?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=drote_ortos2018_ortos_2018&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_Madeira_DROTe_Ortho_2018_19",
+  "license": "© DROTe — Informação geográfica cedida pela Direção Regional do Ordenamento do Território; Ortofotomapas 1:2000 2018/2019, CC BY 4.0",
+  "maxConnections": 1,
+  "maxZoom": 19
+}

@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{8098ECA8-1D3C-4448-8E5E-A77D18E1F5F9}",
+  "name": "NOAA NCCOS seabed habitat map (Saipan)",
+  "group": "Coast and land",
+  "layer": true,
+  "url": "https://gis.ngdc.noaa.gov/arcgis/rest/services/nccos/Saipan_ShallowWaterHabitat/MapServer/export?bbox={bbox}&bboxSR=3857&imageSR=3857&size=256,256&format=png32&transparent=true&layers=show:37&f=image",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Coast_NOAA_NCCOS_Habitat_Saipan",
+  "license": "NOAA National Centers for Coastal Ocean Science (NCCOS), Saipan shallow-water benthic habitat map (field data 2018-2022); no restriction on use; draft product, not for navigation",
+  "maxConnections": 1,
+  "maxZoom": 17,
+  "navigationWarning": true
+}

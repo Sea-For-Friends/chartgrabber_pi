@@ -237,3 +237,12 @@ One new file, written by this repository from the provider's terms (read 2026-11
 the others. Downloaded once with the CLI 2026.11.1 (one connection, a few tiles). sha256:
 
     834e2bb933fbd6930ac2b900da77f9703e5f53d091c6a56519b0c225d81c24ff  Satellite/Japan-GSI-Seamless-Photo.source.json
+
+## 2026-11-06: Hong Kong, Madeira and Saipan
+
+Three new files, written by this repository from the providers' terms (read 2026-11-06), in the same `.source.json` format as
+the others. Downloaded once each with the CLI 2026.11.1 (one connection, a few tiles). sha256:
+
+    aea5b5f8e31c76a4b88c88fa9ab9cdd866faf20f26476bfbd2fa6fb5525d38fb  Satellite/Hong-Kong-LandsD-Aerial-Photo.source.json
+    76a179eb9ad5fe39d1972c2b877a2376eb3d3fb14decbe123e2adff55c98c113  Satellite/Madeira-DROTe-Ortho-2018-19.source.json
+    b4d15a1b9205c3649c1dfb362a8a72f65b2df005bce7ae79593896958c2b484f  Coast and land/NOAA-NCCOS-Habitat-Saipan.source.json
