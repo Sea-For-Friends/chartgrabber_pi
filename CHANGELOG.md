@@ -11,6 +11,7 @@ Versions are calendar-based: `YYYY.MM.N` (year and month of the release, N = rel
 - Replacing a chart on the New chart page leaves one row per replaced file in My charts, not two.
 - The notes on the New chart page wrap at the real width of the window, and there is no doubled gap above the Chart row.
 - A download that ends at once, for example one that is refused, is now reported as finished instead of staying "running".
+- **Update all weather charts** now removes the old weather file of every chart, not only the first, also when Windows still holds the file.
 - Chart Grabber CLI 2026.11.3 is bundled and recommended.
 - Updating from 2026.11.1: Import the new file over the old one.
 
