@@ -872,18 +872,23 @@ void JobController::finishBatch(const wxString& reason, const Buttons& buttons) 
             cg::ChartRecord r = *it;
             const std::size_t before = r.stale.size();
             r.stale = removeStaleFiles(r.stale);
-            if (r.stale.size() < before) {
+            const bool freed = r.stale.size() < before;
+            if (freed)
                 removed = true;
+            if (!r.stale.empty())
+                r.stale = dropStale(r.stale); // still held: no rescan, the call reloads the list itself
+            if (freed || r.stale.size() < before)
                 config_.saveChart(r);
-            }
             left = left || !r.stale.empty();
         }
         if (removed) {
             UpdateChartDBInplace(dirs, false, false);
             cg::logLine("chart list updated again (old weather file removed)");
         }
-        if (left)
+        if (left) {
             lead_ += staleWeatherText() + "\n";
+            staleTimer_.StartOnce(120000); // retry the held files like after a start
+        }
     } else if (nUpdated_ == 0 && nUnchanged_ > 0) {
         cg::logLine("same weather pictures; chart list not updated");
     }
