@@ -2,6 +2,18 @@
 
 Versions are calendar-based: `YYYY.MM.N` (year and month of the release, N = release count within that month, from 0).
 
+## 2026.11.3
+
+- 86 chart sources are bundled: new are the Hong Kong aerial photo (LandsD), the Madeira orthophoto 2018-19 (DROTe) and the NOAA seabed habitat chart of Saipan; the Digital Earth Africa mosaic is back.
+- On OpenCPN 5.14 (Flatpak 25.08) the Chart Grabber chart folder now stays in Options > Charts > Chart Files after a restart, so the downloaded charts still draw. If the folder is still missing from an older download, add it there once.
+- When a server refuses a download, the result line now says so instead of a general failure.
+- **Open folder** says so when the Flatpak desktop opens no file manager window.
+- Replacing a chart on the New chart page leaves one row per replaced file in My charts, not two.
+- The notes on the New chart page wrap at the real width of the window, and there is no doubled gap above the Chart row.
+- A download that ends at once, for example one that is refused, is now reported as finished instead of staying "running".
+- Chart Grabber CLI 2026.11.3 is bundled and recommended.
+- Updating from 2026.11.1: Import the new file over the old one.
+
 ## 2026.11.1
 
 - 81 chart sources are bundled: Canadian Hydrographic Service charts and NONNA-10 depths, national orthophotos of France (IGN), Spain (PNOA) and the Netherlands (PDOK), French and Portuguese coast, depth, seamark, tide, current and satellite layers, and sources for Uruguay, Argentina and other Latin American countries.
