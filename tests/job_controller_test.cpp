@@ -2834,6 +2834,8 @@ TEST_F(SwapTest, ADropThatDoesNotReleaseTriesBothSpellingsOnceAndKeepsTheStaleLi
     EXPECT_EQ(chart(r.id).stale, (std::vector<std::string>{planned("W.mbtiles")}));
     EXPECT_NE(chartIniText(r.id).find("Stale0=" + planned("W.mbtiles") + "\n"), std::string::npos);
     EXPECT_NE(detailsText().find("Chart Grabber removes it later."), std::string::npos);
+    ASSERT_TRUE(jc().staleTimer_.IsRunning()); // the retry, like after a batch
+    EXPECT_EQ(jc().staleTimer_.GetInterval(), 120000);
 }
 
 TEST_F(SwapTest, AHeldFileAtStartIsDroppedWhenTheTimerFiresAndTheRecordOfARunningJobIsSkipped) {
@@ -3289,6 +3291,28 @@ TEST_F(BatchSwapTest, FilesStillHeldAfterTheRescanAddTheRestartLineOnce) {
     EXPECT_EQ(ocpn_fake::updates.size(), 1u);
     EXPECT_EQ(chart(a.id).stale.size(), 1u);
     EXPECT_EQ(count(detailsText(), u(staleWeatherText())), 1u);
+}
+
+// On 5.14+ (no drop) a file held after the batch rescan is removed by the 120 s retry, which rescans again
+// so the file leaves OpenCPN's chart list.
+TEST_F(BatchSwapTest, P0262TheRetryAfterABatchRescansWhenItRemovesAHeldFile) {
+    auto a = wchart(1), b = wchart(2);
+    picture(a.id, 1, true);
+    picture(b.id, 1, true);
+    batch({a, b});
+    ASSERT_TRUE(waitIdle());
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u);
+    ASSERT_TRUE(jc().staleTimer_.IsRunning());
+    for (int k : {1, 2})
+        fs::permissions(folder() / dirName(k), fs::perms::owner_write, fs::perm_options::add);
+    wxTimerEvent ev(jc().staleTimer_);
+    jc().onStaleTimer(ev);
+    EXPECT_FALSE(fs::exists(planned("d1/W.mbtiles")));
+    EXPECT_FALSE(fs::exists(planned("d2/W.mbtiles")));
+    EXPECT_EQ(ocpn_fake::updates.size(), 2u);
+    EXPECT_TRUE(ocpn_fake::removed.empty());
+    jc().onStaleTimer(ev); // nothing left to free: no further rescan
+    EXPECT_EQ(ocpn_fake::updates.size(), 2u);
 }
 
 // A file OpenCPN 5.10-5.13 still lists after the batch rescan is dropped from its chart list like a single
