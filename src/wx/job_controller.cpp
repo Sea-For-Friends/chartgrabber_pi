@@ -784,6 +784,8 @@ void JobController::finishJob(cg::Outcome outcome) {
 }
 
 // One rescan of OpenCPN's chart folders plus the folders of `files` (a per-file add hangs 5.14+).
+// The rescan alone does not save a new folder for the next start, so the folders are also written to the
+// config.
 wxArrayString JobController::rescanChartList(const std::vector<std::string>& files) {
     wxArrayString dirs = GetChartDBDirArrayString();
     for (const std::string& f : files) {
@@ -795,6 +797,10 @@ wxArrayString JobController::rescanChartList(const std::vector<std::string>& fil
             dirs.Add(cg::fromUtf8(dir));
     }
     UpdateChartDBInplace(dirs, false, false);
+    for (const std::string& f : files) {
+        if (config_.addOpenCpnChartDir(cg::parentDir(f)))
+            cg::logLine("chart folder saved in the OpenCPN config");
+    }
     cg::logLine(wxString::Format("chart list updated (%d folders)", static_cast<int>(dirs.GetCount())));
     rescanned_ = true;
     return dirs;
