@@ -91,6 +91,59 @@ void placeChart(const fs::path& jobs, const cg::ChartRecord& r) {
     spit(jobs / r.id / "chart.ini", cg::chartIni(r));
 }
 
+// The folder of a finished job goes into OpenCPN's [ChartDirectories] as ChartDir<N>=<path>^ (N = highest
+// used index + 1) unless the group already lists it (compared without the "^magic" and a trailing '/').
+TEST_F(Store, ChartFolderIsAppendedToTheOpenCpnFolderList) {
+    struct Row {
+        const char* name;
+        std::vector<std::pair<std::string, std::string>> before;
+        std::string dir;
+        bool added;
+        std::string key;    // the entry that holds `dir` afterwards
+        std::string stored; // its value
+    };
+    const std::vector<Row> rows = {
+        {"empty group", {}, "/home/u/Charts/ChartGrabber", true, "ChartDir1", "/home/u/Charts/ChartGrabber^"},
+        {"after the highest index, gaps kept",
+         {{"ChartDir1", "/a^123"}, {"ChartDir7", "/b^"}},
+         "/c",
+         true,
+         "ChartDir8",
+         "/c^"},
+        {"listed with a magic", {{"ChartDir1", "/c^98765"}}, "/c", false, "ChartDir1", "/c^98765"},
+        {"listed with a trailing slash", {{"ChartDir4", "/c/^"}}, "/c", false, "ChartDir4", "/c/^"},
+        {"similar folder is not the same", {{"ChartDir1", "/c2^"}}, "/c", true, "ChartDir2", "/c^"},
+        {"odd path",
+         {{"ChartDir1", "/a^"}},
+         "/ch a'rts/\xd0\x9c\xd0\xbe\xd1\x80\xd0\xb5",
+         true,
+         "ChartDir2",
+         "/ch a'rts/\xd0\x9c\xd0\xbe\xd1\x80\xd0\xb5^"},
+    };
+    for (const Row& row : rows) {
+        SCOPED_TRACE(row.name);
+        config_->DeleteGroup("/ChartDirectories");
+        for (const auto& [k, v] : row.before)
+            config_->Write("/ChartDirectories/" + wxString(k), wxString::FromUTF8(v));
+        EXPECT_EQ(store_->addOpenCpnChartDir(row.dir), row.added);
+        wxString got;
+        ASSERT_TRUE(config_->Read("/ChartDirectories/" + wxString(row.key), &got));
+        EXPECT_EQ(got.ToStdString(wxConvUTF8), row.stored);
+        config_->SetPath("/ChartDirectories");
+        EXPECT_EQ(config_->GetNumberOfEntries(), row.before.size() + (row.added ? 1u : 0u));
+        config_->SetPath("/");
+    }
+}
+
+TEST_F(Store, ChartFolderEntryHasTheOpenCpnFormatAndIsSavedAtOnce) {
+    EXPECT_TRUE(store_->addOpenCpnChartDir("/home/u/Charts/ChartGrabber"));
+    EXPECT_FALSE(store_->addOpenCpnChartDir("/home/u/Charts/ChartGrabber")); // idempotent
+    const std::string file = slurp(conf_); // config_ is still open: only an explicit Flush wrote it
+    EXPECT_NE(file.find("[ChartDirectories]\nChartDir1=/home/u/Charts/ChartGrabber^\n"), std::string::npos)
+        << file;
+    EXPECT_EQ(file.find("ChartDir2"), std::string::npos);
+}
+
 TEST_F(Store, DefaultsWhenNothingStored) {
     const cg::Settings s = store_->loadSettings();
     EXPECT_EQ(s.cliPath, "");

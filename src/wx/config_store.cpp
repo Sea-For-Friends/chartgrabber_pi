@@ -477,6 +477,29 @@ void ConfigStore::deleteChartDir(const std::string& id) {
     wxFileName::Rmdir(cg::fromUtf8(jobsDir() + "/" + id), wxPATH_RMDIR_RECURSIVE);
 }
 
+// OpenCPN's UpdateChartDBInplace keeps the rescanned folders only in its in-memory list and chartlist.dat;
+// the next start reads the folders from [ChartDirectories] and deletes chartlist.dat when that is empty.
+// An entry has the format of OpenCPN's own writer: ChartDir<N>=<path>^<magic>; the empty magic is recomputed
+// by the next scan.
+bool ConfigStore::addOpenCpnChartDir(const std::string& dir) {
+    const wxConfigPathChanger path(config_, "/ChartDirectories/ChartDir");
+    long next = 1;
+    wxString key;
+    long cookie = 0;
+    for (bool more = config_->GetFirstEntry(key, cookie); more; more = config_->GetNextEntry(key, cookie)) {
+        wxString value;
+        config_->Read(key, &value);
+        if (cg::sameDir(cg::toUtf8(value.BeforeFirst('^')), dir))
+            return false;
+        long n = 0;
+        if (key.StartsWith("ChartDir") && key.Mid(8).ToLong(&n) && n >= next)
+            next = n + 1;
+    }
+    config_->Write(wxString::Format("ChartDir%ld", next), cg::fromUtf8(dir) + "^");
+    config_->Flush();
+    return true;
+}
+
 // Deletes only the sub-directories of the cache root whose name starts with "cache".
 // A symbolic link is never followed or removed.
 void ConfigStore::clearCacheDirs(const std::string& root) {

@@ -70,6 +70,9 @@ public:
     unreadableChartIds() const; // job dirs whose chart.ini is missing or does not parse
     void saveChart(const cg::ChartRecord& r);
     void deleteChartDir(const std::string& id);
+    // Adds `dir` to OpenCPN's saved chart folders ([ChartDirectories]) when it is not there; false when the
+    // config already lists it.
+    bool addOpenCpnChartDir(const std::string& dir);
     static void clearCacheDirs(const std::string& root); // cache* sub-directories, symlinks skipped
 
 private:
