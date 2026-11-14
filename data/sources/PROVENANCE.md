@@ -238,10 +238,17 @@ the others. Downloaded once with the CLI 2026.11.1 (one connection, a few tiles)
 
     834e2bb933fbd6930ac2b900da77f9703e5f53d091c6a56519b0c225d81c24ff  Satellite/Japan-GSI-Seamless-Photo.source.json
 
+## 2026-11-14: Africa imagery
+
+One new file, written by this repository from the provider's terms and capabilities (read 2026-11-06), in the same
+`.source.json` format as the others. Downloaded once with the CLI 2026.11.3 (one connection, a few tiles). sha256:
+
+    56e5dcb34782326f18e047a2927c7afe6000891e91c9cc191b68d800c3c8aa48  Satellite/DEAfrica-GeoMAD-2025.source.json
+
 ## 2026-11-06: Hong Kong, Madeira and Saipan
 
 Three new files, written by this repository from the providers' terms (read 2026-11-06), in the same `.source.json` format as
-the others. Downloaded once each with the CLI 2026.11.1 (one connection, a few tiles). sha256:
+the others. Downloaded once each with the CLI 2026.11.3 (one connection, a few tiles). sha256:
 
     aea5b5f8e31c76a4b88c88fa9ab9cdd866faf20f26476bfbd2fa6fb5525d38fb  Satellite/Hong-Kong-LandsD-Aerial-Photo.source.json
     76a179eb9ad5fe39d1972c2b877a2376eb3d3fb14decbe123e2adff55c98c113  Satellite/Madeira-DROTe-Ortho-2018-19.source.json

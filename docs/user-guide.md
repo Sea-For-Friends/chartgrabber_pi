@@ -111,7 +111,7 @@ Chart Grabber does not run on OpenCPN for Android. Make the charts on a PC or a 
 
 ## Bundled charts
 
-85 sources come with the plugin, in seven groups (the menus under **Chart**).
+86 sources come with the plugin, in seven groups (the menus under **Chart**).
 
 | Group | Source | What it is for | Area |
 |---|---|---|---|
@@ -158,6 +158,7 @@ Chart Grabber does not run on OpenCPN for Android. Make the charts on a PC or a 
 | Satellite | IDE Uruguay orthophoto 2017-18 (Uruguay coast) | Sharp 32 cm photo of the whole Uruguayan shore: harbour entrances and anchorages | Uruguay, Río de la Plata |
 | Satellite | IGN Argentina aerial photo (Buenos Aires, Paraná, towns) | Sharp aerial photos of yacht-club approaches; patches only, draws from zoom 11 | Buenos Aires, Paraná, Necochea, Río Gallegos, Río Grande |
 | Satellite | GSI aerial photo (Japan) | Aerial photos of Japanese harbours, bays and reef edges; the newest photo per area | Japan, Okinawa |
+| Satellite | Satellite mosaic 2025 (Africa, DE Africa) | Cloud-free satellite picture of African coasts, islands and reefs, 10 m | Africa and its islands |
 | Satellite | LandsD aerial photo (Hong Kong) | Sharp aerial photo of Hong Kong anchorages, typhoon shelters and marina entrances; 2023 or newer | Hong Kong |
 | Satellite | DROTe orthophoto 2018-19 (Madeira, Porto Santo) | Sharp 10 cm photo of Madeira and Porto Santo harbours, marinas and anchorages, flown 2018-19 | Madeira, Porto Santo |
 | Satellite | Esri World Imagery | Sharp satellite picture worldwide: anchorages, reefs and passes; use within Esri's terms | Worldwide |
@@ -245,7 +246,7 @@ NOAA NCCOS seabed habitat map (Saipan) colours: pale yellow bare sand, olive san
 
 ## Your own sources
 
-- The 85 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
+- The 86 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
 - Add your own `.zmp` source folders to `Charts/Chart sources` in your home folder (Settings, **Chart sources**, **Open folder** creates it), or pick another folder with **Change...**. They are read after the bundled ones.
 - Sources that need a key are not bundled: put the source folder there and enter your key where its file says `KEY`.
 

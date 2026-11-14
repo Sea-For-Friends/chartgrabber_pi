@@ -42,6 +42,7 @@ wxString budgetStopText(int budgetMb);
 wxString firstSuccessHint();
 wxString jobFileMissingText();
 wxString snapshotFailedText(); // exit 4: the weather source's latest picture could not be taken
+wxString serverRefusedText();  // exit 4: the chart source's server refused the tiles
 wxString weatherPictureLine(const wxString& time); // Details: "Weather picture: <time>"
 // Strip texts and button labels of the job controller.
 wxString stoppingText();
