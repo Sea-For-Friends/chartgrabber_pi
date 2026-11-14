@@ -311,7 +311,7 @@ TEST(FavouriteSources, TheUrlNamesTheTagOfTheVersion) {
 
 std::map<std::string, SourceRecord> fixtureRecords() {
     std::map<std::string, SourceRecord> out;
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.1/sources-bundled-all.stdout",
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.3/sources-bundled-all.stdout",
                      std::ios::binary);
     for (std::string line; std::getline(in, line);) {
         const auto r = parseStdoutLine(line);
@@ -325,7 +325,7 @@ std::map<std::string, SourceRecord> fixtureRecords() {
 
 TEST(FavouriteSources, TheShippedFileParsesCleanlyAndEveryGuidIsAFittingBundledRecord) {
     const auto records = fixtureRecords();
-    ASSERT_EQ(records.size(), 82u);
+    ASSERT_EQ(records.size(), 83u);
     const ConfFile conf =
         readConf((std::filesystem::path(CG_SOURCE_DIR) / "data" / "favourite-sources.conf").string());
     ASSERT_TRUE(conf.found);
@@ -374,7 +374,7 @@ TEST(FavouriteSources, EverySatelliteSourceFileAndFixtureRecordHasTheGroupSatell
             ++rows;
             EXPECT_EQ(kv.second.group, "Satellite") << kv.second.name;
         }
-    EXPECT_EQ(rows, 12u);
+    EXPECT_EQ(rows, 13u);
 }
 
 } // namespace

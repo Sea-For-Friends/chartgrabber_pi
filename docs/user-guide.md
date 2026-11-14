@@ -111,7 +111,7 @@ Chart Grabber does not run on OpenCPN for Android. Make the charts on a PC or a 
 
 ## Bundled charts
 
-82 sources come with the plugin, in seven groups (the menus under **Chart**).
+83 sources come with the plugin, in seven groups (the menus under **Chart**).
 
 | Group | Source | What it is for | Area |
 |---|---|---|---|
@@ -158,6 +158,7 @@ Chart Grabber does not run on OpenCPN for Android. Make the charts on a PC or a 
 | Satellite | IDE Uruguay orthophoto 2017-18 (Uruguay coast) | Sharp 32 cm photo of the whole Uruguayan shore: harbour entrances and anchorages | Uruguay, Río de la Plata |
 | Satellite | IGN Argentina aerial photo (Buenos Aires, Paraná, towns) | Sharp aerial photos of yacht-club approaches; patches only, draws from zoom 11 | Buenos Aires, Paraná, Necochea, Río Gallegos, Río Grande |
 | Satellite | GSI aerial photo (Japan) | Aerial photos of Japanese harbours, bays and reef edges; the newest photo per area | Japan, Okinawa |
+| Satellite | Satellite mosaic 2025 (Africa, DE Africa) | Cloud-free satellite picture of African coasts, islands and reefs, 10 m | Africa and its islands |
 | Satellite | Esri World Imagery | Sharp satellite picture worldwide: anchorages, reefs and passes; use within Esri's terms | Worldwide |
 | Coast and land | OpenTopoMap | Land relief along the shore: what gives shelter, where squalls come down; light use at the server's request | Worldwide |
 | Coast and land | IDEIB Posidonia and protected seabed (Balearics) | Posidonia meadows and the Decree 25/2018 zones where anchoring is regulated; informative | Balearics |
@@ -238,7 +239,7 @@ CHS NONNA-10: downloading accepts the CHS NONNA Licence; a chart file you make f
 
 ## Your own sources
 
-- The 82 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
+- The 83 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
 - Add your own `.zmp` source folders to `Charts/Chart sources` in your home folder (Settings, **Chart sources**, **Open folder** creates it), or pick another folder with **Change...**. They are read after the bundled ones.
 - Sources that need a key are not bundled: put the source folder there and enter your key where its file says `KEY`.
 

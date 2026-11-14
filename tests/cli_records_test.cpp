@@ -21,7 +21,7 @@ using namespace cg;
 namespace {
 
 std::vector<std::string> fixtureLines(const std::string& name) {
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.1/" + name, std::ios::binary);
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.3/" + name, std::ios::binary);
     EXPECT_TRUE(in.good()) << name;
     std::vector<std::string> out;
     for (std::string line; std::getline(in, line);) {
@@ -30,10 +30,10 @@ std::vector<std::string> fixtureLines(const std::string& name) {
     return out;
 }
 
-// the captured lines of the pinned 2026.11.1 (15 columns: field 10 `origin` is
+// the captured lines of the pinned 2026.11.3 (15 columns: field 10 `origin` is
 // `user`, the last is `navigationWarning`); the record is read by position and `origin` changes nothing.
 TEST(Records, SourcesOfThePinnedRelease) {
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.1/sources-two-folders.stdout",
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.3/sources-two-folders.stdout",
                      std::ios::binary);
     ASSERT_TRUE(in.good());
     std::vector<SourceRecord> recs;
@@ -128,21 +128,21 @@ TEST(CliRecordsStdout, SourceEmptyGroupAndExtraFields) {
 }
 
 // the captured `sources` answers of the pinned CLI. Bundled
-// data/sources after 82 rows (four weather sources more, CHS chart,
+// data/sources after 83 rows (four weather sources more, CHS chart,
 // CHS NONNA-10, IGN, PNOA, PDOK, four Coast and land overlays, nine SHOM
 // depth layers, seven more depth layers, nine SHOM layers, four more Satellite
 // layers and the IH Portugal chart, eight more Weather now sources, four more Ocean
 // currents and waves, one of those Satellite layers removed, four more sources, the
-// INEGI row removed, one more Satellite source (Japan)), the flag is 1 for exactly the forty sources of the
-// groups `Nautical charts` (Norway, Finland, NOAA chart, CHS chart, IH Portugal chart) and `Depth` (EMODnet
-// Europe and World, GEBCO, BlueTopo, CHS NONNA-10, the nine SHOM layers, the seven more layers) and of the
-// two overlays IDEIB Posidonia and EMODnet seagrass, nine more SHOM layers (buoyage, wrecks, navigation
-// rules, tidal ranges, tidal stream, 3D currents, tide zones), the two STOFS layers (surge water level, peak
-// water level) and the\n// NOAA OFS currents, and 0 for the other 42. A sailor-folder definition with
-// NavigationWarning=1 gets the flag too; the plain bundled one does not.
+// INEGI row removed, two more Satellite sources (Japan, Africa)), the flag is 1 for exactly the forty sources
+// of the groups `Nautical charts` (Norway, Finland, NOAA chart, CHS chart, IH Portugal chart) and `Depth`
+// (EMODnet Europe and World, GEBCO, BlueTopo, CHS NONNA-10, the nine SHOM layers, the seven more layers) and
+// of the two overlays IDEIB Posidonia and EMODnet seagrass, nine more SHOM layers (buoyage, wrecks,
+// navigation rules, tidal ranges, tidal stream, 3D currents, tide zones), the two STOFS layers (surge water
+// level, peak water level) and the\n// NOAA OFS currents, and 0 for the other 43. A sailor-folder definition
+// with NavigationWarning=1 gets the flag too; the plain bundled one does not.
 TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
     const auto flags = [](const char* file) {
-        std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.1/" + file, std::ios::binary);
+        std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.3/" + file, std::ios::binary);
         EXPECT_TRUE(in.good()) << file;
         std::map<std::string, bool> out;
         for (std::string line; std::getline(in, line);) {
@@ -154,7 +154,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
         return out;
     };
     const auto all = flags("sources-bundled-all.stdout");
-    ASSERT_EQ(all.size(), 82u);
+    ASSERT_EQ(all.size(), 83u);
     const std::set<std::string> flagged = {
         "{25DBA489-D484-4A13-B65D-ABA8967FF3DA}", // Norway sea chart
         "{8A9C3A53-0512-4401-A6D3-050E08934949}", // Finland sea chart
@@ -206,13 +206,13 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
 }
 
 // the regrouped bundled set as the pinned CLI lists it. Seven groups with these counts
-// (Nautical charts 5, Seamarks and traffic 6, Depth 21, Satellite 12,
+// (Nautical charts 5, Seamarks and traffic 6, Depth 21, Satellite 13,
 // Coast and land 6, Weather now 18, Ocean 14 with eight
 // snapshots (NASA sea surface temperature and sea ice, NOAA RTOFS east and west, NOAA OFS, three Copernicus)
 // and the six static SHOM layers, and every snapshot is in Weather now or Ocean (twenty-six); the six static
 // Ocean records are the SHOM layers.
 TEST(Records, BundledSetGroupsAndSnapshots) {
-    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.1/sources-bundled-all.stdout",
+    std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.3/sources-bundled-all.stdout",
                      std::ios::binary);
     ASSERT_TRUE(in.good());
     std::map<std::string, int> groups;
@@ -237,9 +237,9 @@ TEST(Records, BundledSetGroupsAndSnapshots) {
         }
     }
     const std::map<std::string, int> expected = {
-        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 21}, {"Satellite", 12},
+        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 21}, {"Satellite", 13},
         {"Coast and land", 6},  {"Weather now", 18},         {"Ocean", 14}};
-    EXPECT_EQ(rows, 82);
+    EXPECT_EQ(rows, 83);
     EXPECT_EQ(groups, expected);
     EXPECT_EQ(snapshots, 26);
 }
@@ -355,7 +355,31 @@ TEST(Records, JapanAerialPhotoOfThePinnedRelease) {
               "GRUS画像（© Axelspace） in some tiles; PDL 1.0");
 }
 
-// the shipped folder holds the 82 bundled definitions; the removed INEGI file is gone.
+// The Digital Earth Africa mosaic as the pinned CLI lists it: verdict ok, EPSG 3857, a static base map of
+// Satellite, max zoom 14, no navigation flag, and the licence line of its definition byte for byte.
+TEST(Records, AfricaMosaicOfThePinnedRelease) {
+    std::map<std::string, SourceRecord> byGuid;
+    for (const auto& line : fixtureLines("sources-bundled-all.stdout")) {
+        const SourceRecord s = std::get<SourceRecord>(*parseStdoutLine(line));
+        byGuid.emplace(s.guid, s);
+    }
+    const auto it = byGuid.find("{027DCBF5-2DF0-4F4A-92FA-361EF8150212}");
+    ASSERT_NE(it, byGuid.end());
+    const SourceRecord& s = it->second;
+    EXPECT_EQ(s.name, "Satellite mosaic 2025 (Africa, DE Africa)");
+    EXPECT_EQ(s.verdict, "ok");
+    EXPECT_EQ(s.epsg, 3857);
+    EXPECT_EQ(s.kind, "map");
+    EXPECT_EQ(s.group, "Satellite");
+    EXPECT_EQ(s.refresh, "static");
+    EXPECT_EQ(s.maxZoom, 14);
+    EXPECT_FALSE(s.navigationWarning);
+    EXPECT_EQ(
+        s.license,
+        "Contains modified Copernicus Sentinel data 2025, processed by Digital Earth Africa. CC BY 4.0");
+}
+
+// the shipped folder holds the 83 bundled definitions; the removed INEGI file is gone.
 TEST(Records, ShippedSourceFiles) {
     int shipped = 0;
     bool inegi = false;
@@ -367,7 +391,7 @@ TEST(Records, ShippedSourceFiles) {
         }
         inegi = inegi || name == "Mexico-INEGI-Ortho.source.json";
     }
-    EXPECT_EQ(shipped, 82);
+    EXPECT_EQ(shipped, 83);
     EXPECT_FALSE(inegi);
 }
 
@@ -804,6 +828,17 @@ TEST(CliRecordsWeather, IsSnapshotFailure) {
     EXPECT_FALSE(isSnapshotFailure(" cannot take the snapshot of"));
 }
 
+TEST(CliRecordsWeather, IsServerRefusal) {
+    EXPECT_TRUE(isServerRefusal("the server refused all 48 requested tiles: HTTP 403"));
+    EXPECT_TRUE(isServerRefusal("the server refused 2 tiles in a row: HTTP 403"));
+    EXPECT_FALSE(isServerRefusal(""));
+    EXPECT_FALSE(isServerRefusal(" the server refused all 48 requested tiles: HTTP 403"));
+    EXPECT_FALSE(isServerRefusal("The server refused all 48 requested tiles: HTTP 403"));
+    EXPECT_FALSE(isServerRefusal("the server refused"));
+    EXPECT_FALSE(
+        isServerRefusal("no connection to the server for 3 tiles in a row: Error connecting to server"));
+}
+
 TEST(CliRecordsStdout, EstimateAllFields) {
     const auto r = parseStdoutLine("estimate\t{G}\t12\t900\t1000\t0.2500\t0.0500\t123456\t1\t987654");
     ASSERT_TRUE(r);
@@ -1011,6 +1046,9 @@ TEST(CliRecordsStderr, TheNewStopCasesOfThePinnedRelease) {
          "caches "
          "(cache types 6 and 61) are no longer supported"},
         {"usage-stdin-not-a-pipe", "2", "--stop-on-stdin needs stdin to be a pipe"},
+        // a server that answers HTTP 403 to every tile (a local stub)
+        {"run-server-refused-all", "4", "the server refused all 4 requested tiles: HTTP 403"},
+        {"run-server-refused-streak", "4", "the server refused 2 tiles in a row: HTTP 403"},
     };
     for (const Row& r : rows) {
         SCOPED_TRACE(r.name);
@@ -1085,7 +1123,7 @@ TEST(CliRecordsStderr, MessagesAndBadProtocolLinesAreOther) {
     }
 }
 
-// every stderr line of the captured CLI 2026.11.1 runs is a record or a message; a line
+// every stderr line of the captured CLI 2026.11.3 runs is a record or a message; a line
 // starting "phase<TAB>" / "progress<TAB>" is never "other", the `warning:` lines are warnings, and the
 // numbers of a record are the fields of the line (the first progress record of the stopped run, literal from
 // the capture).
@@ -1301,6 +1339,8 @@ TEST(Exit, EveryRowOfTheOutcomeTable) {
          Outcome::Stalled},
         {4, "cannot take the snapshot of x: y", false, Outcome::DownloadIncomplete},
         {4, "cannot store tiles: disk full", false, Outcome::StorageError},
+        {4, "the server refused all 4 requested tiles: HTTP 403", false, Outcome::DownloadIncomplete},
+        {4, "the server refused 2 tiles in a row: HTTP 403", false, Outcome::DownloadIncomplete},
         {4, "some other failure", false, Outcome::DownloadIncomplete},
         {4, "", false, Outcome::DownloadIncomplete},
         {5, "", false, Outcome::ExportFailed},
@@ -1487,6 +1527,31 @@ TEST(Preflight, PrecedenceTooLargeThenDiskThenBudget) {
     EXPECT_EQ(checkPreflight(in), Preflight::CacheDiskFull);
     in.freeCacheBytes = kHuge;
     EXPECT_EQ(checkPreflight(in), Preflight::OverBudget);
+}
+
+// The two captured refusals of a server that answers 403 to every tile: exit 4, the last error line starts
+// with "the server refused ", the run is resumable and never retried by itself.
+TEST(Retry, ACapturedServerRefusalIsResumableAndNotRetried) {
+    const std::pair<const char*, const char*> runs[] = {
+        {"run-server-refused-all", "the server refused all 4 requested tiles: HTTP 403"},
+        {"run-server-refused-streak", "the server refused 2 tiles in a row: HTTP 403"}};
+    Settings s;
+    for (const auto& [name, line] : runs) {
+        SCOPED_TRACE(name);
+        std::string last;
+        for (const std::string& l : fixtureLines(std::string(name) + ".stderr")) {
+            const StderrLine parsed = parseStderrLine(l);
+            const auto* m = std::get_if<MessageLine>(&parsed);
+            if (m && m->kind == MessageLine::Kind::Error)
+                last = m->text;
+        }
+        EXPECT_EQ(last, line);
+        EXPECT_TRUE(isServerRefusal(last));
+        const Outcome o = classifyExit(4, last, false);
+        EXPECT_EQ(o, Outcome::DownloadIncomplete);
+        EXPECT_TRUE(resumable(o));
+        EXPECT_FALSE(shouldRetry(o, s, RetryState{0}));
+    }
 }
 
 TEST(Retry, OnlyStalledNotSlowUnderThree) {
