@@ -64,6 +64,8 @@ OpenCPN shows the master catalog by default; choosing another one is an expert s
 4. Click **Update Plugin Catalog: Beta**.
 5. Find **ChartGrabber** in the list, click **Install**, then enable it.
 
+![Options, Plugins: the Beta catalog is active and ChartGrabber is in the list with its install button](images/install-catalog.png)
+
 If you installed Chart Grabber with **Import plugin...**, OpenCPN 5.10.2 shows no Install or Update for it in the catalog list. Uninstall it first (your charts and settings stay, see [Uninstall](#uninstall)), then install it from the catalog; from then on, new versions show **Update**. Newer OpenCPN versions show **Update** for an imported Chart Grabber as soon as the catalog has the same or a newer version.
 
 ### Install by Import
@@ -108,6 +110,14 @@ Chart Grabber does not run on OpenCPN for Android. Make the charts on a PC or a 
 ![The New chart page](images/new-chart.png)
 
 ![The downloaded chart in OpenCPN with OpenSeaMap buoys and lights on top](images/chart-seamarks.png)
+
+**More sources...** opens a searchable list of every chart source, grouped (nautical charts, depth and so on), with a short note on what each is good for:
+
+![The More sources list: sources in groups with a note beside each](images/source-picker.png)
+
+While the download runs, a strip at the bottom of the chart shows the part, the size and the time left; when it ends the strip says "Chart added" and **Show** opens the chart:
+
+![The progress strip during a download, and the strip saying Chart added with Show, Close and Details](images/download-progress.png)
 
 ## Bundled charts
 
@@ -218,14 +228,25 @@ NOAA NCCOS seabed habitat map (Saipan) colours: pale yellow bare sand, olive san
 ## Everyday use
 
 - **Draw on chart**: drag a rectangle, or tap two corners. Right-click or **Cancel** to stop.
+
+![A rectangle drawn on the chart; the estimate below the detail bands is for that area](images/area-draw.png)
+
 - **Along route**: pick a route and its **Corridor width** (0.5 to 20 NM, default 2.0).
+
+![The Along route page: a route on the chart, the route picker and the corridor width](images/area-route.png)
+
 - **Detail**: the bands **Passage** and **Coastal** (on by default), **Approach** and **Harbour** (small areas only), each with its scale. The estimate tells you what one more level would add. For exact limits, use **Advanced**, **Least detail** / **Most detail**.
+
+![The detail bands and the estimate line for a small area, with Approach switched on](images/detail-estimate.png)
+
 - **Seamarks on top (OpenSeaMap)** adds buoys and lights over the chart.
 - **My charts** lists your charts with detail, size, date and state. **Show** displays one; **More...** offers **Top up**, **Update...**, **Build from saved tiles**, **Delete** and **Show in folder**.
 - **Stop** saves progress ("Stopped. Resume any time from My charts."); **Resume** continues.
 - **Update...** downloads again the tiles older than the age you pick: **Today (all tiles)**, **1 month**, **6 months** or **1 year**.
 
 ![My charts](images/my-charts.png)
+
+![The More... menu of a chart in My charts: Top up, Update..., Build from saved tiles, Delete, Show in folder](images/my-charts-more.png)
 
 ## Weather
 
@@ -236,6 +257,8 @@ NOAA NCCOS seabed habitat map (Saipan) colours: pale yellow bare sand, olive san
 - **Update all weather charts** (My charts, left of Close) updates every weather chart one after another and then refreshes OpenCPN's chart list once. **Stop** stops the rest; the result line says how many charts were updated, unchanged, failed (with their names), skipped or not started.
 
 ![Rain radar (RainViewer) over the Norway sea chart](images/weather.png)
+
+![My charts with a weather chart: its More... menu offers Update to latest weather, and Update all weather charts sits at the bottom left](images/weather-update.png)
 
 ## At sea and on slow links
 
@@ -268,6 +291,8 @@ The `.zmp` source folders Chart Grabber reads use the format of SAS.Planet, a fr
 ## Settings reference
 
 OpenCPN, Options, Plugins, Chart Grabber, **Preferences**.
+
+![The Chart Grabber settings: chart sources, the slow or paid connection mode with its limit per download, saved tiles](images/settings.png)
 
 | Setting | Default | Meaning |
 |---|---|---|
