@@ -233,7 +233,7 @@ NOAA NCCOS seabed habitat map (Saipan) colours: pale yellow bare sand, olive san
 
 - **Along route**: pick a route and its **Corridor width** (0.5 to 20 NM, default 2.0).
 
-![The Along route page: a route on the chart, the route picker and the corridor width](images/area-route.png)
+![The Along route page: the route Bergen - Fedje over open water, the route picker and the corridor width](images/area-route.png)
 
 - **Detail**: the bands **Passage** and **Coastal** (on by default), **Approach** and **Harbour** (small areas only), each with its scale. The estimate tells you what one more level would add. For exact limits, use **Advanced**, **Least detail** / **Most detail**.
 
@@ -244,7 +244,7 @@ NOAA NCCOS seabed habitat map (Saipan) colours: pale yellow bare sand, olive san
 - **Stop** saves progress ("Stopped. Resume any time from My charts."); **Resume** continues.
 - **Update...** downloads again the tiles older than the age you pick: **Today (all tiles)**, **1 month**, **6 months** or **1 year**.
 
-![My charts](images/my-charts.png)
+![My charts with a sea chart, a weather chart and the Update all weather charts button](images/my-charts.png)
 
 ![The More... menu of a chart in My charts: Top up, Update..., Build from saved tiles, Delete, Show in folder](images/my-charts-more.png)
 
