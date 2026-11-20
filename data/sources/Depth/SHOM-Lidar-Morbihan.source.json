@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{935B45A2-1B70-4F02-8C6E-11878F5CADCB}",
+  "name": "SHOM lidar depth, Gulf of Morbihan 2015",
+  "group": "Depth",
+  "layer": true,
+  "url": "https://services.data.shom.fr/INSPIRE/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=L3D_MAR_MORBIHAN_2015_PYR_3857_WMTS&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Depth_SHOM_Lidar_Morbihan",
+  "license": "© Shom / IGN — Litto3D® Licence Ouverte 2.0. Non certifié pour la navigation",
+  "maxConnections": 2,
+  "maxZoom": 17,
+  "navigationWarning": true
+}

@@ -5,6 +5,7 @@ The folder was renamed from `cli-2026.11.1` for the CLI 2026.11.3 (core tag `v20
 - `sources-bundled-all.stdout`: one more row, the Digital Earth Africa mosaic (83 rows at that capture; 86 with the three sources added since).
 - NEW cases `run-server-refused-all` and `run-server-refused-streak` (a local stub that answers every request with HTTP 403, `refusing_server.py`).
 - NOTHING else differs in the offline cases; the kept network cases are not rewritten. `run-refused-busy` was re-captured and differs only by live numbers (one cache-hit estimate line, the lock folder name, the process id), so the 2026.11.1 files stay.
+(2026-11-20): `sources-bundled-all.stdout` re-captured with the same CLI after the Gulf of Morbihan lidar source was added: one more row (87 rows), nothing else differs.
 The history of the earlier pins follows.
 
 

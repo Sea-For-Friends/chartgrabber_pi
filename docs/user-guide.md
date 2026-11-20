@@ -121,7 +121,7 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 
 ## Bundled charts
 
-86 sources come with the plugin, in seven groups (the menus under **Chart**).
+87 sources come with the plugin, in seven groups (the menus under **Chart**).
 
 | Group | Source | What it is for | Area |
 |---|---|---|---|
@@ -146,6 +146,7 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 | Depth | SHOM Litto3D lidar depth, Saint-Martin 2019 | Lidar depths of shallows, reefs and anchorages; not for navigation | Saint-Martin |
 | Depth | SHOM Litto3D lidar depth, Saint-Barthélemy 2019 | Lidar depths of shallows, reefs and anchorages; not for navigation | Saint-Barthélemy |
 | Depth | SHOM lidar depth, Corsica 2017-2018 | Lidar depths of coves and anchorages; not for navigation | Corsica |
+| Depth | SHOM lidar depth, Gulf of Morbihan 2015 | Lidar depths of shallows, channels and anchorages; not for navigation | Gulf of Morbihan |
 | Depth | SHOM 100 m depth, Guadeloupe and Martinique | Offshore depth model on a 100 m grid; not for navigation | Guadeloupe, Martinique |
 | Depth | SHOM 100 m depth, Saint-Martin, Saint-Barthélemy | Offshore depth model on a 100 m grid; not for navigation | Saint-Martin, Saint-Barthélemy |
 | Depth | SHOM 100 m depth, Corsica | Offshore depth model on a 100 m grid; not for navigation | Corsica |
@@ -269,7 +270,7 @@ NOAA NCCOS seabed habitat map (Saipan) colours: pale yellow bare sand, olive san
 
 ## Your own sources
 
-- The 86 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
+- The 87 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
 - Add your own `.zmp` source folders to `Charts/Chart sources` in your home folder (Settings, **Chart sources**, **Open folder** creates it), or pick another folder with **Change...**. They are read after the bundled ones.
 - Sources that need a key are not bundled: put the source folder there and enter your key where its file says `KEY`.
 
