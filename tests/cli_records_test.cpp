@@ -134,7 +134,7 @@ TEST(CliRecordsStdout, SourceEmptyGroupAndExtraFields) {
 // layers and the IH Portugal chart, eight more Weather now sources, four more Ocean
 // currents and waves, one of those Satellite layers removed, four more sources, the
 // INEGI row removed, four more Satellite sources (Japan, Africa, Hong Kong, Madeira) and one Coast and land
-// overlay (Saipan)), the flag is 1 for exactly the forty-one sources of the groups `Nautical charts` (Norway,
+// overlay (Saipan)), the flag is 1 for exactly the forty-two sources of the groups `Nautical charts` (Norway,
 // Finland, NOAA chart, CHS chart, IH Portugal chart) and `Depth` (EMODnet Europe and World, GEBCO, BlueTopo,
 // CHS NONNA-10, the nine SHOM layers, the seven more layers) and of the three overlays IDEIB Posidonia,
 // EMODnet seagrass and NOAA NCCOS Saipan, nine more SHOM layers (buoyage, wrecks, navigation rules, tidal
@@ -155,7 +155,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
         return out;
     };
     const auto all = flags("sources-bundled-all.stdout");
-    ASSERT_EQ(all.size(), 86u);
+    ASSERT_EQ(all.size(), 87u);
     const std::set<std::string> flagged = {
         "{25DBA489-D484-4A13-B65D-ABA8967FF3DA}", // Norway sea chart
         "{8A9C3A53-0512-4401-A6D3-050E08934949}", // Finland sea chart
@@ -175,6 +175,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
         "{C72F0919-06A3-4653-A452-02241CB692C0}", // SHOM Litto3D lidar depth, Saint-Martin 2019
         "{A60F19C2-D083-4272-8EE8-46D248B6D9F3}", // SHOM Litto3D lidar depth, Saint-Barthelemy 2019
         "{49DBB292-F25F-4FF3-AF2C-D2CFB2D56775}", // SHOM lidar depth, Corsica 2017-2018
+        "{935B45A2-1B70-4F02-8C6E-11878F5CADCB}", // SHOM lidar depth, Gulf of Morbihan 2015
         "{02109A1A-0782-4E8D-AFC6-E26EFDF7411E}", // SHOM 100 m depth, Guadeloupe and Martinique
         "{F8D0CFB0-4844-4A0D-A87E-3D9FBA78FFB8}", // SHOM 100 m depth, Saint-Martin, Saint-Barthelemy
         "{04C99FA6-041B-4E56-A154-0464F26F3620}", // SHOM 100 m depth, Corsica
@@ -208,7 +209,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
 }
 
 // the regrouped bundled set as the pinned CLI lists it. Seven groups with these counts
-// (Nautical charts 5, Seamarks and traffic 6, Depth 21, Satellite 15,
+// (Nautical charts 5, Seamarks and traffic 6, Depth 22, Satellite 15,
 // Coast and land 7, Weather now 18, Ocean 14 with eight
 // snapshots (NASA sea surface temperature and sea ice, NOAA RTOFS east and west, NOAA OFS, three Copernicus)
 // and the six static SHOM layers, and every snapshot is in Weather now or Ocean (twenty-six); the six static
@@ -239,9 +240,9 @@ TEST(Records, BundledSetGroupsAndSnapshots) {
         }
     }
     const std::map<std::string, int> expected = {
-        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 21}, {"Satellite", 15},
+        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 22}, {"Satellite", 15},
         {"Coast and land", 7},  {"Weather now", 18},         {"Ocean", 14}};
-    EXPECT_EQ(rows, 86);
+    EXPECT_EQ(rows, 87);
     EXPECT_EQ(groups, expected);
     EXPECT_EQ(snapshots, 26);
 }
@@ -432,7 +433,7 @@ TEST(Records, AfricaMosaicOfThePinnedRelease) {
         "Contains modified Copernicus Sentinel data 2025, processed by Digital Earth Africa. CC BY 4.0");
 }
 
-// the shipped folder holds the 86 bundled definitions; the removed INEGI file is gone.
+// the shipped folder holds the 87 bundled definitions; the removed INEGI file is gone.
 TEST(Records, ShippedSourceFiles) {
     int shipped = 0;
     bool inegi = false;
@@ -444,7 +445,7 @@ TEST(Records, ShippedSourceFiles) {
         }
         inegi = inegi || name == "Mexico-INEGI-Ortho.source.json";
     }
-    EXPECT_EQ(shipped, 86);
+    EXPECT_EQ(shipped, 87);
     EXPECT_FALSE(inegi);
 }
 

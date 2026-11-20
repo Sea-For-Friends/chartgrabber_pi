@@ -1,6 +1,6 @@
 # Shipped chart-source definitions
 
-Eighty-six JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
+Eighty-seven JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
 copied from the SAS.Planet map catalogue; the GUID and `NameInCache` are reused only for the three services the
 catalogue also has (OpenSeaMap seamarks, Esri World Imagery, OpenTopoMap), so an existing tile cache stays valid.
 The folder name is the menu group (the `group` value of the definitions); seven groups, below. The definition
@@ -211,6 +211,13 @@ SHOM serves each survey as its own WMTS layer and its WMS refuses layer lists, s
 - Terms: datasets under Licence Ouverte 2.0; the `/INSPIRE/` capabilities say `Fees` "Soumis à abonnement" and the WMS/r "sauf pour les thématiques INSPIRE qui sont en accès libre"; the data.shom.fr CGU was not found.
 - Attribution: © Shom / IGN — Litto3D® / HOMONIM, Licence Ouverte 2.0. Non certifié pour la navigation. Max zoom 17.
 - Coverage: Corsican coast (survey 2017-2018).
+
+### SHOM lidar depth, Gulf of Morbihan 2015
+- GUID `{935B45A2-1B70-4F02-8C6E-11878F5CADCB}` (overlay layer), `"navigationWarning": true`
+- Service: WMTS `https://services.data.shom.fr/INSPIRE/wmts`, layer `L3D_MAR_MORBIHAN_2015_PYR_3857_WMTS`, style `normal`, matrix set `3857` (ids `0`..`21`, XYZ grid), PNG
+- Terms: datasets under Licence Ouverte 2.0; the `/INSPIRE/` capabilities say `Fees` "Soumis à abonnement" and the WMS/r "sauf pour les thématiques INSPIRE qui sont en accès libre"; the data.shom.fr CGU was not found.
+- Attribution: © Shom / IGN — Litto3D® Licence Ouverte 2.0. Non certifié pour la navigation. Max zoom 17.
+- Coverage: Gulf of Morbihan (product dated 2015; the lidar itself was flown in 2005, with echo-sounder data of 2003 and 2013).
 
 ### SHOM 100 m depth, Guadeloupe and Martinique
 - GUID `{02109A1A-0782-4E8D-AFC6-E26EFDF7411E}` (overlay layer), `"navigationWarning": true`

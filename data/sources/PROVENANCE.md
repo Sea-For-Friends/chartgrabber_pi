@@ -253,3 +253,10 @@ the others. Downloaded once each with the CLI 2026.11.3 (one connection, a few t
     aea5b5f8e31c76a4b88c88fa9ab9cdd866faf20f26476bfbd2fa6fb5525d38fb  Satellite/Hong-Kong-LandsD-Aerial-Photo.source.json
     76a179eb9ad5fe39d1972c2b877a2376eb3d3fb14decbe123e2adff55c98c113  Satellite/Madeira-DROTe-Ortho-2018-19.source.json
     b4d15a1b9205c3649c1dfb362a8a72f65b2df005bce7ae79593896958c2b484f  Coast and land/NOAA-NCCOS-Habitat-Saipan.source.json
+
+## 2026-11-20: SHOM lidar, Gulf of Morbihan
+
+One new file, written by this repository from the SHOM WMTS `/INSPIRE/` layer list, in the same `.source.json` format as
+the others. Downloaded once with the CLI 2026.11.3 (two connections, 97 tiles, zooms 14 and 15 of a small bbox). sha256:
+
+    a7b5dc40a43e515fc37ce246425710fc4d11445f2e716dc41251fa887d6dd273  Depth/SHOM-Lidar-Morbihan.source.json
