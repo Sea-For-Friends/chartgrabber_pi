@@ -259,7 +259,8 @@ JobController::~JobController() {
     onChartsChanged = nullptr;
     onBusyChanged = nullptr;
     onPreferences = nullptr;
-    if (phase_ == Phase::Checking) { // no record was changed yet
+    if (phase_ ==
+        Phase::Checking) { // a new chart stays Running on disk; the next start recovers it as Interrupted
         probe_.cancel();
         phase_ = Phase::Idle;
     }

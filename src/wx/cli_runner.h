@@ -113,7 +113,10 @@ public:
     // done runs once, from the child's end or the time limit (the child is killed then). A check() while one
     // runs cancels the running one first (its done is not called).
     void check(const std::string& program, const cg::Settings& cliSettings, Done done);
-    void cancel(); // done is not called; the child is killed
+    // done is not called; the child is killed. Destroying the runner waits for the child to be reaped in a
+    // nested event loop (milliseconds after SIGKILL).
+    void cancel();
+    // False after a timeout, although the killed child may live until it is reaped.
     bool running() const { return done_ != nullptr; }
     void setTimeoutMs(int ms) { timeoutMs_ = ms; } // tests only
 
