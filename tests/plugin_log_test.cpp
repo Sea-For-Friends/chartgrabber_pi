@@ -7,6 +7,11 @@
 
 #include <gtest/gtest.h>
 
+#include <wx/app.h>
+#include <wx/utils.h>
+
+#include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -136,6 +141,130 @@ TEST_F(PluginLogTest, WaylandWithOpenGlIsTheOnlyCoveredCase) {
     EXPECT_FALSE(cg::waylandOpenGlCovers("wayland", "unknown"));
     EXPECT_FALSE(cg::waylandOpenGlCovers("x11", "on"));
     EXPECT_FALSE(cg::waylandOpenGlCovers("none", "on"));
+}
+
+// Yields to the event loop for `span`, so the stall timer ticks and CallAfter actions run.
+void pumpFor(std::chrono::milliseconds span) {
+    const auto end = std::chrono::steady_clock::now() + span;
+    while (std::chrono::steady_clock::now() < end) {
+        wxTheApp->Yield(true);
+        wxMilliSleep(5);
+    }
+}
+
+// Blocks the GUI thread for `span`: a busy wait inside a CallAfter action, so no event is dispatched
+// meanwhile.
+void blockGuiThread(std::chrono::milliseconds span) {
+    wxTheApp->CallAfter([span] {
+        const auto end = std::chrono::steady_clock::now() + span;
+        while (std::chrono::steady_clock::now() < end) {
+        }
+    });
+}
+
+// The values of the "main loop stalled N ms" lines, in order.
+std::vector<int> stallValues(const std::vector<std::string>& lines) {
+    std::vector<int> values;
+    const std::regex line(R"(main loop stalled (\d+) ms)");
+    std::smatch match;
+    for (const std::string& text : lines) {
+        if (std::regex_search(text, match, line))
+            values.push_back(std::stoi(match[1].str()));
+    }
+    return values;
+}
+
+TEST_F(PluginLogTest, TheStallTimerRunsOnlyWhileDebugIsOn) {
+    if (!wxTheApp || !wxTheApp->IsGUI())
+        GTEST_SKIP() << "no display: the GUI environment was NOT run";
+    ASSERT_TRUE(cg::openPluginLog(file_.string()));
+    EXPECT_FALSE(cg::stallWatchRunning());
+    cg::setPluginLogDebug(true);
+    EXPECT_TRUE(cg::stallWatchRunning());
+    cg::setPluginLogDebug(false);
+    EXPECT_FALSE(cg::stallWatchRunning());
+}
+
+TEST_F(PluginLogTest, ClosingThePluginLogStopsTheStallTimer) {
+    if (!wxTheApp || !wxTheApp->IsGUI())
+        GTEST_SKIP() << "no display: the GUI environment was NOT run";
+    ASSERT_TRUE(cg::openPluginLog(file_.string()));
+    cg::setPluginLogDebug(true);
+    ASSERT_TRUE(cg::stallWatchRunning());
+    cg::closePluginLog();
+    EXPECT_FALSE(cg::stallWatchRunning());
+}
+
+TEST_F(PluginLogTest, NoStallIsLoggedWhileDebugIsOff) {
+    if (!wxTheApp || !wxTheApp->IsGUI())
+        GTEST_SKIP() << "no display: the GUI environment was NOT run";
+    ASSERT_TRUE(cg::openPluginLog(file_.string()));
+    blockGuiThread(std::chrono::milliseconds(600));
+    pumpFor(std::chrono::milliseconds(800));
+    EXPECT_TRUE(stallValues(fileLines()).empty());
+}
+
+TEST_F(PluginLogTest, ABlockedGuiThreadWritesALineWhileDebugIsOn) {
+    if (!wxTheApp || !wxTheApp->IsGUI())
+        GTEST_SKIP() << "no display: the GUI environment was NOT run";
+    ASSERT_TRUE(cg::openPluginLog(file_.string()));
+    cg::setPluginLogDebug(true);
+    pumpFor(std::chrono::milliseconds(350)); // ticks first, so the block is measured against a tick
+    blockGuiThread(std::chrono::milliseconds(600));
+    pumpFor(std::chrono::milliseconds(700));
+    cg::setPluginLogDebug(false);
+    const std::vector<int> stalls = stallValues(fileLines());
+    ASSERT_FALSE(stalls.empty());
+    EXPECT_GE(*std::max_element(stalls.begin(), stalls.end()), 450);
+}
+
+TEST_F(PluginLogTest, ClosingWritesTheSummaryBeforeTheSessionEndLine) {
+    if (!wxTheApp || !wxTheApp->IsGUI())
+        GTEST_SKIP() << "no display: the GUI environment was NOT run";
+    ASSERT_TRUE(cg::openPluginLog(file_.string()));
+    cg::setPluginLogDebug(true);
+    pumpFor(std::chrono::milliseconds(350));
+    blockGuiThread(std::chrono::milliseconds(600));
+    pumpFor(std::chrono::milliseconds(700));
+    cg::closePluginLog();
+    const std::vector<std::string> lines = fileLines();
+    ASSERT_GE(lines.size(), 2u);
+    EXPECT_EQ(lines.back(), "session end");
+    EXPECT_TRUE(std::regex_match(lines[lines.size() - 2],
+                                 std::regex(R"(main loop stalls: [1-9]\d*, longest \d+ ms, total \d+ ms)")))
+        << lines[lines.size() - 2];
+}
+
+TEST_F(PluginLogTest, TurningDebugOnAgainKeepsTheCountOfTheRunningTimer) {
+    if (!wxTheApp || !wxTheApp->IsGUI())
+        GTEST_SKIP() << "no display: the GUI environment was NOT run";
+    ASSERT_TRUE(cg::openPluginLog(file_.string()));
+    cg::setPluginLogDebug(true);
+    pumpFor(std::chrono::milliseconds(350));
+    blockGuiThread(std::chrono::milliseconds(600));
+    pumpFor(std::chrono::milliseconds(700));
+    cg::setPluginLogDebug(true); // the Settings OK applies the switch again: no restart of the count
+    cg::closePluginLog();
+    const std::vector<std::string> lines = fileLines();
+    ASSERT_GE(lines.size(), 2u);
+    EXPECT_TRUE(std::regex_match(lines[lines.size() - 2],
+                                 std::regex(R"(main loop stalls: [1-9]\d*, longest \d+ ms, total \d+ ms)")))
+        << lines[lines.size() - 2];
+}
+
+TEST_F(PluginLogTest, ClosingWithoutStallsWritesNoSummary) {
+    if (!wxTheApp || !wxTheApp->IsGUI())
+        GTEST_SKIP() << "no display: the GUI environment was NOT run";
+    ASSERT_TRUE(cg::openPluginLog(file_.string()));
+    cg::setPluginLogDebug(true);
+    pumpFor(std::chrono::milliseconds(350));
+    cg::closePluginLog();
+    const std::vector<std::string> lines = fileLines();
+    ASSERT_FALSE(lines.empty());
+    EXPECT_EQ(lines.back(), "session end");
+    EXPECT_TRUE(stallValues(lines).empty());
+    for (const std::string& text : lines)
+        EXPECT_EQ(text.find("main loop stalls"), std::string::npos) << text;
 }
 
 } // namespace

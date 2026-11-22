@@ -89,6 +89,7 @@ set(CG_WX_SOURCES
     src/wx/question.cpp
     src/wx/plugin_log.cpp
     src/wx/open_folder.cpp
+    src/wx/stall_watch.cpp
 )
 add_library(chartgrabber_pi SHARED ${CG_WX_SOURCES})
 target_include_directories(chartgrabber_pi SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/api ${wxWidgets_INCLUDE_DIRS})

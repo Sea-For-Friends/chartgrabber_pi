@@ -5,8 +5,10 @@
 #include "plugin_version.h"
 #include "portable.h"
 #include "session_log.h"
+#include "stall_watch.h"
 #include "wx_util.h"
 
+#include <wx/app.h>
 #include <wx/fileconf.h>
 #include <wx/log.h>
 #include <wx/utils.h>
@@ -29,7 +31,8 @@ namespace {
 
 cg::SessionLog g_file;
 bool g_debug = false;
-std::string g_display, g_openGl; // header lines 4 and 5: what line 8 decides on
+std::unique_ptr<cg::StallWatch> g_stall; // exists while Debug log is on (a GUI application)
+std::string g_display, g_openGl;         // header lines 4 and 5: what line 8 decides on
 
 std::string stamp() {
     const auto now = std::chrono::system_clock::now();
@@ -109,6 +112,10 @@ bool openPluginLog(const std::string& path) {
 }
 
 void closePluginLog() {
+    if (g_stall) { // before the file closes: the summary line goes to it
+        g_stall->stop();
+        g_stall.reset();
+    }
     logFile("session end");
     g_file.close();
     g_debug = false;
@@ -186,6 +193,17 @@ void endPluginLogHeader() {
 
 void setPluginLogDebug(bool on) {
     g_debug = on;
+    if (on && wxTheApp) {
+        if (!g_stall)
+            g_stall = std::make_unique<StallWatch>();
+        g_stall->start();
+    } else if (g_stall) {
+        g_stall->stop();
+    }
+}
+
+bool stallWatchRunning() {
+    return g_stall && g_stall->running();
 }
 
 bool pluginLogDebug() {
