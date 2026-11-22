@@ -764,7 +764,10 @@ public:
     std::vector<std::string> messages;
 
 protected:
-    void DoLogRecord(wxLogLevel, const wxString& msg, const wxLogRecordInfo&) override {
+    void DoLogRecord(wxLogLevel level, const wxString& msg, const wxLogRecordInfo&) override {
+        if (level ==
+            wxLOG_Debug) // wx's own diagnostics (a child reaped by another test): not the plugin's lines
+            return;
         messages.push_back(msg.utf8_string());
     }
 };
