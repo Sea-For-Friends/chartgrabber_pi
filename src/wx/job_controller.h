@@ -8,6 +8,7 @@
 #include "job_files.h"
 #include "job_progress.h"
 #include "progress_strip.h"
+#include "rescan_throttle.h"
 #include "settings.h"
 
 #include <wx/arrstr.h>
@@ -34,6 +35,8 @@ class Look;
 cg::Os& weatherSwapOs();
 // True once OpenCPN reported 5.x with x < 14 (RemoveChartFromDBInPlace is safe then); default false.
 bool& staleDropAllowed();
+// The clock of the chart-list update throttle, in milliseconds (steady); a test seam.
+std::function<std::int64_t()>& rescanClockMs();
 
 class JobController : private wxEvtHandler {
 public:
@@ -60,6 +63,10 @@ public:
     // Plugin start: removes the stale files of Windows weather updates; one rescan 120 s
     // later when something was removed.
     void cleanupStaleAtStart();
+    // The one way to update OpenCPN's chart list: remembers the folders `extraDirs` (written files) and saves
+    // them in the OpenCPN config; on 5.14+ at most one update per 30 s (later requests merge), none while the
+    // Options dialog is shown; on 5.10 / 5.12 at once.
+    void requestRescan(const std::vector<std::string>& extraDirs = {});
     // "Update all weather charts": each chart as start(r, Download, true), one after
     // another; one rescan after the last and one result. Precondition !busy() (else logged and ignored);
     // empty is ignored.
@@ -80,6 +87,8 @@ private:
     void onExit(int exitCode);
     void onTick(wxTimerEvent&);
     void onStaleTimer(wxTimerEvent&);
+    void onRescanTimer(wxTimerEvent&);
+    void doRescan();
     std::vector<std::string> dropStale(std::vector<std::string> stale);
     void swapWeatherOutput(const std::string& iniPath);
     void requestTerminate();
@@ -89,7 +98,7 @@ private:
     batchNext(BatchEnd how, bool stop, const wxString& reason = {},
               const Buttons& buttons = {}); // true = the batch took over (next chart started or result shown)
     void finishBatch(const wxString& reason, const Buttons& buttons);
-    wxArrayString rescanChartList(const std::vector<std::string>& files);
+    void rescanChartList(const std::vector<std::string>& files);
     void startFailed(const std::string& why, const wxString& headline = wxString());
     void saveRecord();
     void addMessage(std::string line); // one Details line (the last 200 are kept)
@@ -109,9 +118,13 @@ private:
     AreaTool& area_;
     std::unique_ptr<CliRunner> runner_;
     wxWeakRef<ProgressStrip> strip_; // a child of the canvas: null once OpenCPN deleted it
-    wxTimer tick_, staleTimer_;
-    bool staleRemoved_ = false; // a stale file was removed at start or by the timer
-    bool rescanned_ = false;    // a job rescan ran (the start-up rescan is then skipped)
+    wxTimer tick_, staleTimer_, rescanTimer_;
+    cg::RescanThrottle throttle_;
+    std::vector<std::string> rescanDirs_; // folders of written files for the next update
+    bool holdLogged_ = false;             // "held" is logged once per hold
+    bool rescanLeft_ = false;             // an update was left at the last shutdown: the stale tick makes it
+    bool staleRemoved_ = false;           // a stale file was removed at start or by the timer
+    bool rescanned_ = false;              // a job rescan ran (the start-up rescan is then skipped)
     std::string prevSnapshot_, prevModelRun_,
         newModelRun_;      // the picture at start; the run's model run
     std::string swapFrom_; // the file this run's job.ini no longer writes; empty = no swap

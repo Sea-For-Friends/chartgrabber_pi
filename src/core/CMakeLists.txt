@@ -12,6 +12,7 @@ geo_math.cpp
     portable.cpp
     chart_folder.cpp
     plugin_conf.cpp
+    rescan_throttle.cpp
 )
 
 if(CG_CORE_SOURCES)

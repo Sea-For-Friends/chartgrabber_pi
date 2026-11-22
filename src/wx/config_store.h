@@ -41,6 +41,8 @@ public:
     void setWarnDetailLevels(bool on); // key WarnDetailLevels only, then Flush()
     bool firstSuccessShown() const;    // key FirstSuccessShown
     void setFirstSuccessShown();
+    bool rescanPending() const; // key RescanPending: a chart-list update was left at shutdown
+    void setRescanPending(bool on);
 
     // The job strip's place: nullopt when a
     // key is missing or invalid (an invalid one is logged once per session); nullopt to set deletes the keys.

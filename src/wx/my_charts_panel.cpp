@@ -619,7 +619,7 @@ void MyChartsPanel::deleteChart(const std::string& id) {
         }
         config_.deleteChartDir(chart.id);
         // OpenCPN's per-file remove call hangs 5.14+: one rescan drops the gone files instead.
-        UpdateChartDBInplace(GetChartDBDirArrayString(), false, false);
+        jobs_.requestRescan();
         refresh();
         if (onDeleted)
             onDeleted();
