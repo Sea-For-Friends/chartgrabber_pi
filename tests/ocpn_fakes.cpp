@@ -73,6 +73,7 @@ Jump jump;
 wxArrayString chartDirs;
 std::vector<DbUpdate> updates;
 std::function<void()> onUpdate;
+wxDialog* optionsDialog = nullptr;
 std::vector<wxString> removed;
 std::function<void()> onRemove;
 std::vector<wxWindow*> canvases;
@@ -125,6 +126,9 @@ bool UpdateChartDBInplace(wxArrayString dir_array, bool b_force_update, bool b_P
         ocpn_fake::onUpdate();
     ocpn_fake::updates.push_back({dir_array, b_force_update, b_ProgressDialog});
     return true;
+}
+wxDialog* GetActiveOptionsDialog() {
+    return ocpn_fake::optionsDialog;
 }
 wxArrayString GetChartDBDirArrayString() {
     return ocpn_fake::chartDirs;

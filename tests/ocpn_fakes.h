@@ -3,6 +3,7 @@
 #pragma once
 #include <wx/arrstr.h>
 #include <wx/colour.h>
+#include <wx/dialog.h>
 #include <wx/string.h>
 
 #include <functional>
@@ -46,6 +47,8 @@ struct DbUpdate {
 extern wxArrayString chartDirs;
 extern std::vector<DbUpdate> updates;
 extern std::function<void()> onUpdate;
+// GetActiveOptionsDialog() returns optionsDialog (default null).
+extern wxDialog* optionsDialog;
 // RemoveChartFromDBInPlace(path) in call order (onRemove, if set, runs first); returns 1. Used only for a
 // Windows stale weather file on OpenCPN < 5.14; never for Delete.
 extern std::vector<wxString> removed;

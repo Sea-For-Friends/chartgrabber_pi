@@ -301,6 +301,15 @@ void ConfigStore::setFirstSuccessShown() {
     config_->Flush();
 }
 
+bool ConfigStore::rescanPending() const {
+    return readFlag(config_, invalidLogged_, "RescanPending", false);
+}
+
+void ConfigStore::setRescanPending(bool on) {
+    writeFlag(config_, "RescanPending", on);
+    config_->Flush();
+}
+
 std::optional<cg::StripAnchor> ConfigStore::stripAnchor() const {
     const auto rawCorner = readRaw(config_, "StripCorner");
     const auto rawDx = readRaw(config_, "StripDx");

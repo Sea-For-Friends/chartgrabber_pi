@@ -62,6 +62,8 @@
 #include "job_controller.h"
 #undef private
 
+#include "rescan_clock.h"
+
 #include <ocpn_plugin.h>
 
 namespace {
@@ -206,6 +208,7 @@ protected:
         ocpn_fake::jump = {};
         ocpn_fake::updates.clear();
         ocpn_fake::chartDirs.Clear();
+        ocpn_fake::optionsDialog = nullptr;
         oldHome_ = getenv("HOME") ? getenv("HOME") : "";
         setenv("HOME", (root_ / "home").c_str(), 1);
         cli_ = (root_ / kName / "fake-cli").string(); // a name with a space, a quote and Cyrillic
@@ -242,6 +245,14 @@ protected:
         expectNoProcessesUnder(root_.string());
         fs::remove_all(root_, ec);
     }
+
+    // The rescan timer fires (the test sets the clock first).
+    void fireRescanTimer() {
+        wxTimerEvent ev(jc().rescanTimer_);
+        jc().onRescanTimer(ev);
+    }
+    // The throttle clock: a test advances it past the 30 s gap, or leaves it for a merged call.
+    FakeRescanClock clock_;
 
     // ---- loop
     bool runUntil(const std::function<bool()>& done, int timeoutMs = 15000) {
@@ -589,6 +600,7 @@ TEST_F(JobTest, TwoChartsAddedRegisteredAndFirstSuccessHintOnce) {
 
     // Second success (a Top up of the same chart): no hint, no warning.
     ocpn_fake::updates.clear();
+    clock_.advance(31000); // past the 30 s gap: the update is not merged
     scenario(r.id, 2, fill(kBase, 8, 100, 0) + written(kBase, a, 400, 321) + written(kOver, b, 50, 679), "",
              0);
     start(chart(r.id));
@@ -731,6 +743,7 @@ TEST_F(JobTest, RegistrationIsOneRescanOfListedFoldersPlusTheJobsFolders) {
     for (const Row& row : rows) {
         SCOPED_TRACE(row.name);
         ocpn_fake::updates.clear();
+        clock_.advance(31000);
         ocpn_fake::chartDirs.Clear();
         for (const auto& d : row.listed)
             ocpn_fake::chartDirs.Add(wxString::FromUTF8(d));
@@ -2129,6 +2142,9 @@ TEST_F(WeatherTest, AChartDoneStartsTheFollowUpAndTheResultsJoin) {
     EXPECT_EQ(chart(first.id).state, cg::ChartState::Complete);
     EXPECT_EQ(chart(next.id).state, cg::ChartState::Complete);
     EXPECT_EQ(chart(next.id).snapshot, "2026-11-05T15:40:00Z");
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u) << "the follow-up's update is merged";
+    clock_.advance(30000);
+    fireRescanTimer();
     EXPECT_EQ(ocpn_fake::updates.size(), 2u);
     EXPECT_EQ(busyCalls_, (std::vector<bool>{true, false, true, false}));
 }
@@ -2621,16 +2637,21 @@ TEST_F(SwapTest, AnOldFileHeldUntilTheRescanIsRemovedAfterItAndRescansAgain) {
     LogCollector log;
     start(r);
     ASSERT_TRUE(waitIdle());
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u) << "the second update is merged, not made at once";
+    EXPECT_EQ(dirs(0), (std::vector<std::string>{folder().string()}));
+    EXPECT_FALSE(fs::exists(planned("W.mbtiles")));
+    EXPECT_TRUE(chart(r.id).stale.empty());
+    EXPECT_EQ(detailsText().find("restarted"), std::string::npos);
+    ASSERT_TRUE(jc().rescanTimer_.IsRunning());
+    EXPECT_EQ(jc().rescanTimer_.GetInterval(), 30000);
+    ocpn_fake::chartDirs = ocpn_fake::updates[0].dirs; // OpenCPN keeps the folders it was given
+    clock_.advance(30000);
+    fireRescanTimer();
     ASSERT_EQ(ocpn_fake::updates.size(), 2u);
     EXPECT_EQ(dirs(1), dirs(0));
     EXPECT_FALSE(ocpn_fake::updates[1].force);
     EXPECT_FALSE(ocpn_fake::updates[1].progress);
-    EXPECT_FALSE(fs::exists(planned("W.mbtiles")));
-    EXPECT_TRUE(chart(r.id).stale.empty());
-    EXPECT_EQ(detailsText().find("restarted"), std::string::npos);
-    EXPECT_NE(std::find(log.messages.begin(), log.messages.end(),
-                        "ChartGrabber: chart list updated again (old weather file removed)"),
-              log.messages.end());
+    EXPECT_FALSE(jc().rescanTimer_.IsRunning());
 }
 
 TEST_F(SwapTest, AnOldFileHeldForGoodStaysInStaleWithTheRestartLineThenTheNextUpdateRemovesItAndSwapsBack) {
@@ -2655,6 +2676,7 @@ TEST_F(SwapTest, AnOldFileHeldForGoodStaysInStaleWithTheRestartLineThenTheNextUp
     makeWritable();
     picture(r.id, 2, false);
     ocpn_fake::updates.clear();
+    clock_.advance(31000);
     start(c);
     ASSERT_TRUE(waitIdle());
     EXPECT_EQ(outOf(r.id), planned("W.mbtiles"));
@@ -2785,6 +2807,7 @@ TEST_F(SwapTest, StartUpCleanupRemovesStaleFilesAndRescansOnceAfter120sUnlessAJo
 
     // a job rescan ran meanwhile: the timer does nothing
     ocpn_fake::updates.clear();
+    clock_.advance(31000);
     auto r = weatherChart("20261105-100900", "P.mbtiles");
     scenario(r.id, 1, written(kRain, planned("P.mbtiles"), 4, 9), "", 0);
     start(r);
@@ -2792,6 +2815,7 @@ TEST_F(SwapTest, StartUpCleanupRemovesStaleFilesAndRescansOnceAfter120sUnlessAJo
     ASSERT_EQ(ocpn_fake::updates.size(), 1u);
     jc().onStaleTimer(ev);
     EXPECT_EQ(ocpn_fake::updates.size(), 1u);
+    EXPECT_FALSE(jc().throttle_.pending()) << "the timer did not even ask for an update";
 }
 
 // ---- a file OpenCPN 5.10-5.13 still lists after the rescan is dropped from its chart list, then
@@ -2924,6 +2948,7 @@ TEST_F(SamePictureTest, AnUpdateRescansOnlyForANewPictureAndKeepsTheRecordsFile)
         const auto r = update(id, row.weather, row.prevT, row.prevRun);
         scenario(id, 1, records(planned("W.mbtiles"), row.newT, row.newRun), "", 0);
         ocpn_fake::updates.clear();
+        clock_.advance(31000);
         LogCollector log;
         start(r);
         ASSERT_TRUE(waitIdle());
@@ -3273,6 +3298,10 @@ TEST_F(BatchSwapTest, AnOldFileHeldUntilTheRescanIsRemovedAfterItWithExactlyOneS
     LogCollector log;
     batch({a, b});
     ASSERT_TRUE(waitIdle());
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u) << "the second update is merged";
+    ocpn_fake::chartDirs = ocpn_fake::updates[0].dirs; // OpenCPN keeps the folders it was given
+    clock_.advance(30000);
+    fireRescanTimer();
     ASSERT_EQ(ocpn_fake::updates.size(), 2u);
     EXPECT_EQ(dirs(1), dirs(0));
     EXPECT_FALSE(fs::exists(planned("d1/W.mbtiles")));
@@ -3305,6 +3334,7 @@ TEST_F(BatchSwapTest, P0262TheRetryAfterABatchRescansWhenItRemovesAHeldFile) {
     ASSERT_TRUE(jc().staleTimer_.IsRunning());
     for (int k : {1, 2})
         fs::permissions(folder() / dirName(k), fs::perms::owner_write, fs::perm_options::add);
+    clock_.advance(120000); // the retry comes 120 s later: past the 30 s gap
     wxTimerEvent ev(jc().staleTimer_);
     jc().onStaleTimer(ev);
     EXPECT_FALSE(fs::exists(planned("d1/W.mbtiles")));
@@ -3389,6 +3419,275 @@ TEST_F(BatchSwapTest, P0262NoRetryTimerWhenNoFileIsLeft) {
     batch({a});
     ASSERT_TRUE(waitIdle());
     EXPECT_FALSE(jc().staleTimer_.IsRunning());
+}
+
+// ---- one chart-list update at a time (OpenCPN 5.14+: at most one call per 30 s, merged; none while the
+// Options dialog is shown; 5.10 / 5.12: at once)
+class RescanTest : public JobTest {
+protected:
+    void SetUp() override {
+        JobTest::SetUp();
+        staleDropAllowed() = false; // an unknown version counts as 5.14+
+        store_->setFirstSuccessShown();
+    }
+    void TearDown() override {
+        staleDropAllowed() = false;
+        ocpn_fake::optionsDialog = nullptr;
+        JobTest::TearDown();
+    }
+    // A finished job that wrote one file into `dir`.
+    void jobWritingTo(const std::string& id, const std::string& dir) {
+        auto r = makeRecord(id);
+        r.overlayGuid.clear();
+        scenario(r.id, 1, written(kBase, dir + "/a.mbtiles", 4, 9), "", 0);
+        start(r);
+        ASSERT_TRUE(waitIdle());
+    }
+    // The values of OpenCPN's [ChartDirectories] in key order.
+    std::vector<std::string> savedDirs() {
+        std::vector<std::string> got;
+        config_->SetPath("/ChartDirectories");
+        wxString key;
+        long cookie = 0;
+        for (bool more = config_->GetFirstEntry(key, cookie); more; more = config_->GetNextEntry(key, cookie))
+            got.push_back(config_->Read(key).ToStdString(wxConvUTF8));
+        config_->SetPath("/");
+        return got;
+    }
+    static int count(const LogCollector& log, const std::string& line) {
+        return static_cast<int>(
+            std::count(log.messages.begin(), log.messages.end(), "ChartGrabber: " + line));
+    }
+    // OpenCPN's Options dialog as GetActiveOptionsDialog() reports it; shown = false is a hidden one OpenCPN
+    // keeps after it closed.
+    struct OptionsDialog {
+        wxDialog dlg;
+        OptionsDialog(wxWindow* parent, bool shown) : dlg(parent, wxID_ANY, "Options") {
+            dlg.Show(shown);
+            ocpn_fake::optionsDialog = &dlg;
+        }
+        ~OptionsDialog() { ocpn_fake::optionsDialog = nullptr; }
+        void hide() { dlg.Hide(); }
+    };
+};
+
+// A job that finished and a Delete right after it: one call at once, the Delete is merged and made when
+// the 30 s are over.
+TEST_F(RescanTest, P0277ADeleteRightAfterAJobIsMergedAndMadeAtThirtySeconds) {
+    const std::string dir = (root_ / "charts").string();
+    LogCollector log;
+    jobWritingTo("20261122-100000", dir);
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u);
+    EXPECT_EQ(dirs(0), (std::vector<std::string>{dir}));
+    EXPECT_EQ(count(log, "chart list updated (1 folders)"), 1);
+    EXPECT_FALSE(jc().rescanTimer_.IsRunning());
+
+    clock_.advance(5000);
+    ocpn_fake::chartDirs = ocpn_fake::updates[0].dirs; // OpenCPN keeps the folders it was given
+    jc().requestRescan();                              // what Delete in My charts does
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u);
+    EXPECT_EQ(count(log, "chart list update merged"), 0) << "the first waiting request joins nothing";
+    clock_.advance(1000);
+    jc().requestRescan(); // a second Delete joins the pending one
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u);
+    EXPECT_EQ(count(log, "chart list update merged"), 1);
+    ASSERT_TRUE(jc().rescanTimer_.IsRunning());
+    EXPECT_EQ(jc().rescanTimer_.GetInterval(), 25000) << "armed by the first waiting request";
+    EXPECT_TRUE(jc().rescanTimer_.IsOneShot());
+
+    EXPECT_EQ(jc().rescanTimer_.GetInterval(), 25000) << "not re-armed by the second request";
+    clock_.advance(24000);
+    fireRescanTimer();
+    ASSERT_EQ(ocpn_fake::updates.size(), 2u);
+    EXPECT_FALSE(jc().rescanTimer_.IsRunning());
+    EXPECT_EQ(count(log, "chart list update merged"), 1);
+    EXPECT_EQ(count(log, "chart list updated (1 folders)"), 2);
+}
+
+// The folder of a new file is saved at once and is in the merged call, once however it is spelled.
+TEST_F(RescanTest, P0277TheFolderOfANewFileIsSavedAtOnceAndIsInTheMergedCall) {
+    ocpn_fake::chartDirs.Add("/x");
+    jc().requestRescan(); // the first call
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u);
+    EXPECT_EQ(dirs(0), (std::vector<std::string>{"/x"}));
+
+    const std::string dir = (root_ / "charts").string();
+    jobWritingTo("20261122-100100", dir);
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u) << "held: within 30 s of the first call";
+    EXPECT_EQ(savedDirs(), (std::vector<std::string>{dir + "^"})) << "saved although the call is held";
+    jc().requestRescan({"/n/"});
+    jc().requestRescan({"/n", dir + "/"});
+    ASSERT_TRUE(jc().rescanTimer_.IsRunning());
+    EXPECT_EQ(jc().rescanTimer_.GetInterval(), 30000) << "one timer, not re-armed by the later requests";
+
+    clock_.advance(30000);
+    fireRescanTimer();
+    ASSERT_EQ(ocpn_fake::updates.size(), 2u);
+    EXPECT_EQ(dirs(1), (std::vector<std::string>{"/x", dir, "/n/"}));
+    EXPECT_FALSE(ocpn_fake::updates[1].force);
+    EXPECT_FALSE(ocpn_fake::updates[1].progress);
+
+    // nothing is remembered after the call
+    clock_.advance(31000);
+    jc().requestRescan();
+    ASSERT_EQ(ocpn_fake::updates.size(), 3u);
+    EXPECT_EQ(dirs(2), (std::vector<std::string>{"/x"}));
+}
+
+// The wait timer fires before the 30 s are over: no call, the timer is armed again for the rest.
+TEST_F(RescanTest, P0277TheTimerFiringEarlyMakesNoCallAndWaitsForTheRest) {
+    jc().requestRescan();
+    clock_.advance(1000);
+    jc().requestRescan();
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u);
+    clock_.advance(9000);
+    fireRescanTimer();
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u);
+    ASSERT_TRUE(jc().rescanTimer_.IsRunning());
+    EXPECT_EQ(jc().rescanTimer_.GetInterval(), 20000);
+    clock_.advance(20000);
+    fireRescanTimer();
+    EXPECT_EQ(ocpn_fake::updates.size(), 2u);
+    fireRescanTimer(); // nothing pending any more
+    EXPECT_EQ(ocpn_fake::updates.size(), 2u);
+    EXPECT_FALSE(jc().rescanTimer_.IsRunning());
+}
+
+// Options shown: an end of job makes no call until the dialog is hidden; held is logged once; the poll is 2
+// s.
+TEST_F(RescanTest, P0277AJobEndWhileOptionsIsShownCallsNothingUntilItIsHidden) {
+    OptionsDialog options(canvas_, true);
+    ASSERT_TRUE(options.dlg.IsShown());
+    const std::string dir = (root_ / "charts").string();
+    LogCollector log;
+    jobWritingTo("20261122-100200", dir);
+    EXPECT_TRUE(ocpn_fake::updates.empty());
+    EXPECT_EQ(count(log, "chart list update held (Options open)"), 1);
+    ASSERT_TRUE(jc().rescanTimer_.IsRunning());
+    EXPECT_EQ(jc().rescanTimer_.GetInterval(), 2000);
+    EXPECT_EQ(savedDirs(), (std::vector<std::string>{dir + "^"}));
+
+    jc().requestRescan(); // a second request in the same hold
+    EXPECT_EQ(count(log, "chart list update held (Options open)"), 1) << "logged once per hold";
+    EXPECT_EQ(count(log, "chart list update merged"), 0);
+    clock_.advance(60000); // however long the dialog stays
+    fireRescanTimer();
+    EXPECT_TRUE(ocpn_fake::updates.empty());
+    ASSERT_TRUE(jc().rescanTimer_.IsRunning());
+    EXPECT_EQ(jc().rescanTimer_.GetInterval(), 2000);
+
+    options.hide();
+    fireRescanTimer(); // first seen hidden: the 30 s gap starts
+    EXPECT_TRUE(ocpn_fake::updates.empty());
+    ASSERT_TRUE(jc().rescanTimer_.IsRunning());
+    EXPECT_EQ(jc().rescanTimer_.GetInterval(), 30000);
+    clock_.advance(30000);
+    fireRescanTimer();
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u);
+    EXPECT_EQ(dirs(0), (std::vector<std::string>{dir}));
+    EXPECT_FALSE(jc().rescanTimer_.IsRunning());
+
+    // the next hold logs again
+    options.dlg.Show(true);
+    clock_.advance(31000);
+    jc().requestRescan();
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u);
+    EXPECT_EQ(count(log, "chart list update held (Options open)"), 2);
+}
+
+// A dialog OpenCPN keeps while hidden does not hold the update.
+TEST_F(RescanTest, P0277AHiddenOptionsDialogDoesNotHoldTheUpdate) {
+    OptionsDialog options(canvas_, false);
+    ASSERT_FALSE(options.dlg.IsShown());
+    jc().requestRescan();
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u);
+}
+
+// After a hold the 30 s gap starts when the dialog is first seen hidden: a call 5 s ago, Options opens and
+// closes, the call comes 30 s after the dialog was seen hidden.
+TEST_F(RescanTest, P0277TheGapStartsWhenTheDialogIsFirstSeenHidden) {
+    jc().requestRescan();
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u);
+    clock_.advance(5000);
+    OptionsDialog options(canvas_, true);
+    jc().requestRescan();
+    options.hide();
+    fireRescanTimer();
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u);
+    ASSERT_TRUE(jc().rescanTimer_.IsRunning());
+    EXPECT_EQ(jc().rescanTimer_.GetInterval(), 30000);
+    clock_.advance(29000);
+    fireRescanTimer();
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u);
+    clock_.advance(1000);
+    fireRescanTimer();
+    EXPECT_EQ(ocpn_fake::updates.size(), 2u);
+}
+
+// A pending update is not called while the plugin closes; the next start makes it once.
+TEST_F(RescanTest, P0277AnUpdateWaitingAtShutdownIsLeftForTheNextStart) {
+    ocpn_fake::chartDirs.Add("/x");
+    jc().requestRescan();
+    clock_.advance(1000);
+    jc().requestRescan({"/n"});
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u);
+    ASSERT_FALSE(store_->rescanPending());
+    {
+        LogCollector log;
+        jc_.reset();
+        EXPECT_EQ(count(log, "chart list update left for the next start"), 1);
+    }
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u) << "no call while closing";
+    EXPECT_TRUE(store_->rescanPending());
+
+    clock_.advance(500);
+    jc().cleanupStaleAtStart();
+    EXPECT_FALSE(store_->rescanPending());
+    ASSERT_TRUE(jc().staleTimer_.IsRunning());
+    EXPECT_EQ(jc().staleTimer_.GetInterval(), 120000);
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u);
+    wxTimerEvent ev(jc().staleTimer_);
+    jc().onStaleTimer(ev);
+    ASSERT_EQ(ocpn_fake::updates.size(), 2u);
+    EXPECT_EQ(dirs(1), (std::vector<std::string>{"/x"}));
+    jc().onStaleTimer(ev); // once
+    EXPECT_EQ(ocpn_fake::updates.size(), 2u);
+}
+
+// An update left at the last shutdown and a shutdown before the 120 s tick: the flag stays set.
+TEST_F(RescanTest, P0277AnUpdateLeftAtShutdownSurvivesAShutdownBeforeTheStaleTick) {
+    store_->setRescanPending(true);
+    jc().cleanupStaleAtStart();
+    EXPECT_FALSE(store_->rescanPending());
+    jc_.reset();
+    EXPECT_TRUE(store_->rescanPending());
+    EXPECT_TRUE(ocpn_fake::updates.empty());
+}
+
+// Nothing pending at shutdown: no flag, nothing at the next start.
+TEST_F(RescanTest, P0277NothingPendingAtShutdownLeavesNoFlag) {
+    jc().requestRescan();
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u);
+    jc_.reset();
+    EXPECT_FALSE(store_->rescanPending());
+    jc().cleanupStaleAtStart();
+    EXPECT_FALSE(jc().staleTimer_.IsRunning());
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u);
+}
+
+// OpenCPN 5.10 / 5.12: the call is synchronous, every request calls at once; the dialog still holds it.
+TEST_F(RescanTest, P0277OnTenAndTwelveEveryRequestCallsAtOnceButNotWhileOptionsIsShown) {
+    staleDropAllowed() = true;
+    jc().requestRescan();
+    jc().requestRescan();
+    EXPECT_EQ(ocpn_fake::updates.size(), 2u);
+    EXPECT_FALSE(jc().rescanTimer_.IsRunning());
+    OptionsDialog options(canvas_, true);
+    jc().requestRescan();
+    EXPECT_EQ(ocpn_fake::updates.size(), 2u);
+    options.hide();
+    fireRescanTimer();
+    EXPECT_EQ(ocpn_fake::updates.size(), 3u);
 }
 
 } // namespace

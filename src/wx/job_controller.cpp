@@ -12,11 +12,13 @@
 #include "progress_strip.h"
 #include "wx_util.h"
 
+#include <wx/dialog.h>
 #include <wx/filename.h>
 #include <wx/intl.h>
 #include <wx/log.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <exception>
 #include <fstream>
@@ -47,9 +49,19 @@ cg::Os& weatherSwapOs() {
 
 JobController::JobController(ConfigStore& config, const Look& look, AreaTool& area)
     : config_(config), look_(look), area_(area), runner_(std::make_unique<CliRunner>()), tick_(this),
-      staleTimer_(this) {
+      staleTimer_(this), rescanTimer_(this) {
     Bind(wxEVT_TIMER, &JobController::onTick, this, tick_.GetId());
     Bind(wxEVT_TIMER, &JobController::onStaleTimer, this, staleTimer_.GetId());
+    Bind(wxEVT_TIMER, &JobController::onRescanTimer, this, rescanTimer_.GetId());
+}
+
+std::function<std::int64_t()>& rescanClockMs() {
+    static std::function<std::int64_t()> clock = [] {
+        return static_cast<std::int64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+                                             std::chrono::steady_clock::now().time_since_epoch())
+                                             .count());
+    };
+    return clock;
 }
 
 bool& staleDropAllowed() {
@@ -103,14 +115,89 @@ void JobController::cleanupStaleAtStart() {
         r.stale = std::move(left);
         config_.saveChart(r);
     }
-    if (staleRemoved_ || pending)
+    if (config_.rescanPending()) { // the last run ended with an update waiting
+        config_.setRescanPending(false);
+        rescanLeft_ = true;
+    }
+    if (staleRemoved_ || pending || rescanLeft_)
         staleTimer_.StartOnce(120000);
+}
+
+namespace {
+bool optionsShown() {
+    wxDialog* d = GetActiveOptionsDialog(); // OpenCPN keeps the dialog object while it is hidden
+    return d && d->IsShown();
+}
+} // namespace
+
+void JobController::requestRescan(const std::vector<std::string>& extraDirs) {
+    for (const std::string& dir : extraDirs) {
+        if (config_.addOpenCpnChartDir(dir))
+            cg::logLine("chart folder saved in the OpenCPN config");
+        const bool known =
+            std::ranges::any_of(rescanDirs_, [&](const std::string& k) { return cg::sameDir(k, dir); });
+        if (!known)
+            rescanDirs_.push_back(dir);
+    }
+    rescanned_ = true;
+    const bool wasPending = throttle_.pending();
+    const bool options = optionsShown();
+    if (throttle_.request(rescanClockMs()(), !staleDropAllowed(), options) ==
+        cg::RescanThrottle::Decision::CallNow) {
+        doRescan();
+        return;
+    }
+    if (options) {
+        if (!holdLogged_)
+            cg::logLine("chart list update held (Options open)");
+        holdLogged_ = true;
+    } else if (wasPending) {
+        cg::logLine("chart list update merged");
+    }
+    if (!rescanTimer_.IsRunning())
+        rescanTimer_.StartOnce(static_cast<int>(throttle_.waitMs(rescanClockMs()(), options)));
+}
+
+void JobController::onRescanTimer(wxTimerEvent&) {
+    if (closing_)
+        return;
+    const std::int64_t now = rescanClockMs()();
+    const bool options = optionsShown();
+    if (throttle_.due(now, !staleDropAllowed(), options) == cg::RescanThrottle::Decision::CallNow) {
+        doRescan();
+        return;
+    }
+    const std::int64_t wait = throttle_.waitMs(now, options);
+    if (wait > 0)
+        rescanTimer_.StartOnce(static_cast<int>(wait));
+}
+
+// ONE UpdateChartDBInplace over OpenCPN's chart folders plus the remembered folders (a per-file add hangs
+// OpenCPN 5.14+).
+void JobController::doRescan() {
+    rescanTimer_.Stop();
+    holdLogged_ = false;
+    wxArrayString dirs = GetChartDBDirArrayString();
+    for (const std::string& dir : rescanDirs_) {
+        bool listed = false;
+        for (const wxString& d : dirs)
+            listed = listed || cg::sameDir(cg::toUtf8(d), dir);
+        if (!listed)
+            dirs.Add(cg::fromUtf8(dir));
+    }
+    rescanDirs_.clear();
+    cg::guarded("chart list update", [&] {
+        UpdateChartDBInplace(dirs, false, false);
+        cg::logLine(wxString::Format("chart list updated (%d folders)", static_cast<int>(dirs.GetCount())));
+    });
+    throttle_.called(rescanClockMs()());
 }
 
 void JobController::onStaleTimer(wxTimerEvent&) {
     if (closing_)
         return;
-    bool freed = false; // this tick removed a file: OpenCPN's list must be rescanned even after a job rescan
+    bool freed =
+        rescanLeft_; // this tick removed a file: OpenCPN's list must be rescanned even after a job rescan
     for (cg::ChartRecord r : config_.loadCharts()) {
         if (r.stale.empty() || (busy() && r.id == record_.id))
             continue;
@@ -123,10 +210,8 @@ void JobController::onStaleTimer(wxTimerEvent&) {
     }
     if (!freed && (!staleRemoved_ || rescanned_))
         return;
-    cg::guarded("stale rescan", [] {
-        UpdateChartDBInplace(GetChartDBDirArrayString(), false, false);
-        cg::logLine("chart list updated (old weather files removed)");
-    });
+    rescanLeft_ = false;
+    requestRescan();
 }
 
 // Windows weather update: job.ini Out= names another file, so the CLI's rename never meets the
@@ -164,6 +249,13 @@ JobController::~JobController() {
         cg::logLine(wxString::Format("%d weather charts not started", static_cast<int>(batch_.size())));
     tick_.Stop();
     staleTimer_.Stop();
+    rescanTimer_.Stop();
+    // an async update while OpenCPN closes is unsafe: the next start makes it (also one carried over
+    // from the last start that the 120 s tick has not made yet)
+    if (throttle_.pending() || rescanLeft_) {
+        config_.setRescanPending(true);
+        cg::logLine("chart list update left for the next start");
+    }
     onChartsChanged = nullptr;
     onBusyChanged = nullptr;
     onPreferences = nullptr;
@@ -739,13 +831,12 @@ void JobController::finishJob(cg::Outcome outcome) {
             batchFiles_.insert(batchFiles_.end(), files.begin(), files.end()); // one rescan at the batch end
             batchIds_.push_back(record_.id);
         } else if (settings_.registerCharts && !files.empty()) {
-            const wxArrayString dirs = rescanChartList(files);
+            rescanChartList(files);
             if (!record_.stale.empty()) {
                 const std::size_t before = record_.stale.size();
                 record_.stale = removeStaleFiles(record_.stale);
                 if (record_.stale.size() < before) { // the list now holds a missing file: once more
-                    UpdateChartDBInplace(dirs, false, false);
-                    cg::logLine("chart list updated again (old weather file removed)");
+                    requestRescan();
                 }
                 if (!record_.stale.empty())
                     record_.stale = dropStale(record_.stale); // no rescan: the call reloads the list itself
@@ -786,27 +877,12 @@ void JobController::finishJob(cg::Outcome outcome) {
         strip().openDetails(true);
 }
 
-// One rescan of OpenCPN's chart folders plus the folders of `files` (a per-file add hangs 5.14+).
-// The rescan alone does not save a new folder for the next start, so the folders are also written to the
-// config.
-wxArrayString JobController::rescanChartList(const std::vector<std::string>& files) {
-    wxArrayString dirs = GetChartDBDirArrayString();
-    for (const std::string& f : files) {
-        const std::string dir = cg::parentDir(f);
-        bool listed = false;
-        for (const wxString& d : dirs)
-            listed = listed || cg::sameDir(cg::toUtf8(d), dir);
-        if (!listed)
-            dirs.Add(cg::fromUtf8(dir));
-    }
-    UpdateChartDBInplace(dirs, false, false);
-    for (const std::string& f : files) {
-        if (config_.addOpenCpnChartDir(cg::parentDir(f)))
-            cg::logLine("chart folder saved in the OpenCPN config");
-    }
-    cg::logLine(wxString::Format("chart list updated (%d folders)", static_cast<int>(dirs.GetCount())));
-    rescanned_ = true;
-    return dirs;
+// The folders of the written `files` go to the one chart-list update (see requestRescan).
+void JobController::rescanChartList(const std::vector<std::string>& files) {
+    std::vector<std::string> dirs;
+    for (const std::string& f : files)
+        dirs.push_back(cg::parentDir(f));
+    requestRescan(dirs);
 }
 
 void JobController::startBatch(std::vector<cg::ChartRecord> charts) {
@@ -864,7 +940,7 @@ bool JobController::batchNext(BatchEnd how, bool stop, const wxString& reason, c
 void JobController::finishBatch(const wxString& reason, const Buttons& buttons) {
     inBatch_ = false;
     if (!batchFiles_.empty()) {
-        const wxArrayString dirs = rescanChartList(batchFiles_);
+        rescanChartList(batchFiles_);
         // the earlier second pass: the old files OpenCPN held until the rescan
         bool removed = false, left = false;
         const std::vector<cg::ChartRecord> charts = config_.loadCharts();
@@ -885,8 +961,7 @@ void JobController::finishBatch(const wxString& reason, const Buttons& buttons) 
             left = left || !r.stale.empty();
         }
         if (removed) {
-            UpdateChartDBInplace(dirs, false, false);
-            cg::logLine("chart list updated again (old weather file removed)");
+            requestRescan();
         }
         if (left) {
             lead_ += staleWeatherText() + "\n";
