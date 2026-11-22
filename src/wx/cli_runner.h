@@ -3,7 +3,8 @@
 // stop-and-wait. GUI thread only; no std::thread.
 // Needs a wx event loop (wxTimer, wxEVT_END_PROCESS); abandon() runs no events.
 // The child gets --stop-on-stdin and an open stdin pipe; terminate() writes "stop\n" and closes it, kill()
-// follows stopGraceMs() later when the child has not ended.
+// follows stopGraceMs() later when the child has not ended. The child leads its own process group (Linux,
+// macOS) or sits in a job object (Windows), so a kill ends everything it started too.
 #pragma once
 
 #include "cli_records.h"
@@ -51,9 +52,12 @@ public:
     bool start(const std::vector<std::string>& argv, Callbacks cb, std::string* error);
     bool running() const { return process_ != nullptr; }
     void terminate(); // the stop line on the child's stdin, then EOF; once per run
-    void kill();      // SIGKILL (Linux) / TerminateProcess (Windows)
+    // SIGKILL to the child's process group (Linux, macOS) / TerminateJobObject (Windows): every process the
+    // CLI started ends with it.
+    void kill();
     // terminate(), then poll for the child's end every 50 ms without dispatching any event, at most waitMs;
-    // a child still running is killed. Then the process is detached (wx reaps it later); no callback runs.
+    // a child still running is killed, a child that ended by itself has the rest of its group / job killed.
+    // Then the process is detached (wx reaps it later); no callback runs.
     void abandon(int waitMs);
 
     // Grace between the stop line and the kill (10 s). setStopGraceMs is for tests only.
@@ -69,6 +73,8 @@ private:
     void onEnd(wxProcessEvent& event);
     void drain();
     void graceCheck();
+    void killTree();
+    void closeJob(); // Windows: release the job object; nothing elsewhere
     bool childReaped() const;
     bool childExited() const; // ended: a zombie counts, unlike childReaped
     void endRun(int raw);
@@ -79,6 +85,7 @@ private:
 
     wxProcess* process_ = nullptr;
     long pid_ = 0;
+    void* job_ = nullptr; // Windows: the job object that holds the child and every process it starts
     wxTimer timer_;
     Callbacks cb_;
     cg::LineSplitter outSplit_, errSplit_;
