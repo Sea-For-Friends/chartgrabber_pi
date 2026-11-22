@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // CliRunner: one CLI child process with redirected pipes, parsed record callbacks, terminate / kill /
 // stop-and-wait. GUI thread only; no std::thread.
-// Needs a wx event loop (wxTimer, wxEVT_END_PROCESS); stopAndWait pumps it itself (false without one).
+// Needs a wx event loop (wxTimer, wxEVT_END_PROCESS); abandon() runs no events.
 // The child gets --stop-on-stdin and an open stdin pipe; terminate() writes "stop\n" and closes it, kill()
 // follows stopGraceMs() later when the child has not ended.
 #pragma once
@@ -38,10 +38,10 @@ public:
     };
 
     CliRunner();
-    ~CliRunner(); // running: stopAndWait(destructorWaitMs()), then Detach
+    ~CliRunner(); // running: abandon(destructorWaitMs())
 
-    // The destructor's wait (15 s). setDestructorWaitMs is for tests only.
-    static constexpr int kDefaultDestructorWaitMs = 15000;
+    // The destructor's wait (2 s). setDestructorWaitMs is for tests only.
+    static constexpr int kDefaultDestructorWaitMs = 2000;
     int destructorWaitMs() const { return destructorWaitMs_; }
     void setDestructorWaitMs(int ms) { destructorWaitMs_ = ms; }
 
@@ -50,9 +50,11 @@ public:
     // (text lines: onText), each stderr line through cg::parseStderrLine to onStderr, in order.
     bool start(const std::vector<std::string>& argv, Callbacks cb, std::string* error);
     bool running() const { return process_ != nullptr; }
-    void terminate();                // the stop line on the child's stdin, then EOF; once per run
-    void kill();                     // SIGKILL (Linux) / TerminateProcess (Windows)
-    bool stopAndWait(int timeoutMs); // terminate(), then drain and poll; true = the process ended
+    void terminate(); // the stop line on the child's stdin, then EOF; once per run
+    void kill();      // SIGKILL (Linux) / TerminateProcess (Windows)
+    // terminate(), then poll for the child's end every 50 ms without dispatching any event, at most waitMs;
+    // a child still running is killed. Then the process is detached (wx reaps it later); no callback runs.
+    void abandon(int waitMs);
 
     // Grace between the stop line and the kill (10 s). setStopGraceMs is for tests only.
     static constexpr int kDefaultStopGraceMs = 10000;
@@ -68,6 +70,7 @@ private:
     void drain();
     void graceCheck();
     bool childReaped() const;
+    bool childExited() const; // ended: a zombie counts, unlike childReaped
     void endRun(int raw);
     void finish(int exitCode);
     void onStdoutLine(std::string_view line);
@@ -80,7 +83,7 @@ private:
     Callbacks cb_;
     cg::LineSplitter outSplit_, errSplit_;
     bool terminated_ = false;
-    bool stopped_ = false; // terminate() / kill() / stopAndWait ran for this run (the exit log line)
+    bool stopped_ = false; // terminate() / kill() / abandon ran for this run (the exit log line)
     bool draining_ = false;
     std::string proxy_; // the --proxy value of the last start: redacted in the debug copies of CLI lines
     int destructorWaitMs_ = kDefaultDestructorWaitMs;
@@ -113,8 +116,8 @@ public:
     // done runs once, from the child's end or the time limit (the child is killed then). A check() while one
     // runs cancels the running one first (its done is not called).
     void check(const std::string& program, const cg::Settings& cliSettings, Done done);
-    // done is not called; the child is killed. Destroying the runner waits for the child to be reaped in a
-    // nested event loop (milliseconds after SIGKILL).
+    // done is not called; the child is killed. Destroying the runner polls briefly for the child's end
+    // (milliseconds after SIGKILL) without dispatching events.
     void cancel();
     // False after a timeout, although the killed child may live until it is reaped.
     bool running() const { return done_ != nullptr; }

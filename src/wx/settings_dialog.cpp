@@ -255,7 +255,9 @@ SettingsDialog::~SettingsDialog() {
     closing_ = true;
     delete question_.get(); // its callback holds this dialog; immediate, not Destroy()
     checkTimer_.Stop();
-    runner_.reset(); // may pump events; its callbacks see closing_
+    if (runner_)
+        runner_->setDestructorWaitMs(0); // a hung sources run does not survive the window; no waiting
+    runner_.reset();
     look_.unsubscribe(lookToken_);
 }
 
