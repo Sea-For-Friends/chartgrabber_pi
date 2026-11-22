@@ -76,6 +76,7 @@ wxString sourceLimitText(const wxString& name, const wxString& scale);
 // The CLI texts of the host system; `os` selects the Windows texts, tested on Linux.
 wxString cliNotFoundText(cg::Os os = cg::kHostOs);
 wxString cliTooOldText(cg::Os os = cg::kHostOs);
+wxString cliNoAnswerText();
 wxString noSourcesText();
 
 // Settings status lines. `version` may be empty; `line` is the last error line (Fails).

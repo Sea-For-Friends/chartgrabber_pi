@@ -88,6 +88,30 @@ bool programExists(const std::string& program) {
     return cg::findOnPath(program, pathFromEnv()).has_value();
 }
 
+// Parses the version text of a finished probe, caches the answer under `key` (when there is one) and writes
+// the one log line. Shared by probeCli and CliProbe.
+std::optional<cg::CliVersion> settleProbe(const std::optional<ProbeKey>& key, long rc,
+                                          const std::string& out) {
+    const auto version = rc == 0 ? cg::parseVersionLine(out) : std::nullopt;
+    const auto supported = cg::supportedCli(version) ? version : std::nullopt;
+    if (key) {
+        g_probeCache[*key] = {supported, version ? versionText(version->number) : std::string()};
+    }
+    wxString line;
+    if (rc != 0 || out.empty()) {
+        line = wxString::Format("no version (exit %ld)", rc);
+    } else {
+        std::string_view first = std::string_view(out).substr(0, out.find('\n'));
+        std::size_t cut = std::min<std::size_t>(first.size(), 200);
+        while (cut > 0 && cut < first.size() && (static_cast<unsigned char>(first[cut]) & 0xC0) == 0x80) {
+            --cut; // never inside a UTF-8 sequence
+        }
+        line = cg::fromUtf8(first.substr(0, cut)).Trim();
+    }
+    cg::logLine(wxString::Format("tile program %s - %s", line, supported ? "supported" : "too old"));
+    return supported;
+}
+
 } // namespace
 
 CliRunner::CliRunner() : timer_(this) {
@@ -389,10 +413,14 @@ std::string CliRunner::redacted(std::string_view line) const {
 void CliRunner::onStdoutLine(std::string_view line) {
     if (cg::pluginLogDebug())
         cg::logDebug("cli out: " + cg::fromUtf8(redacted(line)));
-    if (!cb_.onRecord)
+    if (!cb_.onRecord && !cb_.onText)
         return;
-    if (const std::optional<cg::StdoutRecord> rec = cg::parseStdoutLine(line)) // text lines: nullopt
-        cg::guarded("runner record callback", [&] { cb_.onRecord(*rec); });
+    if (const std::optional<cg::StdoutRecord> rec = cg::parseStdoutLine(line)) { // text lines: nullopt
+        if (cb_.onRecord)
+            cg::guarded("runner record callback", [&] { cb_.onRecord(*rec); });
+    } else if (cb_.onText) {
+        cg::guarded("runner text callback", [&] { cb_.onText(line); });
+    }
 }
 
 void CliRunner::onStderrLine(std::string_view line) {
@@ -448,24 +476,7 @@ std::optional<cg::CliVersion> probeCli(const std::string& program, const cg::Set
             out.append(buf, s->LastRead());
         }
     }
-    const auto version = rc == 0 ? cg::parseVersionLine(out) : std::nullopt;
-    const auto supported = cg::supportedCli(version) ? version : std::nullopt;
-    if (key) {
-        g_probeCache[*key] = {supported, version ? versionText(version->number) : std::string()};
-    }
-    wxString line;
-    if (rc != 0 || out.empty()) {
-        line = wxString::Format("no version (exit %ld)", rc);
-    } else {
-        std::string_view first = std::string_view(out).substr(0, out.find('\n'));
-        std::size_t cut = std::min<std::size_t>(first.size(), 200);
-        while (cut > 0 && cut < first.size() && (static_cast<unsigned char>(first[cut]) & 0xC0) == 0x80) {
-            --cut; // never inside a UTF-8 sequence
-        }
-        line = cg::fromUtf8(first.substr(0, cut)).Trim();
-    }
-    cg::logLine(wxString::Format("tile program %s - %s", line, supported ? "supported" : "too old"));
-    return supported;
+    return settleProbe(key, rc, out);
 }
 
 std::string probedCliVersion(const std::string& program) {
@@ -513,4 +524,77 @@ std::optional<std::string> resolveCli(const cg::Settings& s, std::string* why,
         return found;
     }
     return fail(cliNotFoundText());
+}
+
+CliProbe::CliProbe() : timer_(this) {
+    Bind(wxEVT_TIMER, &CliProbe::onTimeout, this);
+}
+
+CliProbe::~CliProbe() {
+    cancel();
+}
+
+void CliProbe::cancel() {
+    timer_.Stop();
+    done_ = nullptr;
+    if (runner_ && runner_->running()) { // an idle runner stays: cancel may run inside its exit callback
+        runner_->kill();
+        runner_.reset();
+    }
+}
+
+void CliProbe::check(const std::string& program, const cg::Settings& cliSettings, Done done) {
+    cancel();
+    key_ = probeKey(program);
+    if (key_) {
+        if (const auto it = g_probeCache.find(*key_); it != g_probeCache.end()) {
+            done(it->second.supported ? Result::Supported : Result::TooOld);
+            return;
+        }
+    }
+    line_.clear();
+    haveLine_ = false;
+    done_ = std::move(done);
+    if (!runner_)
+        runner_ = std::make_unique<CliRunner>();
+    CliRunner::Callbacks cb;
+    cb.onText = [this](std::string_view line) {
+        if (!haveLine_) {
+            haveLine_ = true;
+            line_ = std::string(line);
+        }
+    };
+    cb.onExit = [this](int code, bool) { onExit(code); };
+    std::string error;
+    if (!runner_->start(cg::cliCommand(program, cg::versionArguments(cliSettings), false), std::move(cb),
+                        &error)) {
+        const bool supported = static_cast<bool>(settleProbe(key_, -1, std::string()));
+        Done d = std::move(done_);
+        done_ = nullptr;
+        d(supported ? Result::Supported : Result::TooOld);
+        return;
+    }
+    timer_.StartOnce(timeoutMs_);
+}
+
+void CliProbe::onExit(int exitCode) {
+    if (!done_) // cancelled or timed out: the child's end is of no interest
+        return;
+    timer_.Stop();
+    const bool supported =
+        static_cast<bool>(settleProbe(key_, exitCode, exitCode == 0 ? line_ : std::string()));
+    Done d = std::move(done_);
+    done_ = nullptr;
+    d(supported ? Result::Supported : Result::TooOld);
+}
+
+void CliProbe::onTimeout(wxTimerEvent&) {
+    if (!done_)
+        return;
+    if (runner_)
+        runner_->kill();
+    cg::logLine("tile program did not answer in 10 s; stopped");
+    Done d = std::move(done_);
+    done_ = nullptr;
+    d(Result::NoAnswer);
 }

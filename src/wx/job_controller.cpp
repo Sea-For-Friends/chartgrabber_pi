@@ -261,6 +261,11 @@ JobController::~JobController() {
     onChartsChanged = nullptr;
     onBusyChanged = nullptr;
     onPreferences = nullptr;
+    if (phase_ ==
+        Phase::Checking) { // a new chart stays Running on disk; the next start recovers it as Interrupted
+        probe_.cancel();
+        phase_ = Phase::Idle;
+    }
     onChartListUpdated = nullptr;
     runner_.reset();             // stop and wait up to 15 s; callbacks still arrive and only record
     if (phase_ != Phase::Idle) { // no exit arrived (detached, or a retry wait): the record says so
@@ -469,44 +474,57 @@ void JobController::start(cg::ChartRecord record, cg::RunKind kind, bool overwri
             return;
         }
         const cg::Settings cliSettings = config_.cliSettings(settings_);
-        if (!probeCli(*cli, cliSettings)) {
-            startFailed({}, cliTooOldText());
-            return;
-        }
-        // The plugin's own cache root: created here so the CLI and the disk check find it; failure only
-        // logged.
-        if (kind != cg::RunKind::BuildFromSaved &&
-            !wxFileName::Mkdir(cg::fromUtf8(cliSettings.cacheDir), wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL))
-            cg::logLine(wxString::Format("cannot create %s", cg::fromUtf8(cliSettings.cacheDir)));
-        argv_ = cg::cliCommand(
-            *cli, cg::runArguments(iniPath, kind, overwrite, cliSettings, record_.updateBefore), true);
+        setPhase(Phase::Checking);
+        probe_.check(
+            *cli, cliSettings, [this, cli = *cli, cliSettings, iniPath, kind, overwrite](CliProbe::Result r) {
+                cg::guarded("job probe", [&] {
+                    if (r == CliProbe::Result::Supported) {
+                        continueStart(cli, cliSettings, iniPath, kind, overwrite);
+                        return;
+                    }
+                    setPhase(Phase::Idle);
+                    startFailed({}, r == CliProbe::Result::TooOld ? cliTooOldText() : cliNoAnswerText());
+                });
+            });
+    });
+}
+
+// What follows a supported version check: the cache root, the command line, then the child.
+void JobController::continueStart(const std::string& cli, const cg::Settings& cliSettings,
+                                  const std::string& iniPath, cg::RunKind kind, bool overwrite) {
+    // The plugin's own cache root: created here so the CLI and the disk check find it; failure only
+    // logged.
+    if (kind != cg::RunKind::BuildFromSaved &&
+        !wxFileName::Mkdir(cg::fromUtf8(cliSettings.cacheDir), wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL))
+        cg::logLine(wxString::Format("cannot create %s", cg::fromUtf8(cliSettings.cacheDir)));
+    argv_ = cg::cliCommand(cli, cg::runArguments(iniPath, kind, overwrite, cliSettings, record_.updateBefore),
+                           true);
 #ifndef NDEBUG
-        if (const char* extra = std::getenv("CG_EXTRA_ARGS")) { // debug builds only: split on ASCII spaces
-            std::string part;
-            for (const char* c = extra;; ++c) {
-                if (*c == ' ' || *c == '\0') {
-                    if (!part.empty())
-                        argv_.push_back(part);
-                    part.clear();
-                    if (*c == '\0')
-                        break;
-                } else {
-                    part += *c;
-                }
+    if (const char* extra = std::getenv("CG_EXTRA_ARGS")) { // debug builds only: split on ASCII spaces
+        std::string part;
+        for (const char* c = extra;; ++c) {
+            if (*c == ' ' || *c == '\0') {
+                if (!part.empty())
+                    argv_.push_back(part);
+                part.clear();
+                if (*c == '\0')
+                    break;
+            } else {
+                part += *c;
             }
         }
+    }
 #endif
-        record_.state = cg::ChartState::Running;
-        saveRecord();
-        setPhase(Phase::Running);
-        const std::string& first = record_.sourceGuid.empty() ? record_.overlayGuid : record_.sourceGuid;
-        strip().showProgress(
-            phaseLine(kind != cg::RunKind::BuildFromSaved ? "download" : "export", sourceLabel(first)), -1,
-            stopButtonText());
-        strip().setDetails(detailsText());
-        tick_.Start(1000);
-        beginRun();
-    });
+    record_.state = cg::ChartState::Running;
+    saveRecord();
+    setPhase(Phase::Running);
+    const std::string& first = record_.sourceGuid.empty() ? record_.overlayGuid : record_.sourceGuid;
+    strip().showProgress(
+        phaseLine(kind != cg::RunKind::BuildFromSaved ? "download" : "export", sourceLabel(first)), -1,
+        stopButtonText());
+    strip().setDetails(detailsText());
+    tick_.Start(1000);
+    beginRun();
 }
 
 // Starts (or restarts, after a retry wait) the child with argv_; false = it did not start (StartFailed
@@ -658,6 +676,15 @@ void JobController::stop() {
         if (closing_)
             return;
         switch (phase_) {
+        case Phase::Checking:
+            probe_.cancel();
+            if (newChart_) { // the caller saved it as Running; any other record is still as it was
+                record_.state = cg::ChartState::Interrupted;
+                saveRecord();
+            }
+            setPhase(Phase::Idle);
+            batchNext(BatchEnd::NotStarted, true);
+            break;
         case Phase::Running:
             userStopped_ = true;
             requestTerminate();

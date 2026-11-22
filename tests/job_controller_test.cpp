@@ -40,7 +40,9 @@
 #include <wx/timer.h>
 
 #include <algorithm>
+#include <cerrno>
 #include <chrono>
+#include <csignal>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -351,6 +353,34 @@ protected:
         chmod(path.c_str(), 0755);
         setVersion(versionLine, folder);
         return path;
+    }
+    // A stand-in whose `--version` writes its pid to `pid` and then waits for the file `release` before it
+    // answers (a slow program); without `release` it never answers.
+    std::string slowStandIn(const std::string& folder) {
+        std::string text = kScript;
+        const std::string counted = "  echo probe >> \"$d0/probes\"\n";
+        const auto at = text.find(counted);
+        EXPECT_NE(at, std::string::npos);
+        text.insert(at + counted.size(), "  echo $$ > \"$d0/pid.tmp\"; mv \"$d0/pid.tmp\" \"$d0/pid\"\n"
+                                         "  while [ ! -f \"$d0/release\" ]; do sleep 0.05; done\n");
+        const std::string path = (root_ / folder / "fake-cli").string();
+        spit(path, text);
+        chmod(path.c_str(), 0755);
+        return path;
+    }
+    void release(const std::string& folder) { spit(root_ / folder / "release", "go\n"); }
+    // The pid the slow program's probe wrote; -1 when it never did.
+    int slowPid(const std::string& folder) {
+        const fs::path file = root_ / folder / "pid";
+        if (!runUntil([&] { return fs::exists(file); }))
+            return -1;
+        int pid = -1;
+        std::ifstream(file) >> pid;
+        return pid;
+    }
+    // True once the process is gone and reaped (a zombie still answers kill(pid, 0)).
+    bool waitGone(int pid) {
+        return runUntil([&] { return ::kill(pid, 0) != 0 && errno == ESRCH; }, 3000);
     }
     int probes(const std::string& folder = kName) const {
         std::istringstream in(slurp(root_ / folder / "probes"));
@@ -1410,6 +1440,7 @@ TEST_F(JobTest, EmptyCliPathUsesTheDefaultPathSeam) {
     setSettings([](cg::Settings& s) { s.cliPath.clear(); });
     auto r = makeRecord("20261015-120701");
     start(r);
+    ASSERT_TRUE(runUntil([&] { return runs(r.id) == 1; })) << "the program of the default list ran the job";
     EXPECT_EQ(probes("default seam"), 1);
     EXPECT_EQ(probes(), 0) << "the fixture's own stand-in is not the one used";
     EXPECT_NE(stripText(), "");
@@ -1588,8 +1619,8 @@ TEST_F(JobTest, TheChildGetsLcAllAndTheTsvArgumentsAndStopStillEndsIt) {
     auto r = makeRecord("20261015-120000");
     scenario(r.id, 1, "", progressDownload(kBase, 13, 412, 1300, 9400000, 111), 0, "wait");
     start(r);
-    EXPECT_TRUE(fs::is_directory(defaultCache())) << "created before the child starts";
     ASSERT_TRUE(waitTextStarts(kSource + ", Coastal")) << stripText(); // the trap is set by then
+    EXPECT_TRUE(fs::is_directory(defaultCache())) << "created before the child starts";
     EXPECT_EQ(lcAll(r.id, 1), "C.UTF-8");
     EXPECT_EQ(argsOf(r.id, 1),
               (std::vector<std::string>{"run", "--job", iniOf(r.id), "--format=tsv", "--progress=lines",
@@ -1859,7 +1890,7 @@ TEST_F(JobTest, ATooOldProgramStartsNoChildAndKeepsTheRecordState) {
         busyCalls_.clear();
         auto fresh = makeRecord(std::string("20261015-12060") + std::to_string(i));
         start(fresh);
-        EXPECT_FALSE(jc().busy());
+        ASSERT_TRUE(waitIdle());
         EXPECT_EQ(stripText(),
                   "Chart Grabber CLI is too old. Install the current chart-grabber-cli package.");
         EXPECT_EQ(buttons(), (std::vector<std::string>{"Preferences...", "Close"}));
@@ -1868,7 +1899,7 @@ TEST_F(JobTest, ATooOldProgramStartsNoChildAndKeepsTheRecordState) {
         EXPECT_FALSE(fs::exists(jobDir(fresh.id) / "args.1"));
         EXPECT_EQ(detailsText(), "");
         EXPECT_EQ(probes(folder), 1) << "only the probe ran";
-        EXPECT_TRUE(busyCalls_.empty());
+        EXPECT_EQ(busyCalls_, (std::vector<bool>{true, false})) << "busy while the version was checked";
         EXPECT_FALSE(fs::exists(defaultCache())) << "no cache folder for a job that does not start";
         ASSERT_TRUE(click("Preferences..."));
         EXPECT_EQ(prefs_, i);
@@ -1882,8 +1913,160 @@ TEST_F(JobTest, ATooOldProgramStartsNoChildAndKeepsTheRecordState) {
                   "Chart Grabber CLI is too old. Install the current chart-grabber-cli package.");
         EXPECT_EQ(runs(kept.id), 0);
         EXPECT_EQ(probes(folder), 1) << "the second start uses the cached probe";
-        EXPECT_TRUE(busyCalls_.empty());
+        EXPECT_FALSE(jc().busy()) << "a cache hit is answered before start() returns";
+        EXPECT_EQ(busyCalls_, (std::vector<bool>{true, false, true, false}));
     }
+}
+
+// The version check does not block: while a slow program is asked, busy() is true, there is no strip and no
+// cache folder yet, a second start is refused and the loop keeps running; when the answer comes the job runs.
+TEST_F(JobTest, ASlowVersionCheckKeepsTheControllerBusyRefusesASecondStartAndThenRunsTheJob) {
+    const std::string slow = slowStandIn("slow probe");
+    setSettings([&](cg::Settings& s) { s.cliPath = slow; });
+    LogCollector log;
+    auto r = makeRecord("20261122-100000");
+    scenario(r.id, 1, "", progressDownload(kBase, 13, 412, 1300, 9400000, 111), 0, "wait");
+    start(r);
+    EXPECT_TRUE(jc().busy()) << "start() returned while the version is still being checked";
+    EXPECT_EQ(busyCalls_, std::vector<bool>{true});
+    ASSERT_GT(slowPid("slow probe"), 0) << "the program was started for the check";
+    EXPECT_TRUE(!strip() || !strip()->IsShown()) << "no strip while the version is checked";
+    EXPECT_FALSE(fs::exists(defaultCache())) << "the job did not start yet";
+    EXPECT_EQ(runs(r.id), 0);
+    ASSERT_TRUE(jc().live().has_value());
+    EXPECT_EQ(jc().live()->chartId, r.id);
+
+    auto other = makeRecord("20261122-100001");
+    start(other);
+    EXPECT_NE(std::find(log.messages.begin(), log.messages.end(), "ChartGrabber: job already running"),
+              log.messages.end());
+    EXPECT_EQ(jc().live()->chartId, r.id) << "the refused start changed nothing";
+
+    runFor(300); // the loop runs during the wait
+    EXPECT_TRUE(jc().busy());
+    EXPECT_EQ(runs(r.id), 0);
+    release("slow probe");
+    ASSERT_TRUE(waitTextStarts(kSource + ", Coastal")) << stripText();
+    EXPECT_EQ(probes("slow probe"), 1);
+    EXPECT_EQ(runs(other.id), 0);
+    EXPECT_TRUE(fs::is_directory(defaultCache()));
+    EXPECT_EQ(busyCalls_, std::vector<bool>{true}) << "busy did not flicker between the check and the run";
+    jc().stop();
+    ASSERT_TRUE(waitIdle(10000));
+    EXPECT_EQ(chart(r.id).state, cg::ChartState::Interrupted);
+}
+
+// A program that does not answer: after the limit the job ends with the "did not answer" text, no job child
+// ran, a new chart is Interrupted and another record keeps its state, nothing is cached (the next start
+// asks the program again).
+TEST_F(JobTest, AProgramThatDoesNotAnswerEndsTheStartWithTheNoAnswerTextAndIsNotCached) {
+    const std::string slow = slowStandIn("mute");
+    setSettings([&](cg::Settings& s) { s.cliPath = slow; });
+    jc().probe_.setTimeoutMs(300);
+    LogCollector log;
+    const std::string text = "Chart Grabber CLI did not answer within 10 seconds. Try again. If it happens "
+                             "again, send the log file with a problem report.";
+    auto fresh = makeRecord("20261122-100100");
+    start(fresh);
+    EXPECT_TRUE(jc().busy());
+    const int pid = slowPid("mute");
+    ASSERT_GT(pid, 0);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(stripText(), text);
+    EXPECT_EQ(buttons(), (std::vector<std::string>{"Preferences...", "Close"}));
+    EXPECT_EQ(chart(fresh.id).state, cg::ChartState::Interrupted);
+    EXPECT_EQ(runs(fresh.id), 0);
+    EXPECT_FALSE(fs::exists(defaultCache())) << "no cache folder for a job that does not start";
+    EXPECT_EQ(busyCalls_, (std::vector<bool>{true, false}));
+    EXPECT_NE(std::find(log.messages.begin(), log.messages.end(),
+                        "ChartGrabber: tile program did not answer in 10 s; stopped"),
+              log.messages.end());
+    EXPECT_TRUE(waitGone(pid)) << "the hung program was killed";
+
+    auto kept = makeRecord("20261122-100101");
+    kept.state = cg::ChartState::Missing;
+    store_->saveChart(kept);
+    fs::remove(root_ / "mute" / "pid");
+    start(kept);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(probes("mute"), 2) << "a program that did not answer is asked again";
+    EXPECT_EQ(stripText(), text);
+    EXPECT_EQ(chart(kept.id).state, cg::ChartState::Missing);
+    EXPECT_EQ(runs(kept.id), 0);
+    EXPECT_TRUE(waitGone(slowPid("mute")));
+
+    release("mute");
+    auto next = makeRecord("20261122-100102");
+    scenario(next.id, 1, "", "", 0);
+    start(next);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(probes("mute"), 3);
+    EXPECT_EQ(runs(next.id), 1) << "the answer arrived, the job ran";
+}
+
+// Stop while the version is checked: the check's child is killed, no job child, no strip, a new chart is
+// Interrupted and any other record keeps its state and its progress; the controller is usable again.
+TEST_F(JobTest, StopDuringTheVersionCheckKillsTheProbeKeepsTheRecordAndStartsNoJob) {
+    const std::string slow = slowStandIn("stoppable");
+    setSettings([&](cg::Settings& s) { s.cliPath = slow; });
+    auto kept = makeRecord("20261122-100200");
+    kept.state = cg::ChartState::Interrupted;
+    kept.done = 600;
+    store_->saveChart(kept);
+    start(kept, cg::RunKind::Download, true);
+    const int pid = slowPid("stoppable");
+    ASSERT_GT(pid, 0);
+    ASSERT_TRUE(jc().busy());
+    jc().stop();
+    EXPECT_FALSE(jc().busy());
+    EXPECT_EQ(busyCalls_, (std::vector<bool>{true, false}));
+    EXPECT_TRUE(!strip() || !strip()->IsShown()) << "no strip for a stop before the job started";
+    EXPECT_EQ(chart(kept.id).state, cg::ChartState::Interrupted);
+    EXPECT_EQ(chart(kept.id).done, 600);
+    EXPECT_TRUE(waitGone(pid)) << "the probe's child is killed";
+    release("stoppable");
+    runFor(300);
+    EXPECT_EQ(runs(kept.id), 0) << "no job child, not even after the late answer";
+    EXPECT_FALSE(jc().busy());
+    EXPECT_FALSE(fs::exists(defaultCache()));
+
+    fs::remove(root_ / "stoppable" / "pid");
+    fs::remove(root_ / "stoppable" / "release");
+    auto fresh = makeRecord("20261122-100201");
+    start(fresh);
+    ASSERT_GT(slowPid("stoppable"), 0);
+    jc().stop();
+    EXPECT_FALSE(jc().busy());
+    EXPECT_EQ(chart(fresh.id).state, cg::ChartState::Interrupted) << "a new chart is saved as Interrupted";
+    EXPECT_EQ(runs(fresh.id), 0);
+
+    release("stoppable");
+    fs::remove(root_ / "stoppable" / "pid");
+    auto again = makeRecord("20261122-100202");
+    scenario(again.id, 1, "", "", 0);
+    start(again);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_EQ(runs(again.id), 1) << "a stopped check leaves the controller ready";
+}
+
+// Closing OpenCPN (the controller is destroyed) during the version check: the probe's child is killed, no job
+// child starts and a record that is not new keeps its state.
+TEST_F(JobTest, DestroyingTheControllerDuringTheVersionCheckKillsTheProbeAndKeepsTheRecord) {
+    const std::string slow = slowStandIn("closing");
+    setSettings([&](cg::Settings& s) { s.cliPath = slow; });
+    auto kept = makeRecord("20261122-100300");
+    kept.state = cg::ChartState::Missing;
+    store_->saveChart(kept);
+    start(kept);
+    const int pid = slowPid("closing");
+    ASSERT_GT(pid, 0);
+    ASSERT_TRUE(jc().busy());
+    jc_.reset();
+    EXPECT_TRUE(waitGone(pid));
+    release("closing");
+    runFor(300);
+    EXPECT_EQ(runs(kept.id), 0);
+    EXPECT_EQ(chart(kept.id).state, cg::ChartState::Missing);
 }
 
 // ------------------------------------------------------------------------------------- the bar
@@ -2551,6 +2734,8 @@ TEST_F(WeatherTest, AWeatherChartResumesAsADownloadFromZero) {
     store_->saveChart(w);
     scenario(w.id, 1, "", "", 0, "wait");
     start(w, JobController::resumeKind(w));
+    ASSERT_TRUE(runUntil([&] { return chart(w.id).state == cg::ChartState::Running; }))
+        << "the version check ends first";
     EXPECT_EQ(jc().live()->donePermille, 0);
     EXPECT_EQ(chart(w.id).done, 0);
     jc().stop();
@@ -3226,6 +3411,28 @@ TEST_F(BatchTest, StopDuringTheSecondChartEndsTheBatchAfterOneRescanForTheFirst)
     EXPECT_EQ(stripText(), "Weather charts: 1 updated, 1 failed (Weather 2), 1 not updated.");
     EXPECT_NE(
         std::find(log.messages.begin(), log.messages.end(), "ChartGrabber: 1 weather charts not started"),
+        log.messages.end());
+}
+
+// Stop while the version of the first chart is checked ends the batch: nothing started, nothing changed.
+TEST_F(BatchTest, StopDuringTheVersionCheckOfTheFirstChartEndsTheBatchWithNothingStarted) {
+    const std::string slow = slowStandIn("batch slow");
+    setSettings([&](cg::Settings& s) { s.cliPath = slow; });
+    std::vector<cg::ChartRecord> v{wchart(1), wchart(2)};
+    const auto before = chart(v[0].id).state;
+    LogCollector log;
+    batch(v);
+    ASSERT_GT(slowPid("batch slow"), 0);
+    ASSERT_TRUE(jc().busy());
+    jc().stop();
+    EXPECT_FALSE(jc().busy());
+    EXPECT_EQ(runs(v[0].id), 0);
+    EXPECT_EQ(runs(v[1].id), 0);
+    EXPECT_EQ(chart(v[0].id).state, before);
+    EXPECT_EQ(stripText(), "Weather charts: 2 not updated.");
+    EXPECT_EQ(buttons(), (std::vector<std::string>{"Close"}));
+    EXPECT_NE(
+        std::find(log.messages.begin(), log.messages.end(), "ChartGrabber: 2 weather charts not started"),
         log.messages.end());
 }
 

@@ -416,6 +416,12 @@ wxString cliTooOldText(cg::Os os) {
                             packageName());
 }
 
+wxString cliNoAnswerText() {
+    return _(
+        "Chart Grabber CLI did not answer within 10 seconds. Try again. If it happens again, send the log "
+        "file with a problem report.");
+}
+
 wxString noSourcesText() {
     return _("No usable chart source was found. Reinstall Chart Grabber, or check the files in your chart "
              "sources folder.");
