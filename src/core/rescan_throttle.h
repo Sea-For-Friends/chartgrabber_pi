@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // When OpenCPN's chart list may be updated: on OpenCPN 5.14+ every update re-parses all charts and a second
 // one while the first runs can leave the list half built, so requests are merged into at most one call per
-// 30 s and none is made while OpenCPN's Options dialog is shown. No wx; std only.
+// 30 s and none is made while OpenCPN's Options dialog is shown; after such a hold the 30 s gap starts when
+// the dialog is first seen hidden. No wx; std only.
 #pragma once
 
 #include <cstdint>
@@ -29,8 +30,11 @@ public:
 
 private:
     bool gapOver(std::int64_t nowMs) const; // a clock step backwards counts as over
+    void seeDialog(std::int64_t nowMs,
+                   bool optionsShown); // after a hold the gap starts at the first hidden look
     std::optional<std::int64_t> last_;
     bool pending_ = false;
+    bool held_ = false; // the dialog was seen shown while a request waited
 };
 
 } // namespace cg

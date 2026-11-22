@@ -250,7 +250,9 @@ JobController::~JobController() {
     tick_.Stop();
     staleTimer_.Stop();
     rescanTimer_.Stop();
-    if (throttle_.pending()) { // an async update while OpenCPN closes is unsafe: the next start makes it
+    // an async update while OpenCPN closes is unsafe: the next start makes it (also one carried over
+    // from the last start that the 120 s tick has not made yet)
+    if (throttle_.pending() || rescanLeft_) {
         config_.setRescanPending(true);
         cg::logLine("chart list update left for the next start");
     }

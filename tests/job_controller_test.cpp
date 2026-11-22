@@ -3577,6 +3577,11 @@ TEST_F(RescanTest, P0277AJobEndWhileOptionsIsShownCallsNothingUntilItIsHidden) {
     EXPECT_EQ(jc().rescanTimer_.GetInterval(), 2000);
 
     options.hide();
+    fireRescanTimer(); // first seen hidden: the 30 s gap starts
+    EXPECT_TRUE(ocpn_fake::updates.empty());
+    ASSERT_TRUE(jc().rescanTimer_.IsRunning());
+    EXPECT_EQ(jc().rescanTimer_.GetInterval(), 30000);
+    clock_.advance(30000);
     fireRescanTimer();
     ASSERT_EQ(ocpn_fake::updates.size(), 1u);
     EXPECT_EQ(dirs(0), (std::vector<std::string>{dir}));
@@ -3598,8 +3603,9 @@ TEST_F(RescanTest, P0277AHiddenOptionsDialogDoesNotHoldTheUpdate) {
     EXPECT_EQ(ocpn_fake::updates.size(), 1u);
 }
 
-// The hold does not skip the 30 s gap: a call 5 s ago, Options opens and closes, the call waits for the rest.
-TEST_F(RescanTest, P0277TheCallAfterTheDialogStillWaitsForTheThirtySecondGap) {
+// After a hold the 30 s gap starts when the dialog is first seen hidden: a call 5 s ago, Options opens and
+// closes, the call comes 30 s after the dialog was seen hidden.
+TEST_F(RescanTest, P0277TheGapStartsWhenTheDialogIsFirstSeenHidden) {
     jc().requestRescan();
     ASSERT_EQ(ocpn_fake::updates.size(), 1u);
     clock_.advance(5000);
@@ -3609,8 +3615,11 @@ TEST_F(RescanTest, P0277TheCallAfterTheDialogStillWaitsForTheThirtySecondGap) {
     fireRescanTimer();
     EXPECT_EQ(ocpn_fake::updates.size(), 1u);
     ASSERT_TRUE(jc().rescanTimer_.IsRunning());
-    EXPECT_EQ(jc().rescanTimer_.GetInterval(), 25000);
-    clock_.advance(25000);
+    EXPECT_EQ(jc().rescanTimer_.GetInterval(), 30000);
+    clock_.advance(29000);
+    fireRescanTimer();
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u);
+    clock_.advance(1000);
     fireRescanTimer();
     EXPECT_EQ(ocpn_fake::updates.size(), 2u);
 }
@@ -3643,6 +3652,16 @@ TEST_F(RescanTest, P0277AnUpdateWaitingAtShutdownIsLeftForTheNextStart) {
     EXPECT_EQ(dirs(1), (std::vector<std::string>{"/x"}));
     jc().onStaleTimer(ev); // once
     EXPECT_EQ(ocpn_fake::updates.size(), 2u);
+}
+
+// An update left at the last shutdown and a shutdown before the 120 s tick: the flag stays set.
+TEST_F(RescanTest, P0277AnUpdateLeftAtShutdownSurvivesAShutdownBeforeTheStaleTick) {
+    store_->setRescanPending(true);
+    jc().cleanupStaleAtStart();
+    EXPECT_FALSE(store_->rescanPending());
+    jc_.reset();
+    EXPECT_TRUE(store_->rescanPending());
+    EXPECT_TRUE(ocpn_fake::updates.empty());
 }
 
 // Nothing pending at shutdown: no flag, nothing at the next start.

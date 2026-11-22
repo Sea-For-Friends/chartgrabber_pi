@@ -47,28 +47,39 @@ TEST(P0277Throttle, TheGapIsThirtySecondsExactly) {
     EXPECT_EQ(t.request(kT0 + 60000, true, false), D::CallNow);
 }
 
-// With the Options dialog shown nothing is called, the poll is 2 s, and the pending call comes at the first
-// due after the dialog is hidden, not before the 30 s gap.
-TEST(P0277Throttle, WhileOptionsIsShownNothingIsCalledAndTheCallFollowsTheDialog) {
+// With the Options dialog shown nothing is called and the poll is 2 s; the 30 s gap starts when the dialog is
+// first seen hidden, however long the hold or the earlier call.
+TEST(P0277Throttle, WhileOptionsIsShownNothingIsCalledAndTheGapStartsWhenItIsSeenHidden) {
     RescanThrottle t;
     EXPECT_EQ(t.request(kT0, true, true), D::Wait) << "the very first request waits too";
     EXPECT_TRUE(t.pending());
     EXPECT_EQ(t.waitMs(kT0, true), 2000);
     EXPECT_EQ(t.due(kT0 + 2000, true, true), D::Wait);
     EXPECT_EQ(t.waitMs(kT0 + 2000, true), 2000);
-    EXPECT_EQ(t.due(kT0 + 4000, true, false), D::CallNow) << "hidden and no earlier call";
-    t.called(kT0 + 4000);
-
-    // a call 5 s ago, then Options opens and closes: the call waits for the rest of the gap
-    EXPECT_EQ(t.request(kT0 + 9000, true, true), D::Wait);
-    EXPECT_EQ(t.due(kT0 + 11000, true, false), D::Wait);
-    EXPECT_EQ(t.waitMs(kT0 + 11000, false), 23000);
+    EXPECT_EQ(t.due(kT0 + 4000, true, false), D::Wait) << "first seen hidden: the gap starts";
+    EXPECT_EQ(t.waitMs(kT0 + 4000, false), 30000);
+    EXPECT_EQ(t.due(kT0 + 33999, true, false), D::Wait);
     EXPECT_EQ(t.due(kT0 + 34000, true, false), D::CallNow);
-
-    // a long hold: gap over when the dialog closes: at once
     t.called(kT0 + 34000);
-    EXPECT_EQ(t.request(kT0 + 40000, true, true), D::Wait);
-    EXPECT_EQ(t.due(kT0 + 90000, true, false), D::CallNow);
+
+    // a long hold after an old call: the gap still starts at the first hidden look
+    EXPECT_EQ(t.request(kT0 + 100000, true, true), D::Wait);
+    EXPECT_EQ(t.due(kT0 + 190000, true, false), D::Wait);
+    EXPECT_EQ(t.waitMs(kT0 + 190000, false), 30000);
+    EXPECT_EQ(t.due(kT0 + 220000, true, false), D::CallNow);
+    t.called(kT0 + 220000);
+
+    // without a hold the gap is not restarted
+    EXPECT_EQ(t.request(kT0 + 260000, true, false), D::CallNow);
+}
+
+// The first hidden look can be a request: a request after the dialog closed also starts the gap.
+TEST(P0277Throttle, ARequestAfterTheHoldIsTheFirstHiddenLook) {
+    RescanThrottle t;
+    t.called(kT0);
+    EXPECT_EQ(t.request(kT0 + 100000, true, true), D::Wait);
+    EXPECT_EQ(t.request(kT0 + 110000, true, false), D::Wait);
+    EXPECT_EQ(t.waitMs(kT0 + 110000, false), 30000);
 }
 
 // On 5.10 / 5.12 (asyncDb false) every request calls at once, also right after a call, unless Options is
