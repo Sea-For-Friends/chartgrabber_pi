@@ -267,7 +267,7 @@ JobController::~JobController() {
         phase_ = Phase::Idle;
     }
     onChartListUpdated = nullptr;
-    runner_.reset();             // stop and wait up to 15 s; callbacks still arrive and only record
+    runner_.reset(); // stop, wait up to 2 s without events, kill, detach; no exit callback arrives
     if (phase_ != Phase::Idle) { // no exit arrived (detached, or a retry wait): the record says so
         record_.state = cg::ChartState::Interrupted;
         if (!lastError_.empty())
@@ -677,12 +677,14 @@ void JobController::stop() {
             return;
         switch (phase_) {
         case Phase::Checking:
+            // Idle before the cancel: nothing may run this case twice (a second click, the probe's own
+            // callback)
+            setPhase(Phase::Idle);
             probe_.cancel();
             if (newChart_) { // the caller saved it as Running; any other record is still as it was
                 record_.state = cg::ChartState::Interrupted;
                 saveRecord();
             }
-            setPhase(Phase::Idle);
             batchNext(BatchEnd::NotStarted, true);
             break;
         case Phase::Running:

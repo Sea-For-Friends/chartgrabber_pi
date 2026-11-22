@@ -159,7 +159,7 @@ bool ChartGrabberPi::DeInit() {
         }
         if (revive_)
             revive_->shutdown();
-        jobs_.reset(); // waits up to 15 s for the child, saves the record Interrupted
+        jobs_.reset(); // stop line, waits up to 2 s for the child (no events), saves the record Interrupted
         if (toolId_ != -1) {
             RemovePlugInTool(toolId_);
             toolId_ = -1;

@@ -9,7 +9,6 @@
 #include "wx_util.h"
 
 #include <wx/app.h>
-#include <wx/evtloop.h>
 #include <wx/intl.h>
 #include <wx/log.h>
 #include <wx/process.h>
@@ -26,6 +25,7 @@
 #include <map>
 #include <memory>
 #include <system_error>
+#include <thread>
 #include <tuple>
 #include <vector>
 
@@ -36,6 +36,8 @@
 #include <pthread.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#else
+#include <wx/msw/wrapwin.h>
 #endif
 
 namespace {
@@ -120,14 +122,8 @@ CliRunner::CliRunner() : timer_(this) {
 }
 
 CliRunner::~CliRunner() {
-    if (process_) {
-        stopAndWait(destructorWaitMs_);
-    }
-    if (process_) { // still alive: leave it running; wx deletes the process object when it ends
-        timer_.Stop();
-        process_->Detach();
-        process_ = nullptr;
-    }
+    if (process_)
+        abandon(destructorWaitMs_);
 }
 
 bool CliRunner::start(const std::vector<std::string>& argv, Callbacks cb, std::string* error) {
@@ -276,30 +272,33 @@ void CliRunner::kill() {
     }
 }
 
-bool CliRunner::stopAndWait(int timeoutMs) {
-    if (!process_) {
-        return true;
-    }
+// No event is dispatched here: OpenCPN's timers, paints and other plugins' handlers must not run inside
+// a destructor (quit, plugin disabled in the Options loop). A zombie counts as ended: wx reaps it from the
+// event loop later.
+void CliRunner::abandon(int waitMs) {
+    if (!process_)
+        return;
     terminate();
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
-    wxEventLoopBase* loop = wxEventLoopBase::GetActive();
-    if (!loop) { // the end of the process arrives as an event: without a loop it cannot be seen
-        return false;
+    cb_ = Callbacks();
+    const auto start = std::chrono::steady_clock::now();
+    const auto deadline = start + std::chrono::milliseconds(waitMs);
+    bool exited = childExited();
+    int pollMs =
+        2; // a just-killed child is a zombie within about a millisecond: poll short first, then 50 ms
+    while (!exited && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(pollMs));
+        pollMs = std::min(pollMs * 4, 50);
+        exited = childExited();
     }
-    while (process_) {
-        drain();
-        graceCheck();
-        // The end of the process arrives as an event: let the loop run for a short while (a console loop
-        // does not deliver it inside YieldFor).
-        loop->DispatchTimeout(20);
-        if (!process_) {
-            return true;
-        }
-        if (std::chrono::steady_clock::now() >= deadline) {
-            return false;
-        }
-    }
-    return true;
+    if (!exited)
+        kill();
+    const auto ms =
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
+    cg::logFile(wxString::Format("cli stop pid %ld: abandoned after %lld ms (%s)", pid_,
+                                 static_cast<long long>(ms.count()), exited ? "exited" : "killed"));
+    timer_.Stop();
+    process_->Detach();
+    process_ = nullptr;
 }
 
 void CliRunner::onTimer(wxTimerEvent&) {
@@ -312,6 +311,22 @@ void CliRunner::onTimer(wxTimerEvent&) {
         drain();
         graceCheck();
     });
+}
+
+// True when the child has ended, reaped by wx or not (a zombie).
+bool CliRunner::childExited() const {
+#ifdef __WINDOWS__
+    HANDLE h = OpenProcess(SYNCHRONIZE, FALSE, static_cast<DWORD>(pid_));
+    if (!h)
+        return true;
+    const bool done = WaitForSingleObject(h, 0) == WAIT_OBJECT_0;
+    CloseHandle(h);
+    return done;
+#else
+    siginfo_t info{};
+    const int rc = waitid(P_PID, static_cast<id_t>(pid_), &info, WEXITED | WNOHANG | WNOWAIT);
+    return (rc == 0 && info.si_pid == static_cast<pid_t>(pid_)) || (rc == -1 && errno == ECHILD);
+#endif
 }
 
 // True once wx has waited for the child (nothing left to wait for); always true on Windows.

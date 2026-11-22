@@ -1032,7 +1032,7 @@ protected:
     }
     void TearDown() override {
         if (store_) {
-            dlg_.reset(); // the runner's stopAndWait pumps the loop
+            dlg_.reset(); // the runner's destructor waits without events
             expectNoProcessesUnder((root_ / "stubs").string());
             activator_.reset();
             loop_.reset();
@@ -1421,6 +1421,23 @@ TEST_F(SettingsCheck, ClosingWhileACheckRunsLeavesNoChildAndNoCallback) {
     dlg_.reset(); // the 500 ms timer was pending
     runFor(700);
     EXPECT_EQ(stub_->argv().size(), 2u) << "no check after the dialog was gone";
+}
+
+// Proof 7a: a child that ignores the stop line is killed at once; the destructor does not wait for it.
+TEST_F(SettingsCheck, ClosingWhileAStubbornCheckRunsDoesNotWait) {
+    stub_->records(recs(1));
+    stub_->ignoreTerm(true);
+    stub_->hold(true);
+    openStub();
+    ASSERT_TRUE(runUntil([&] { return stub_->argv().size() == 1; }));
+    const auto start = std::chrono::steady_clock::now();
+    dlg_.reset();
+    const auto took = std::chrono::steady_clock::now() - start;
+    EXPECT_LT(took, std::chrono::milliseconds(200)) << "no waiting in the destructor";
+    EXPECT_TRUE(runUntil([&] { return processesUnder((root_ / "stubs").string()).empty(); }))
+        << "the child is killed";
+    stub_->hold(false);
+    stub_->ignoreTerm(false);
 }
 
 // Proof 7b: a scheme change re-applies Look to the open dialog and touches nothing after it is destroyed.

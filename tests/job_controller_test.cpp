@@ -55,6 +55,7 @@
 #include <sstream>
 #include <string>
 #include <sys/stat.h>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -1478,17 +1479,23 @@ TEST_F(JobTest, ExtraArgumentsAreAppendedInDebugBuilds) {
 
 // ---------------------------------------------------------------------------------------- shutdown, 8.6
 
-// Proof 6: the controller is destroyed while the child runs (DeInit). Events arriving during the wait
-// (a strip Stop, a new start, busy()) change nothing; whatever the exit (143 or a clean 0) the record on disk
-// says Interrupted with the last error and the planned files, nothing is registered, no strip is left.
-TEST_F(JobTest, DestroyedWhileRunningSavesInterruptedAndIgnoresEventsDuringTheWait) {
-    for (const char* mode : {"slowterm", "termzero"}) {
-        SCOPED_TRACE(mode);
+// Quit during a download: the destructor sends the stop line, waits at most 2 s WITHOUT running events (a
+// timer due during the wait has not fired when it returns), kills a child that ignores the line, saves the
+// record Interrupted and makes no strip, result or rescan request.
+TEST_F(JobTest, DestroyedWhileRunningWaitsWithoutEventsKillsAndSavesInterrupted) {
+    struct Row {
+        const char* mode;
+        const char* suffix;
+        long minMs, maxMs;
+    };
+    for (const Row& row :
+         {Row{"slowterm", "00", 0, 1500}, Row{"termzero", "01", 0, 1500}, Row{"ignore", "02", 1900, 2500}}) {
+        SCOPED_TRACE(row.mode);
         busyCalls_.clear();
         ocpn_fake::updates.clear();
-        auto r = makeRecord(std::string("20261015-1140") + (mode[0] == 's' ? "00" : "01"));
+        auto r = makeRecord(std::string("20261015-1140") + row.suffix);
         scenario(r.id, 1, written(kBase, "/charts/late.mbtiles", 4, 9),
-                 tsv({"phase", "fill", kBase}) + "error: disk is slow\n", 0, mode);
+                 tsv({"phase", "fill", kBase}) + "error: disk is slow\n", 0, row.mode);
         start(r);
         ASSERT_TRUE(waitTextStarts(kSource + ": checking the saved tiles"));
         runFor(100);
@@ -1505,9 +1512,13 @@ TEST_F(JobTest, DestroyedWhileRunningSavesInterruptedAndIgnoresEventsDuringTheWa
         timer.StartOnce(100);
         const std::size_t before = busyCalls_.size();
         const int changesBefore = changes_;
+        const auto t0 = Clock::now();
         jc_.reset();
+        const long tookMs = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - t0).count();
         timer.Stop();
-        EXPECT_TRUE(reentered);
+        EXPECT_GE(tookMs, row.minMs);
+        EXPECT_LT(tookMs, row.maxMs);
+        EXPECT_FALSE(reentered) << "an event was dispatched inside the destructor";
         EXPECT_EQ(runs("20261015-114999"), 0);
         EXPECT_EQ(runs(r.id), 1);
         const cg::ChartRecord c = chart(r.id);
@@ -1519,7 +1530,7 @@ TEST_F(JobTest, DestroyedWhileRunningSavesInterruptedAndIgnoresEventsDuringTheWa
         EXPECT_EQ(busyCalls_.size(), before); // the hooks were cleared first
         EXPECT_EQ(changes_, changesBefore);
         EXPECT_EQ(strip(), nullptr);
-        EXPECT_FALSE(fs::exists(jobDir("20261015-114999") / "chart.ini")); // start() was ignored
+        EXPECT_FALSE(fs::exists(jobDir("20261015-114999") / "chart.ini")); // start() never ran
     }
 }
 
@@ -2047,6 +2058,52 @@ TEST_F(JobTest, StopDuringTheVersionCheckKillsTheProbeKeepsTheRecordAndStartsNoJ
     start(again);
     ASSERT_TRUE(waitIdle());
     EXPECT_EQ(runs(again.id), 1) << "a stopped check leaves the controller ready";
+}
+
+// Stop during the version check runs no event: a 10 ms timer set before the call has not fired when stop()
+// returns (the probe's runner is abandoned, not waited for in a nested loop), and the child is gone.
+TEST_F(JobTest, StopDuringTheVersionCheckReturnsWithoutDispatchingEvents) {
+    const std::string slow = slowStandIn("nonested");
+    setSettings([&](cg::Settings& s) { s.cliPath = slow; });
+    auto fresh = makeRecord("20261122-100210");
+    start(fresh);
+    const int pid = slowPid("nonested");
+    ASSERT_GT(pid, 0);
+    bool fired = false;
+    wxEvtHandler handler;
+    wxTimer timer(&handler);
+    handler.Bind(wxEVT_TIMER, [&](wxTimerEvent&) { fired = true; });
+    timer.StartOnce(10);
+    std::this_thread::sleep_for(std::chrono::milliseconds(30)); // due when stop() runs
+    const auto t0 = Clock::now();
+    jc().stop();
+    EXPECT_LT(Clock::now() - t0, std::chrono::milliseconds(1500));
+    EXPECT_FALSE(fired) << "an event was dispatched inside stop()";
+    EXPECT_FALSE(jc().busy());
+    EXPECT_TRUE(waitGone(pid));
+    EXPECT_TRUE(fired) << "the timer was live";
+}
+
+// A second Stop that arrives while the first one still runs (here from the hook that the first one's record
+// save fires) does not save the record or end the batch again.
+TEST_F(JobTest, ASecondStopInsideTheFirstOneDuringTheVersionCheckSavesOnce) {
+    const std::string slow = slowStandIn("twice");
+    setSettings([&](cg::Settings& s) { s.cliPath = slow; });
+    auto fresh = makeRecord("20261122-100220");
+    start(fresh);
+    ASSERT_GT(slowPid("twice"), 0);
+    int stops = 0;
+    jc().onChartsChanged = [&] {
+        ++changes_;
+        if (++stops == 1)
+            jc().stop(); // the second click, inside the first one's save
+    };
+    const std::size_t busyBefore = busyCalls_.size();
+    jc().stop();
+    EXPECT_EQ(stops, 1) << "the record was saved once";
+    EXPECT_EQ(chart(fresh.id).state, cg::ChartState::Interrupted);
+    EXPECT_EQ(busyCalls_.size(), busyBefore + 1) << "busy went false once";
+    EXPECT_FALSE(jc().busy());
 }
 
 // Closing OpenCPN (the controller is destroyed) during the version check: the probe's child is killed, no job

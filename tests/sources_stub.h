@@ -77,6 +77,7 @@ public:
                "[ \"$1\" = --version ] && { echo run >> \"$d/probes.log\";"
                " k=0; while [ -f \"$d/hold-version\" ] && [ $k -lt 3000 ]; do sleep 0.02; k=$((k + 1)); done;"
                " cat \"$d/version\" 2>/dev/null || echo 'chart-grabber-cli 2026.10.9 (test)'; exit 0; }\n"
+               "[ -f \"$d/ignore-term\" ] && trap '' TERM\n"
                // `estimate` and `run` / `export` have their own files, so the sources log and the
                // sources tests stay as they were. Default: sources.
                "case \"$1\" in\n"
@@ -125,6 +126,13 @@ public:
     // While on, `--version` does not answer (the answer comes when it is turned off).
     void holdVersion(bool on) { holdFile("hold-version", on); }
     void exitWith(int code) { std::ofstream(dir_ / "exit", std::ios::trunc) << code; }
+    // While on, the stand-in ignores the stop line and SIGTERM: only SIGKILL ends it.
+    void ignoreTerm(bool on) {
+        if (on)
+            std::ofstream(dir_ / "ignore-term") << "x";
+        else
+            std::filesystem::remove(dir_ / "ignore-term");
+    }
     void hold(bool on) {
         if (on)
             std::ofstream(dir_ / "hold") << "x";

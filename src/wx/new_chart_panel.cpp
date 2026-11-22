@@ -573,7 +573,11 @@ NewChartPanel::~NewChartPanel() {
     estimateTimer_.Stop();
     sourcesProbe_.cancel();
     estimateProbe_.cancel();
-    sourcesRunner_.reset(); // may pump events up to 15 s; its callbacks only return (closing_)
+    if (sourcesRunner_)
+        sourcesRunner_->setDestructorWaitMs(0); // no waiting in a destructor: a child still running is killed
+    if (estimateRunner_)
+        estimateRunner_->setDestructorWaitMs(0);
+    sourcesRunner_.reset();
     estimateRunner_.reset();
     look_.unsubscribe(lookToken_);
 }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The local wx event loop of the tests that run a CliRunner (moved out of cli_runner_test.cpp): a
-// console loop that is the active one for the test, so wxTimer, END_PROCESS and stopAndWait work.
+// console loop that is the active one for the test, so wxTimer and END_PROCESS work.
 #pragma once
 
 #include <gtest/gtest.h>
