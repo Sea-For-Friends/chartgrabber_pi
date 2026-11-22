@@ -44,7 +44,7 @@ namespace {
 
 constexpr int kPollMs = 100;
 constexpr size_t kChunk = 4096;
-// probeCli's cache: (path, size, mtime) -> the supported version and the version text; GUI thread only.
+// The probe cache: (path, size, mtime) -> the supported version and the version text; GUI thread only.
 using ProbeKey = std::tuple<std::string, std::uintmax_t, std::filesystem::file_time_type>;
 struct ProbeEntry {
     std::optional<cg::CliVersion> supported; // nullopt = too old
@@ -91,7 +91,7 @@ bool programExists(const std::string& program) {
 }
 
 // Parses the version text of a finished probe, caches the answer under `key` (when there is one) and writes
-// the one log line. Shared by probeCli and CliProbe.
+// the one log line. Used by CliProbe.
 std::optional<cg::CliVersion> settleProbe(const std::optional<ProbeKey>& key, long rc,
                                           const std::string& out) {
     const auto version = rc == 0 ? cg::parseVersionLine(out) : std::nullopt;
@@ -448,50 +448,6 @@ void CliRunner::onStderrLine(std::string_view line) {
     if (!cb_.onStderr)
         return;
     cg::guarded("runner stderr callback", [&] { cb_.onStderr(parsed); });
-}
-
-std::optional<cg::CliVersion> probeCli(const std::string& program, const cg::Settings& cliSettings) {
-    const std::optional<ProbeKey> key = probeKey(program);
-    if (key) {
-        if (const auto it = g_probeCache.find(*key); it != g_probeCache.end()) {
-            return it->second.supported;
-        }
-    }
-    std::vector<std::string> args{program};
-    for (std::string& a : cg::versionArguments(cliSettings))
-        args.push_back(std::move(a));
-    wxProcess child;
-    child.Redirect();
-    long rc;
-    {
-        wxLogNull quiet; // a failure is the answer "no version", not a dialog
-#ifdef __WINDOWS__
-        rc = wxExecute(cg::fromUtf8(cg::windowsCommandLine(args)),
-                       wxEXEC_SYNC | wxEXEC_NOEVENTS | wxEXEC_HIDE_CONSOLE, &child);
-#else
-        std::vector<wxString> strs;
-        for (const std::string& a : args)
-            strs.push_back(cg::fromUtf8(a));
-        std::vector<const wchar_t*> argv;
-        for (const wxString& w : strs)
-            argv.push_back(w.wc_str());
-        argv.push_back(nullptr);
-        rc = wxExecute(argv.data(), wxEXEC_SYNC | wxEXEC_NOEVENTS, &child);
-#endif
-    }
-    std::string out;
-    if (rc == 0 && child.GetInputStream()) {
-        char buf[kChunk];
-        wxInputStream* s = child.GetInputStream();
-        while (s->CanRead()) {
-            s->Read(buf, sizeof buf);
-            if (s->LastRead() == 0) {
-                break;
-            }
-            out.append(buf, s->LastRead());
-        }
-    }
-    return settleProbe(key, rc, out);
 }
 
 std::string probedCliVersion(const std::string& program) {

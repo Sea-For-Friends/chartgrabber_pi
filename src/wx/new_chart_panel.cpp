@@ -571,6 +571,8 @@ NewChartPanel::~NewChartPanel() {
     delete sourcesDialog_.get();
     delete settingsDialog_.get();
     estimateTimer_.Stop();
+    sourcesProbe_.cancel();
+    estimateProbe_.cancel();
     if (sourcesRunner_)
         sourcesRunner_->setDestructorWaitMs(0); // no waiting in a destructor: a child still running is killed
     if (estimateRunner_)
@@ -875,12 +877,20 @@ void NewChartPanel::reloadSources() {
     }
     if (!sourcesRunner_)
         sourcesRunner_ = std::make_unique<CliRunner>();
-    if (!probeCli(*cli, config_.cliSettings(settings_))) {
-        sourceFailed(cliTooOldText());
-        return;
-    }
+    sourcesProbe_.check(*cli, config_.cliSettings(settings_), [this, cli = *cli](CliProbe::Result r) {
+        if (closing_)
+            return;
+        if (r == CliProbe::Result::Supported)
+            runSources(cli);
+        else
+            sourceFailed(r == CliProbe::Result::TooOld ? cliTooOldText() : cliNoAnswerText());
+    });
+}
+
+// The sources run, started once the version probe of `cli` found it supported.
+void NewChartPanel::runSources(const std::string& cli) {
     const std::vector<std::string> argv =
-        cg::cliCommand(*cli, cg::sourcesArguments(config_.cliSettings(settings_)), false);
+        cg::cliCommand(cli, cg::sourcesArguments(config_.cliSettings(settings_)), false);
     CliRunner::Callbacks cb;
     cb.onRecord = [this](const cg::StdoutRecord& r) {
         if (const auto* s = std::get_if<cg::SourceRecord>(&r))
@@ -1314,10 +1324,21 @@ void NewChartPanel::startEstimate() {
         estimateFailed(cliNotFoundText());
         return;
     }
-    if (!probeCli(*cli, config_.cliSettings(settings))) {
-        estimateFailed(cliTooOldText());
-        return;
-    }
+    // The state stays Waiting while the probe runs; an input change meanwhile restarts the debounce timer.
+    estimateProbe_.check(*cli, config_.cliSettings(settings),
+                         [this, cli = *cli, settings, gen = estimateGen_](CliProbe::Result r) {
+                             if (closing_ || gen != estimateGen_ || estimateState_ != EstimateState::Waiting)
+                                 return;
+                             if (r == CliProbe::Result::Supported)
+                                 runEstimate(cli, settings);
+                             else
+                                 estimateFailed(r == CliProbe::Result::TooOld ? cliTooOldText()
+                                                                              : cliNoAnswerText());
+                         });
+}
+
+// The estimate run, started once the version probe of `cli` found it supported.
+void NewChartPanel::runEstimate(const std::string& cli, const cg::Settings& settings) {
     cg::JobSpec spec = jobSpec();
     if (kind_ == cg::AreaKind::Route) { // the corridor needs the route as a GPX file
         const wxString dir = cg::fromUtf8(config_.jobsDir());
@@ -1334,7 +1355,7 @@ void NewChartPanel::startEstimate() {
         spec.routeGpxPath = cg::toUtf8(gpx);
     }
     const std::vector<std::string> argv =
-        cg::cliCommand(*cli, cg::estimateArguments(spec, config_.cliSettings(settings)), false);
+        cg::cliCommand(cli, cg::estimateArguments(spec, config_.cliSettings(settings)), false);
     if (!estimateRunner_)
         estimateRunner_ = std::make_unique<CliRunner>();
     estimateRecords_.clear();

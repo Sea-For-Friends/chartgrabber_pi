@@ -457,6 +457,8 @@ wxString cliStatusText(CliStatus status, const std::string& version, const wxStr
                    ? cliTooOldText(os)
                    : wxString::Format(_("Chart Grabber CLI %s is too old. Install the current %s package."),
                                       v, packageName());
+    case CliStatus::NoAnswer:
+        return cliNoAnswerText();
     case CliStatus::Fails:
         break;
     }

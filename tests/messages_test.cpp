@@ -790,7 +790,7 @@ TEST(MessagesSweep, NoTextOfMessagesHSaysMapOrTileProgramAndAllAreAscii) {
     EXPECT_EQ(kUiTexts, 12);
     EXPECT_EQ(kOutcomes, 11);
     EXPECT_EQ(kAreaErrors, 4);
-    EXPECT_EQ(kCliStatuses, 6);
+    EXPECT_EQ(kCliStatuses, 7);
     EXPECT_EQ(kSourcesStatuses, 5);
     EXPECT_EQ(kPreflights, 5);
     EXPECT_EQ(kChartStates, 5);

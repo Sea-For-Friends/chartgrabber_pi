@@ -3,9 +3,10 @@
 // folder that prints the `source` records of records.tsv (type, guid, kind, name, contentType, epsg,
 // cacheType, verdict, zmpFile, group, tab separated), then stderr.txt to stderr, appends its argument list to
 // argv.log, waits while the file `hold` exists, and exits with the number in `exit` (0 when absent).
-// `--version` (run by probeCli before every first use of the file) prints the line in the file `version`
-// ("chart-grabber-cli 2026.10.9 (test)" when absent) and appends a line to probes.log; it touches nothing
-// else. `estimate` and `run` / `export` do the same with their own files: estimate.out (stdout), estimate.err
+// `--version` (run by the version probe before every first use of the file) prints the line in the
+// file `version` ("chart-grabber-cli 2026.10.9 (test)" when absent) and appends a line to probes.log, after
+// waiting while the file `hold-version` exists (a program that does not answer); it touches nothing else.
+// `estimate` and `run` / `export` do the same with their own files: estimate.out (stdout), estimate.err
 // (stderr), estimate.exit, estimate.log (the argument list), hold-estimate, and the same with `run`; the
 // sources files above are not used for them. rawRecords() holds the tsv records of the CLI. A test steers the
 // next run by rewriting these files. The folder name has a space and a quote on purpose.
@@ -73,8 +74,9 @@ public:
             << "#!/bin/sh\n"
             << kStopPrelude
             << "d=$(dirname \"$0\")\n"
-               "[ \"$1\" = --version ] && { echo run >> \"$d/probes.log\"; cat \"$d/version\" 2>/dev/null ||"
-               " echo 'chart-grabber-cli 2026.10.9 (test)'; exit 0; }\n"
+               "[ \"$1\" = --version ] && { echo run >> \"$d/probes.log\";"
+               " k=0; while [ -f \"$d/hold-version\" ] && [ $k -lt 3000 ]; do sleep 0.02; k=$((k + 1)); done;"
+               " cat \"$d/version\" 2>/dev/null || echo 'chart-grabber-cli 2026.10.9 (test)'; exit 0; }\n"
                "[ -f \"$d/ignore-term\" ] && trap '' TERM\n"
                // `estimate` and `run` / `export` have their own files, so the sources log and the
                // sources tests stay as they were. Default: sources.
@@ -109,7 +111,7 @@ public:
     }
     void rawRecords(const std::string& text) { std::ofstream(dir_ / "records.tsv", std::ios::trunc) << text; }
     void stderrText(const std::string& text) { std::ofstream(dir_ / "stderr.txt", std::ios::trunc) << text; }
-    // The `--version` answer (default: chart-grabber-cli 2026.10.9). probeCli caches per file,
+    // The `--version` answer (default: chart-grabber-cli 2026.10.9). The probe caches per file,
     // so set it before the first probe of this stand-in.
     void version(const std::string& line) {
         std::ofstream(dir_ / "version", std::ios::trunc) << line << '\n';
@@ -121,6 +123,8 @@ public:
             ++n;
         return n;
     }
+    // While on, `--version` does not answer (the answer comes when it is turned off).
+    void holdVersion(bool on) { holdFile("hold-version", on); }
     void exitWith(int code) { std::ofstream(dir_ / "exit", std::ios::trunc) << code; }
     // While on, the stand-in ignores the stop line and SIGTERM: only SIGKILL ends it.
     void ignoreTerm(bool on) {

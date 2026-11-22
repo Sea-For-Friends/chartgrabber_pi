@@ -97,7 +97,7 @@ private:
 };
 
 // The version check as a runner client: "<program> --version [--datadir=...]" without waiting. GUI thread
-// only; needs a wx event loop. Shares the cache of probeCli (path, size, modification time); a timeout is not
+// only; needs a wx event loop. Caches per (path, size, modification time); a timeout is not
 // cached.
 class CliProbe : private wxEvtHandler {
 public:
@@ -143,13 +143,7 @@ std::vector<std::string> hostCliPaths();
 // Settings::cliPath if set (a program file, no fallback), else the first of defaultPaths that
 // is a program file, else kDefaultCliName on pathEnv (nullopt = the PATH variable).
 // nullopt: *why (may be null) says what is wrong, in English.
-// "<program> --version [--datadir=<cliSettings.cliDataDir>]" synchronously (no env, no nice), the
-// supported version from the version line; cached per (path, size, modification time) for the session; the
-// first probe of a key writes one log line. nullopt = too old or not the Chart Grabber CLI (the caller shows
-// cliTooOldText()). GUI thread only.
-std::optional<cg::CliVersion> probeCli(const std::string& program, const cg::Settings& cliSettings);
-
-// "<major>.<minor>.<patch>" of the version line probeCli parsed for `program` (same cache key, no
+// "<major>.<minor>.<patch>" of the version line the probe parsed for `program` (same cache key, no
 // new process); empty when the program was not probed, gave no version, or its probe was not cached.
 std::string probedCliVersion(const std::string& program);
 
