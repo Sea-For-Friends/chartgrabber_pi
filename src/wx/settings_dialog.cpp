@@ -255,6 +255,7 @@ SettingsDialog::~SettingsDialog() {
     closing_ = true;
     delete question_.get(); // its callback holds this dialog; immediate, not Destroy()
     checkTimer_.Stop();
+    probe_.cancel();
     runner_.reset(); // may pump events; its callbacks see closing_
     look_.unsubscribe(lookToken_);
 }
@@ -521,6 +522,7 @@ void SettingsDialog::startCheck() {
     cliStatus_->SetLabel(cliStatusText(CliStatus::Checking, {}, {}));
     sourcesStatus_->SetLabel(sourcesStatusText(SourcesStatus::Checking));
 
+    probe_.cancel(); // a probe of an older check is stale, also when no program is left to probe
     std::string why;
     const auto cli = resolveCli(pending_, &why, cliDefaultPaths, cliPathEnv);
     if (!cli) {
@@ -530,12 +532,26 @@ void SettingsDialog::startCheck() {
         return;
     }
     const cg::Settings forCli = config_.cliSettings(pending_);
-    if (!probeCli(*cli, forCli)) {
-        notReady(cliStatusText(CliStatus::TooOld, probedCliVersion(*cli), {}),
-                 sourcesStatusText(SourcesStatus::CliNotReady));
-        return;
-    }
-    const std::string version = probedCliVersion(*cli);
+    probe_.check(*cli, forCli, [this, generation, cli = *cli, forCli](CliProbe::Result r) {
+        if (closing_ || generation != generation_)
+            return;
+        if (r == CliProbe::Result::NoAnswer) {
+            notReady(cliStatusText(CliStatus::NoAnswer, {}, {}),
+                     sourcesStatusText(SourcesStatus::CliNotReady));
+            return;
+        }
+        if (r == CliProbe::Result::TooOld) {
+            notReady(cliStatusText(CliStatus::TooOld, probedCliVersion(cli), {}),
+                     sourcesStatusText(SourcesStatus::CliNotReady));
+            return;
+        }
+        runSourcesCheck(generation, cli, forCli);
+    });
+}
+
+// The sources run of a check whose CLI answered the version probe.
+void SettingsDialog::runSourcesCheck(int generation, const std::string& cli, const cg::Settings& forCli) {
+    const std::string version = probedCliVersion(cli);
     if (cg::countSourceEntries(config_.bundledSourcesDir(), 1) == 0) { // no CLI run
         notReady(cliStatusText(CliStatus::Ready, version, {}),
                  sourcesStatusText(SourcesStatus::BundledMissing),
@@ -598,7 +614,7 @@ void SettingsDialog::startCheck() {
             expandAdvanced();
     };
     std::string error;
-    if (!runner_->start(cg::cliCommand(*cli, cg::sourcesArguments(forCli), false), std::move(cb), &error)) {
+    if (!runner_->start(cg::cliCommand(cli, cg::sourcesArguments(forCli), false), std::move(cb), &error)) {
         notReady(cliStatusText(CliStatus::Fails, {}, cg::fromUtf8(error)),
                  sourcesStatusText(SourcesStatus::RunFailed));
     }

@@ -10,7 +10,6 @@
 #include "ocpn_fakes.h"
 #include "plugin_log.h"
 #include "question_probe.h"
-#include "settings_dialog.h"
 #include "sources_stub.h"
 #include "wx_env.h"
 
@@ -45,6 +44,12 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <vector>
+
+// Test-only access to the version probes of the dialogs (their time limit). The standard and wx headers
+// are already in, so the macro touches only these headers.
+#define private public
+#include "settings_dialog.h"
+#undef private
 
 #include <ocpn_plugin.h>
 
@@ -1430,6 +1435,119 @@ TEST_F(SettingsCheck, ASchemeChangeReachesTheOpenDialogAndNotTheDestroyedOne) {
     ocpn_fake::dimeCalls = 0;
     look_.setScheme(PI_GLOBAL_COLOR_SCHEME_NIGHT);
     EXPECT_EQ(ocpn_fake::dimeCalls, 0);
+}
+
+// ---- the version check before the sources run: it never waits for the program ----
+
+// Counts the 100 ms ticks of the loop while a check waits.
+class Ticker : public wxTimer {
+public:
+    int ticks = 0;
+    void Notify() override { ++ticks; }
+};
+
+const char* const kNoAnswer =
+    "Chart Grabber CLI did not answer within 10 seconds. Try again. If it happens again, send the log file "
+    "with a problem report."; // the text the CLI check shows when the program stays silent
+
+// A program that answers its version after a while: the dialog shows "Checking..." at once while the loop
+// keeps running and no sources run starts; the answer then gives Ready and the sources run.
+TEST_F(SettingsCheck, AProgramThatAnswersLateShowsCheckingThenReady) {
+    stub_->records(recs(3));
+    stub_->holdVersion(true);
+    openStub();
+    Ticker ticker;
+    ticker.Start(100);
+    ASSERT_TRUE(runUntil([&] { return stub_->probes() == 1; })) << "the version probe started";
+    EXPECT_EQ(label("cliStatus"), "Checking Chart Grabber CLI...");
+    EXPECT_EQ(label("sourcesStatus"), "Looking for chart sources...");
+    const int before = ticker.ticks;
+    runFor(450);
+    EXPECT_GE(ticker.ticks, before + 3) << "the loop kept running while the program was silent";
+    EXPECT_EQ(label("cliStatus"), "Checking Chart Grabber CLI...");
+    EXPECT_TRUE(stub_->argv().empty()) << "no sources run before the version answer";
+    stub_->holdVersion(false);
+    ASSERT_TRUE(settle());
+    EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.9 is ready.");
+    EXPECT_EQ(stub_->argv().size(), 1u);
+    EXPECT_EQ(stub_->probes(), 1);
+}
+
+// A program that never answers: after the limit (300 ms in the test) the line says so, the sources line says
+// the CLI is not ready, Advanced opens, no sources run started and the program is gone.
+TEST_F(SettingsCheck, AProgramThatNeverAnswersShowsTheNoAnswerTextAndNoSourcesRun) {
+    stub_->records(recs(3));
+    stub_->holdVersion(true);
+    LogScope log;
+    openStub();
+    dlg_->probe_.setTimeoutMs(300);
+    Ticker ticker;
+    ticker.Start(100);
+    ASSERT_TRUE(settle());
+    EXPECT_EQ(label("cliStatus"), kNoAnswer);
+    EXPECT_EQ(label("sourcesStatus"), kReadyNone);
+    EXPECT_TRUE(advancedOpen());
+    EXPECT_GE(ticker.ticks, 2) << "the loop kept running during the wait";
+    EXPECT_TRUE(stub_->argv().empty());
+    EXPECT_EQ(stub_->probes(), 1);
+    EXPECT_NE(std::find(log->messages.begin(), log->messages.end(),
+                        "ChartGrabber: tile program did not answer in 10 s; stopped"),
+              log->messages.end());
+    EXPECT_TRUE(runUntil([&] { return processesUnder((root_ / "stubs").string()).empty(); }, 3000))
+        << "the silent program was killed";
+}
+
+// A path change while the first program is silent: only the answer of the second program is shown, the
+// first one is killed and its sources never run.
+TEST_F(SettingsCheck, ChangingTheProgramWhileAProbeRunsShowsOnlyTheSecondAnswer) {
+    stub::Sources second(root_ / "stubs", "b d'x");
+    second.records(recs(1));
+    stub_->records(recs(3));
+    stub_->holdVersion(true);
+    openStub();
+    ASSERT_TRUE(runUntil([&] { return stub_->probes() == 1; }));
+    change("cli", second.cli());
+    ASSERT_TRUE(settle());
+    EXPECT_EQ(label("cliStatus"), "Chart Grabber CLI 2026.10.9 is ready.");
+    EXPECT_EQ(label("sourcesStatus").find("1 chart source available"), 0u) << label("sourcesStatus");
+    stub_->holdVersion(false); // the first program, if it were still alive, would answer now
+    runFor(400);
+    EXPECT_EQ(label("sourcesStatus").find("1 chart source available"), 0u) << label("sourcesStatus");
+    EXPECT_TRUE(stub_->argv().empty()) << "the first program's sources never ran";
+    EXPECT_EQ(second.argv().size(), 1u);
+    EXPECT_EQ(stub_->probes(), 1);
+}
+
+// A path change to a file that cannot be run, while the first program is silent: the first program's late
+// answer must not replace the "cannot be run" line.
+TEST_F(SettingsCheck, TheLateAnswerOfAReplacedProgramDoesNotOverwriteTheCannotBeRunLine) {
+    stub_->records(recs(3));
+    stub_->holdVersion(true);
+    openStub();
+    ASSERT_TRUE(runUntil([&] { return stub_->probes() == 1; }));
+    change("cli", plainFile());
+    const std::string notRunnable =
+        "This file cannot be run as a program. Use default to go back to the installed one.";
+    ASSERT_TRUE(runUntil([&] { return label("cliStatus") == notRunnable; }));
+    stub_->holdVersion(false); // the first program answers now
+    runFor(600);
+    EXPECT_EQ(label("cliStatus"), notRunnable);
+    EXPECT_EQ(label("sourcesStatus"), kReadyNone);
+    EXPECT_TRUE(stub_->argv().empty()) << "the first program's sources never ran";
+}
+
+// Closing the dialog while the program is silent kills it and leaves no check behind.
+TEST_F(SettingsCheck, ClosingWhileTheVersionProbeRunsLeavesNoChildAndNoCheck) {
+    stub_->records(recs(1));
+    stub_->holdVersion(true);
+    openStub();
+    ASSERT_TRUE(runUntil([&] { return stub_->probes() == 1; }));
+    dlg_.reset();
+    EXPECT_TRUE(processesUnder((root_ / "stubs").string()).empty()) << "the silent program is gone";
+    stub_->holdVersion(false);
+    runFor(700);
+    EXPECT_TRUE(stub_->argv().empty());
+    EXPECT_EQ(stub_->probes(), 1);
 }
 
 } // namespace

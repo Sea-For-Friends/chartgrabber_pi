@@ -90,6 +90,8 @@ private:
     const cg::SourceRecord* weatherRecord() const; // the weather layer when "Weather on top" is ticked
     std::vector<int> zoomList() const;
     void startEstimate(); // the timer fired
+    void runSources(const std::string& cli);
+    void runEstimate(const std::string& cli, const cg::Settings& settings);
     void estimateFailed(const wxString& text);
     void estimateFinished(int code);
     void showEstimate();
@@ -156,6 +158,7 @@ private:
     ConfigStore& config_;
     cg::Settings settings_; // reloaded on every sources run (Preferences may have changed it)
     std::unique_ptr<CliRunner> sourcesRunner_;
+    CliProbe sourcesProbe_;                 // the version check before the sources run
     cg::SourceDescriptions descriptions_;   // source-descriptions.conf beside the bundled sources
     cg::FavouriteSources favourites_;       // favourite-sources.conf beside the bundled sources
     std::vector<cg::SourceRecord> sources_; // CLI order; kept for the earlier SourcesDialog
@@ -179,6 +182,7 @@ private:
 
     //
     std::unique_ptr<CliRunner> estimateRunner_;
+    CliProbe estimateProbe_; // the version check before the estimate run
     EstimateState estimateState_ = EstimateState::None;
     int estimateGen_ = 0, runGen_ = 0; // bumped on every input change / at every run start
     bool estimatePending_ = false;     // the running estimate was terminated: start again on its exit

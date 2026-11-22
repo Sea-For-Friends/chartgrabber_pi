@@ -90,6 +90,7 @@ private:
     void expandAdvanced();
     void scheduleCheck();
     void startCheck();
+    void runSourcesCheck(int generation, const std::string& cli, const cg::Settings& forCli);
     void notReady(const wxString& cliText, const wxString& sourcesText, bool expand = true);
 
     ConfigStore& config_;
@@ -114,6 +115,7 @@ private:
     // The automatic check: one runner, a generation per check; a change while it runs terminates
     // it and onExit starts the next one (rerun_).
     std::unique_ptr<CliRunner> runner_;
+    CliProbe probe_; // the version check before the sources run
     wxTimer checkTimer_;
     int generation_ = 0;
     bool rerun_ = false;

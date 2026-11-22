@@ -80,7 +80,7 @@ wxString cliNoAnswerText();
 wxString noSourcesText();
 
 // Settings status lines. `version` may be empty; `line` is the last error line (Fails).
-enum class CliStatus { Checking, Ready, NotInstalled, NotRunnable, TooOld, Fails };
+enum class CliStatus { Checking, Ready, NotInstalled, NotRunnable, TooOld, NoAnswer, Fails };
 wxString cliStatusText(CliStatus status, const std::string& version, const wxString& line,
                        cg::Os os = cg::kHostOs);
 // Found: `records` source records, folder = the state of the sailor's own folder.

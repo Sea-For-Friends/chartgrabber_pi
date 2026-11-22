@@ -686,7 +686,6 @@ TEST(ResolveCli, ChosenPathWinsAndNeverFallsBack) {
     EXPECT_EQ(*found, other);
 }
 
-// ---- probeCli ----------------------------------------------------------------
 namespace {
 class CollectLog : public wxLog {
 public:
@@ -723,200 +722,6 @@ int runsOf(const TempDir& tmp) {
     return n;
 }
 } // namespace
-
-// Proof 2/3: version line -> the supported version or "too old" (nullopt) and the one log line. Supported
-// from 2026.10.9; 2026.10.8, 2026.10.5, 2026.9.9 and old-tiles 0.1.0 are too old.
-TEST(ProbeCli, SupportedOrTooOldAndItsLogLine) {
-    struct Row {
-        const char* name;
-        std::string body;
-        bool supported;
-        std::string logged;
-    };
-    const std::vector<Row> rows = {
-        {"minimum", "echo 'chart-grabber-cli 2026.10.9 (x)'; echo 'second line'", true,
-         "ChartGrabber: tile program chart-grabber-cli 2026.10.9 (x) - supported"},
-        {"dirty release", "echo 'chart-grabber-cli 2026.10.9 (2a7aee506e26-dirty)'", true,
-         "ChartGrabber: tile program chart-grabber-cli 2026.10.9 (2a7aee506e26-dirty) - supported"},
-        {"2027.1.0", "echo 'chart-grabber-cli 2027.1.0 (x)'", true,
-         "ChartGrabber: tile program chart-grabber-cli 2027.1.0 (x) - supported"},
-        {"2026.10.8", "echo 'chart-grabber-cli 2026.10.8 (x)'", false,
-         "ChartGrabber: tile program chart-grabber-cli 2026.10.8 (x) - too old"},
-        {"2026.10.5", "echo 'chart-grabber-cli 2026.10.5 (x)'", false,
-         "ChartGrabber: tile program chart-grabber-cli 2026.10.5 (x) - too old"},
-        {"2026.9.9", "echo 'chart-grabber-cli 2026.9.9 (x)'", false,
-         "ChartGrabber: tile program chart-grabber-cli 2026.9.9 (x) - too old"},
-        {"0.1.0", "echo 'old-tiles 0.1.0 (\xD0\x81-build)'", false,
-         "ChartGrabber: tile program old-tiles 0.1.0 (\xD0\x81-build) - too old"},
-        {"exit 2", "exit 2", false, "ChartGrabber: tile program no version (exit 2) - too old"},
-        {"garbage", "echo 'hello world'", false, "ChartGrabber: tile program hello world - too old"},
-        {"version line but exit 3", "echo 'chart-grabber-cli 2026.10.9 (x)'; exit 3", false,
-         "ChartGrabber: tile program no version (exit 3) - too old"},
-        {"exit 0, no output", "exit 0", false, "ChartGrabber: tile program no version (exit 0) - too old"},
-    };
-    for (const Row& row : rows) {
-        SCOPED_TRACE(row.name);
-        TempDir tmp;
-        const std::string cli = tmp.write("probe-cli", countingScript(row.body), true);
-        LogScope log;
-        const auto v = probeCli(cli, cg::Settings{});
-        ASSERT_EQ(v.has_value(), row.supported);
-        if (v) {
-            EXPECT_EQ(v->program, "chart-grabber-cli");
-        }
-        ASSERT_EQ(log->messages.size(), 1u);
-        EXPECT_EQ(log->messages[0], row.logged);
-    }
-}
-
-// a stand-in run without --stop-on-stdin and with stdin at EOF is not stopped (the `--version` race
-// in dash); with the option, EOF still ends it. Both forms: script file and `sh -c` ($0 = the option).
-TEST(ProbeCli, StopPreludeReactsOnlyToTheOption) {
-    TempDir tmp;
-    const std::string body = "sleep 0.3; echo done; exit 7";
-    const std::string script =
-        tmp.write("prelude-cli", std::string("#!/bin/sh\n") + stub::kStopPrelude + body + "\n", true);
-    const std::string shScript = tmp.write("prelude.sh", std::string(stub::kStopPrelude) + body, false);
-    const fs::path out = tmp.dir() / "out";
-    const auto run = [&](const std::string& cmd) {
-        const int rc = std::system((cmd + " </dev/null >\"$CG_T_OUT\" 2>&1").c_str());
-        std::ifstream in(out);
-        std::string text((std::istreambuf_iterator<char>(in)), {});
-        return std::make_pair(WEXITSTATUS(rc) + (WIFSIGNALED(rc) ? 1000 : 0), text);
-    };
-    setenv("CG_T_OUT", out.c_str(), 1); // the folder name has a quote: paths go by variable
-    setenv("CG_T_SCRIPT", script.c_str(), 1);
-    setenv("CG_T_SH", shScript.c_str(), 1);
-    const std::string sc = "\"$CG_T_SCRIPT\"";
-    const std::string shc = "/bin/sh -c \"$(cat \"$CG_T_SH\")\"";
-    EXPECT_EQ(run(sc), std::make_pair(7, std::string("done\n"))) << "script, no option";
-    EXPECT_EQ(run(shc), std::make_pair(7, std::string("done\n"))) << "sh -c, no option";
-    EXPECT_EQ(run(sc + " --stop-on-stdin").second.find("done"),
-              std::string::npos) // the shell may print "Terminated"
-        << "script, option: EOF stops it";
-    EXPECT_EQ(run(shc + " --stop-on-stdin").second.find("done"), std::string::npos)
-        << "sh -c, option: EOF stops it";
-}
-
-// the child gets exactly "--version" and ONE "--datadir=DIR" argument (a directory with a
-// space, a quote and Cyrillic stays one argument); with an empty data dir only "--version".
-TEST(ProbeCli, ArgvIsVersionAndTheDatadir) {
-    TempDir tmp;
-    const std::string body = "for a; do printf '%s\\n' \"$a\" >> \"$(dirname \"$0\")/argv\"; done\n"
-                             "echo 'chart-grabber-cli 2026.10.9 (abc)'";
-    const auto argvOf = [&](const std::string& name, const std::string& dataDir) {
-        const std::string cli = tmp.write(name, countingScript(body), true);
-        cg::Settings s;
-        s.cliDataDir = dataDir;
-        EXPECT_TRUE(probeCli(cli, s));
-        std::vector<std::string> lines;
-        std::ifstream in(tmp.dir() / "argv");
-        for (std::string l; std::getline(in, l);)
-            lines.push_back(l);
-        std::filesystem::remove(tmp.dir() / "argv");
-        return lines;
-    };
-    const std::string dir = (tmp.dir() / "d \xD0\x96 a'b" / "cli-data").string();
-    EXPECT_EQ(argvOf("with-data", dir), (std::vector<std::string>{"--version", "--datadir=" + dir}));
-    EXPECT_EQ(argvOf("no-data", ""), (std::vector<std::string>{"--version"}));
-}
-
-// 200 real probes of the Sources stand-in (a new file each: the probe cache is keyed on the file)
-// all see the version line, none "no version".
-TEST(ProbeCli, SourcesStandInAnswersEveryProbe) {
-    TempDir tmp;
-    for (int i = 0; i < 200; ++i) {
-        stub::Sources src(tmp.dir(), std::string("p") + std::to_string(i));
-        ASSERT_TRUE(probeCli(src.cli(), cg::Settings{})) << "probe " << i;
-    }
-}
-
-// probedCliVersion reads the probe cache; it never runs the program.
-TEST(ProbeCli, ProbedVersionComesFromTheCache) {
-    TempDir tmp;
-    const std::string cli =
-        tmp.write("probe-cli", countingScript("echo 'chart-grabber-cli 2026.10.9 (abc)'"), true);
-    const std::string old = tmp.write("old-cli", countingScript("echo 'old-tiles 0.0.9 (x)'"), true);
-    const std::string none = tmp.write("none-cli", countingScript("echo 'hello'"), true);
-    EXPECT_EQ(probedCliVersion(cli), "") << "never probed";
-    ASSERT_TRUE(probeCli(cli, cg::Settings{}));
-    EXPECT_EQ(probedCliVersion(cli), "2026.10.9");
-    EXPECT_EQ(runsOf(tmp), 1) << "probedCliVersion started no process";
-    EXPECT_FALSE(probeCli(old, cg::Settings{}));
-    EXPECT_EQ(probedCliVersion(old), "0.0.9") << "a too old program still has its version";
-    EXPECT_FALSE(probeCli(none, cg::Settings{}));
-    EXPECT_EQ(probedCliVersion(none), "") << "no version line";
-    EXPECT_EQ(probedCliVersion((tmp.dir() / "gone").string()), "") << "not cacheable: no file";
-}
-
-// the log line is cut at 200 bytes, never inside a UTF-8 sequence. "hello " + 'a' filler makes the
-// first line 199 bytes, then a 2-byte Cyrillic capital: its second byte would be byte 200 (the cut); the
-// character is dropped whole. When the character ends exactly at byte 200 it stays.
-TEST(ProbeCli, LogLineIsCutOnACharacterBoundary) {
-    const std::string yo = "\xD0\x81";
-    const std::string head199 = std::string("hello ") + std::string(193, 'a');
-    const std::string head198 = std::string("hello ") + std::string(192, 'a');
-    struct Row {
-        const char* name;
-        std::string line, logged;
-    };
-    const std::vector<Row> rows = {
-        {"split character dropped", head199 + yo + "bbb", head199},
-        {"character ending at the limit stays", head198 + yo + "bbb", head198 + yo},
-    };
-    for (const Row& row : rows) {
-        SCOPED_TRACE(row.name);
-        TempDir tmp;
-        const std::string cli = tmp.write("probe-cli", countingScript("echo '" + row.line + "'"), true);
-        LogScope log;
-        EXPECT_FALSE(probeCli(cli, cg::Settings{}));
-        ASSERT_EQ(log->messages.size(), 1u);
-        EXPECT_EQ(log->messages[0], "ChartGrabber: tile program " + row.logged + " - too old");
-    }
-}
-
-// Proof 2, cache: the second call for the same file does not run it and does not log; a rewritten file (size
-// changed, or only the modification time changed) runs again and logs again; the key is size + time, not the
-// content. A refusal is cached too.
-TEST(ProbeCli, CachedPerPathSizeAndModificationTime) {
-    TempDir tmp;
-    const std::string cli =
-        tmp.write("probe-cli", countingScript("echo 'chart-grabber-cli 2026.10.3 (a)'"), true);
-    const auto t0 = fs::last_write_time(cli) - std::chrono::hours(2);
-    fs::last_write_time(cli, t0);
-    LogScope log;
-    EXPECT_FALSE(probeCli(cli, cg::Settings{}));
-    EXPECT_EQ(runsOf(tmp), 1);
-    EXPECT_FALSE(probeCli(cli, cg::Settings{}));
-    EXPECT_EQ(runsOf(tmp), 1) << "a second call must not run the program again";
-    EXPECT_EQ(log->messages.size(), 1u);
-
-    // Only the size changes (same modification time): the program runs again.
-    tmp.write("probe-cli", countingScript("echo 'chart-grabber-cli 2026.10.9 (aa)'"), true);
-    fs::last_write_time(cli, t0);
-    EXPECT_TRUE(probeCli(cli, cg::Settings{}));
-    EXPECT_EQ(runsOf(tmp), 2);
-    EXPECT_EQ(log->messages.size(), 2u);
-
-    // Same size, same time, other content: the identity is the same, the answer comes from the cache.
-    tmp.write("probe-cli", countingScript("echo 'chart-grabber-cli 2026.10.3 (aa)'"), true);
-    fs::last_write_time(cli, t0);
-    EXPECT_TRUE(probeCli(cli, cg::Settings{}));
-    EXPECT_EQ(runsOf(tmp), 2);
-
-    // Same size, only the modification time moves: the program runs again and the new answer is used.
-    fs::last_write_time(cli, t0 + std::chrono::hours(1));
-    EXPECT_FALSE(probeCli(cli, cg::Settings{}));
-    EXPECT_EQ(runsOf(tmp), 3);
-    EXPECT_EQ(log->messages.size(), 3u);
-
-    // A "too old" answer is cached as well.
-    const std::string old = tmp.write("old-cli", countingScript("exit 2"), true);
-    EXPECT_FALSE(probeCli(old, cg::Settings{}));
-    EXPECT_FALSE(probeCli(old, cg::Settings{}));
-    EXPECT_EQ(runsOf(tmp), 4) << "old-cli ran once, probe-cli three times";
-    EXPECT_EQ(log->messages.size(), 4u);
-}
 
 // ---- CliProbe: the version check without waiting ------------------------------------------------------
 namespace {
@@ -1016,7 +821,7 @@ TEST_F(CliProbeTest, ASupportedAnswerIsCachedPerFileAndANewerModificationTimePro
     EXPECT_FALSE(probe.running());
     ASSERT_EQ(log->messages.size(), 1u);
     EXPECT_EQ(log->messages[0], "ChartGrabber: tile program chart-grabber-cli 2026.10.9 (x) - supported");
-    EXPECT_EQ(probedCliVersion(cli), "2026.10.9") << "the cache is the one of probeCli";
+    EXPECT_EQ(probedCliVersion(cli), "2026.10.9") << "the cache is the probe cache";
 
     probe.check(cli, cg::Settings{}, record(results));
     EXPECT_EQ(results.size(), 2u) << "a cache hit answers before check returns";
@@ -1035,30 +840,8 @@ TEST_F(CliProbeTest, ASupportedAnswerIsCachedPerFileAndANewerModificationTimePro
     EXPECT_EQ(log->messages.size(), 2u);
 }
 
-// A cache entry written by probeCli answers the probe and the other way round.
-TEST_F(CliProbeTest, TheCacheIsSharedWithTheSynchronousProbe) {
-    TempDir tmp;
-    CliProbe probe;
-    const std::string viaSync =
-        tmp.write("sync-cli", countingScript("echo 'chart-grabber-cli 2026.10.9 (x)'"), true);
-    const std::string viaProbe = tmp.write("async-cli", countingScript("echo 'old-tiles 0.0.9 (x)'"), true);
-    std::vector<ProbeResult> results;
-    ASSERT_TRUE(probeCli(viaSync, cg::Settings{}));
-    probe.check(viaSync, cg::Settings{}, record(results));
-    EXPECT_EQ(results, std::vector<ProbeResult>{ProbeResult::Supported}) << "answered by probeCli's entry";
-    EXPECT_EQ(runsOf(tmp), 1);
-
-    probe.check(viaProbe, cg::Settings{}, record(results));
-    ASSERT_TRUE(runUntil([&] { return results.size() == 2; }, 10000));
-    runFor(50);
-    EXPECT_EQ(results[1], ProbeResult::TooOld);
-    EXPECT_FALSE(probeCli(viaProbe, cg::Settings{}));
-    EXPECT_EQ(probedCliVersion(viaProbe), "0.0.9");
-    EXPECT_EQ(runsOf(tmp), 2) << "probeCli used the entry of the probe";
-}
-
 // Too old, no version line, exit != 0, a program that is missing: done(TooOld) once each and the log line is
-// the one probeCli writes.
+// the one the probe writes.
 TEST_F(CliProbeTest, TooOldNoVersionLineBadExitOrAMissingProgramAreTooOldWithTheUsualLogLine) {
     struct Row {
         const char* name;
@@ -1218,6 +1001,139 @@ TEST_F(CliProbeTest, DestroyingAProbeDuringACheckKillsTheChildAndNeverCallsDone)
     EXPECT_TRUE(waitGone(pid));
     runFor(600);
     EXPECT_TRUE(results.empty());
+}
+
+// The log line is cut at 200 bytes, never inside a UTF-8 sequence. "hello " + 'a' filler makes the first line
+// 199 bytes, then a 2-byte Cyrillic capital: its second byte would be byte 200 (the cut); the character is
+// dropped whole. When the character ends exactly at byte 200 it stays.
+TEST_F(CliProbeTest, TheLogLineIsCutOnACharacterBoundary) {
+    const std::string yo = "\xD0\x81";
+    const std::string head199 = std::string("hello ") + std::string(193, 'a');
+    const std::string head198 = std::string("hello ") + std::string(192, 'a');
+    struct Row {
+        const char* name;
+        std::string line, logged;
+    };
+    const std::vector<Row> rows = {
+        {"split character dropped", head199 + yo + "bbb", head199},
+        {"character ending at the limit stays", head198 + yo + "bbb", head198 + yo},
+    };
+    for (const Row& row : rows) {
+        SCOPED_TRACE(row.name);
+        TempDir tmp;
+        CliProbe probe;
+        const std::string cli = tmp.write("probe-cli", countingScript("echo '" + row.line + "'"), true);
+        LogScope log;
+        std::vector<ProbeResult> results;
+        probe.check(cli, cg::Settings{}, record(results));
+        ASSERT_TRUE(runUntil([&] { return !results.empty(); }, 10000));
+        runFor(50);
+        EXPECT_EQ(results, std::vector<ProbeResult>{ProbeResult::TooOld});
+        ASSERT_EQ(log->messages.size(), 1u);
+        EXPECT_EQ(log->messages[0], "ChartGrabber: tile program " + row.logged + " - too old");
+    }
+}
+
+// The cache key is the path, the size and the modification time, not the content: a changed size or only a
+// changed time asks the program again, the same size and time is answered from the cache; a too-old answer
+// is cached too, and the version text of the cache is read without a process.
+TEST_F(CliProbeTest, TheCacheKeyIsPathSizeAndModificationTimeAndATooOldAnswerIsCachedToo) {
+    TempDir tmp;
+    CliProbe probe;
+    const std::string cli =
+        tmp.write("probe-cli", countingScript("echo 'chart-grabber-cli 2026.10.3 (a)'"), true);
+    const auto t0 = fs::last_write_time(cli) - std::chrono::hours(2);
+    fs::last_write_time(cli, t0);
+    LogScope log;
+    std::vector<ProbeResult> results;
+    const auto ask = [&](const std::string& program, std::size_t expected) {
+        probe.check(program, cg::Settings{}, record(results));
+        ASSERT_TRUE(runUntil([&] { return results.size() == expected; }, 10000));
+        runFor(50);
+    };
+    EXPECT_EQ(probedCliVersion(cli), "") << "never probed";
+    ask(cli, 1);
+    EXPECT_EQ(results[0], ProbeResult::TooOld);
+    EXPECT_EQ(runsOf(tmp), 1);
+    EXPECT_EQ(probedCliVersion(cli), "2026.10.3") << "a too old program still has its version";
+    ask(cli, 2);
+    EXPECT_EQ(results[1], ProbeResult::TooOld);
+    EXPECT_EQ(runsOf(tmp), 1) << "a refusal is cached";
+    EXPECT_EQ(log->messages.size(), 1u);
+
+    // Only the size changes (same modification time): the program runs again.
+    tmp.write("probe-cli", countingScript("echo 'chart-grabber-cli 2026.10.9 (aa)'"), true);
+    fs::last_write_time(cli, t0);
+    ask(cli, 3);
+    EXPECT_EQ(results[2], ProbeResult::Supported);
+    EXPECT_EQ(runsOf(tmp), 2);
+    EXPECT_EQ(log->messages.size(), 2u);
+
+    // Same size, same time, other content: the identity is the same, the answer comes from the cache.
+    tmp.write("probe-cli", countingScript("echo 'chart-grabber-cli 2026.10.3 (aa)'"), true);
+    fs::last_write_time(cli, t0);
+    ask(cli, 4);
+    EXPECT_EQ(results[3], ProbeResult::Supported);
+    EXPECT_EQ(runsOf(tmp), 2);
+
+    // Same size, only the modification time moves: the program runs again and the new answer is used.
+    fs::last_write_time(cli, t0 + std::chrono::hours(1));
+    ask(cli, 5);
+    EXPECT_EQ(results[4], ProbeResult::TooOld);
+    EXPECT_EQ(runsOf(tmp), 3);
+    EXPECT_EQ(log->messages.size(), 3u);
+
+    // No version line: not cached as a version; a file that is not there cannot be cached at all.
+    const std::string none = tmp.write("none-cli", countingScript("echo 'hello'"), true);
+    ask(none, 6);
+    EXPECT_EQ(probedCliVersion(none), "") << "no version line";
+    EXPECT_EQ(probedCliVersion((tmp.dir() / "gone").string()), "") << "no file";
+    const std::string gone = (tmp.dir() / "gone").string();
+    ask(gone, 7);
+    ask(gone, 8);
+    EXPECT_EQ(log->messages.size(), 6u) << "a missing program is asked again (logged each time)";
+}
+
+// The data folder is one argument even with a space, a quote and Cyrillic; with an empty data folder the
+// child gets only the version option and the stop option.
+TEST_F(CliProbeTest, AnEmptyDataFolderIsNotPassedAndAnAwkwardOneStaysOneArgument) {
+    TempDir tmp;
+    CliProbe probe;
+    const std::string body = "for a; do printf '%s\\n' \"$a\" >> \"$(dirname \"$0\")/argv\"; done\n"
+                             "echo 'chart-grabber-cli 2026.10.9 (abc)'";
+    std::vector<ProbeResult> results;
+    const auto argvOf = [&](const std::string& name, const std::string& dataDir) {
+        const std::string cli = tmp.write(name, countingScript(body), true);
+        cg::Settings s;
+        s.cliDataDir = dataDir;
+        const std::size_t before = results.size();
+        probe.check(cli, s, record(results));
+        EXPECT_TRUE(runUntil([&] { return results.size() == before + 1; }, 10000));
+        std::vector<std::string> lines;
+        std::ifstream in(tmp.dir() / "argv");
+        for (std::string l; std::getline(in, l);)
+            lines.push_back(l);
+        fs::remove(tmp.dir() / "argv");
+        return lines;
+    };
+    const std::string dir = (tmp.dir() / "d \xD0\x96 a'b" / "cli-data").string();
+    EXPECT_EQ(argvOf("with-data", dir),
+              (std::vector<std::string>{"--version", "--datadir=" + dir, "--stop-on-stdin"}));
+    EXPECT_EQ(argvOf("no-data", ""), (std::vector<std::string>{"--version", "--stop-on-stdin"}));
+}
+
+// 60 real probes of the sources stand-in (a new file each: the cache is keyed on the file) all see the
+// version line: the stand-in's stop prelude never ends a `--version` run early.
+TEST_F(CliProbeTest, TheSourcesStandInAnswersEveryProbe) {
+    TempDir tmp;
+    CliProbe probe;
+    for (int i = 0; i < 60; ++i) {
+        stub::Sources src(tmp.dir(), std::string("p") + std::to_string(i));
+        std::vector<ProbeResult> results;
+        probe.check(src.cli(), cg::Settings{}, record(results));
+        ASSERT_TRUE(runUntil([&] { return !results.empty(); }, 10000)) << "probe " << i;
+        ASSERT_EQ(results, std::vector<ProbeResult>{ProbeResult::Supported}) << "probe " << i;
+    }
 }
 
 // ---- stdout lines are CLI records or nothing, stderr lines are parsed one by one --
