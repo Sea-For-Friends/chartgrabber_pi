@@ -3,7 +3,8 @@
 // folder that prints the `source` records of records.tsv (type, guid, kind, name, contentType, epsg,
 // cacheType, verdict, zmpFile, group, tab separated), then stderr.txt to stderr, appends its argument list to
 // argv.log, waits while the file `hold` exists, and exits with the number in `exit` (0 when absent).
-// `--version` (run by probeCli before every first use of the file) prints the line in the file `version`
+// `--version` (run by the version probe before every first use of the file) prints the line in the file
+// `version`
 // ("chart-grabber-cli 2026.10.9 (test)" when absent) and appends a line to probes.log; it touches nothing
 // else. `estimate` and `run` / `export` do the same with their own files: estimate.out (stdout), estimate.err
 // (stderr), estimate.exit, estimate.log (the argument list), hold-estimate, and the same with `run`; the
@@ -108,7 +109,7 @@ public:
     }
     void rawRecords(const std::string& text) { std::ofstream(dir_ / "records.tsv", std::ios::trunc) << text; }
     void stderrText(const std::string& text) { std::ofstream(dir_ / "stderr.txt", std::ios::trunc) << text; }
-    // The `--version` answer (default: chart-grabber-cli 2026.10.9). probeCli caches per file,
+    // The `--version` answer (default: chart-grabber-cli 2026.10.9). the probe caches per file,
     // so set it before the first probe of this stand-in.
     void version(const std::string& line) {
         std::ofstream(dir_ / "version", std::ios::trunc) << line << '\n';

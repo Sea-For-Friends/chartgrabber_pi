@@ -177,8 +177,6 @@ protected:
         const auto box = parseBBox(env("CG_BBOX").value_or("-1.5,50.5,-1.0,50.9"));
         ASSERT_TRUE(box) << "CG_BBOX is not west,south,east,north";
         bbox_ = *box;
-        ASSERT_TRUE(probeCli(*cli, settings_))
-            << "probeCli(" << *cli << ") failed: too old or not a tile program";
         // CLI 2026.10.13 creates the data folder (its fontconfig sysroot) already for `--version`;
         // DatadirEqualsFormCreatesTheFolder needs it absent.
         fs::remove_all(settings_.cliDataDir);

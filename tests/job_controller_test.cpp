@@ -97,7 +97,7 @@ const std::string kSource =
 
 const std::string kScript =
     std::string("#!/bin/sh\n") + stub::kStopPrelude +
-    R"SH(if [ "$1" = --version ]; then # probeCli: counted, the answer is in the file `version` next to the script
+    R"SH(if [ "$1" = --version ]; then # version probe: counted, the answer is in the file `version` next to the script
   d0=$(dirname "$0")
   echo probe >> "$d0/probes"
   cat "$d0/version" 2>/dev/null || echo 'chart-grabber-cli 2026.10.9 (test)'
