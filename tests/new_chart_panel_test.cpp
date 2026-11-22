@@ -4851,11 +4851,16 @@ TEST_F(DownloadTest, AVersionAnswerThatArrivesInsideTheWaitAfterANewInputStartsN
     ASSERT_TRUE(runUntil([&] { return sources_->probes() == probes + 1; }));
     pickZooms(9, 11);             // the wait before the next estimate starts here
     sources_->holdVersion(false); // the stale probe answers inside it
-    ASSERT_TRUE(runUntil([&] { return !panel()->estimateProbe_.running(); }));
-    if (panel()->estimateTimer_.IsRunning()) { // still inside the wait (a very slow machine may not be)
-        EXPECT_TRUE(!panel()->estimateRunner_ || !panel()->estimateRunner_->running())
-            << "no estimate run starts before the wait is over";
-    }
+    bool waitRunning = false, runRunning = false;
+    ASSERT_TRUE(runUntil([&] { // sampled the moment the stale probe has answered
+        if (panel()->estimateProbe_.running())
+            return false;
+        waitRunning = panel()->estimateTimer_.IsRunning();
+        runRunning = panel()->estimateRunner_ && panel()->estimateRunner_->running();
+        return true;
+    }));
+    ASSERT_TRUE(waitRunning) << "the stale probe answered after the wait was over";
+    EXPECT_FALSE(runRunning) << "no estimate run starts before the wait is over";
     waitEstimateRuns(2);
     waitEstimate();
     runUntil([] { return false; }, 500); // a second run for the old input would show itself

@@ -56,7 +56,6 @@ public:
     void
     outlineArea(bool show); // show and kind Rectangle: the rectangle is outlined on the chart, else nothing
     void reloadSources();
-    void runSources(const std::string& cli);
     void setBusy(bool busy); // Download <-> "A download is running" in its place
     // The height the page may take (the screen minus what the dialog adds around it); the rows above the
     // status line scroll beyond it.
@@ -91,6 +90,7 @@ private:
     const cg::SourceRecord* weatherRecord() const; // the weather layer when "Weather on top" is ticked
     std::vector<int> zoomList() const;
     void startEstimate(); // the timer fired
+    void runSources(const std::string& cli);
     void runEstimate(const std::string& cli, const cg::Settings& settings);
     void estimateFailed(const wxString& text);
     void estimateFinished(int code);

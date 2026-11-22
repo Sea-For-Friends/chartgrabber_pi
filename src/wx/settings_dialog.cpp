@@ -522,6 +522,7 @@ void SettingsDialog::startCheck() {
     cliStatus_->SetLabel(cliStatusText(CliStatus::Checking, {}, {}));
     sourcesStatus_->SetLabel(sourcesStatusText(SourcesStatus::Checking));
 
+    probe_.cancel(); // a probe of an older check is stale, also when no program is left to probe
     std::string why;
     const auto cli = resolveCli(pending_, &why, cliDefaultPaths, cliPathEnv);
     if (!cli) {
@@ -531,7 +532,6 @@ void SettingsDialog::startCheck() {
         return;
     }
     const cg::Settings forCli = config_.cliSettings(pending_);
-    probe_.cancel(); // a probe of an older check is stale
     probe_.check(*cli, forCli, [this, generation, cli = *cli, forCli](CliProbe::Result r) {
         if (closing_ || generation != generation_)
             return;
