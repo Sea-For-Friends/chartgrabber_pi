@@ -75,6 +75,7 @@ public:
 
     std::function<void()> onChartsChanged;        // after every saveChart of the job
     std::function<void(bool busy)> onBusyChanged; // on every busy() change
+    std::function<void()> onChartListUpdated;     // right after UpdateChartDBInplace
     std::function<void()> onPreferences;          // the strip's "Preferences..." button (StartFailed)
 
 private:

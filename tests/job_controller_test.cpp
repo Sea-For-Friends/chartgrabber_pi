@@ -796,6 +796,32 @@ TEST_F(JobTest, RegistrationIsOneRescanOfListedFoldersPlusTheJobsFolders) {
     }
 }
 
+// The chart-list update tells the frame-timer watch: once per UpdateChartDBInplace, after the call returned.
+TEST_F(JobTest, TheChartListUpdateHookRunsOnceAfterTheUpdateCall) {
+    store_->setFirstSuccessShown();
+    ocpn_fake::chartDirs.Add("/x");
+    std::vector<std::size_t> updatesSeen;
+    jc().onChartListUpdated = [&] { updatesSeen.push_back(ocpn_fake::updates.size()); };
+    auto r = makeRecord("20261016-100300");
+    scenario(r.id, 1, written(kBase, "/charts/a.mbtiles", 4, 9), "", 0);
+    start(r);
+    ASSERT_TRUE(waitIdle());
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u);
+    EXPECT_EQ(updatesSeen, std::vector<std::size_t>{1});
+}
+
+TEST_F(JobTest, TheChartListUpdateHookDoesNotRunWithoutAnUpdate) {
+    store_->setFirstSuccessShown();
+    int calls = 0;
+    jc().onChartListUpdated = [&] { ++calls; };
+    auto r = makeRecord("20261016-100400");
+    scenario(r.id, 1, "", "", 0);
+    start(r);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_TRUE(ocpn_fake::updates.empty());
+    EXPECT_EQ(calls, 0);
+}
+
 // The folders of the written files are also saved in OpenCPN's [ChartDirectories] (a rescan alone is lost at
 // the next start on 5.14): one entry per new folder in record order, nothing for a folder the config lists or
 // for a folder only OpenCPN's in-memory list holds, nothing without written files.
