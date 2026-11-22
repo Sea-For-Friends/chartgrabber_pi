@@ -308,7 +308,7 @@ OpenCPN, Options, Plugins, Chart Grabber, **Preferences**.
 | Warn before very large or very small detail choices | on | Asks before extreme detail |
 | Show download progress on the chart | off | Off: progress in its own small window |
 | Log file, **Open** | | For problem reports |
-| Debug: write more detail to the log file | off | For problem reports |
+| Debug: write more detail to the log file | off | For problem reports; also records each pause of OpenCPN's screen of a quarter second or more |
 
 ## Troubleshooting
 

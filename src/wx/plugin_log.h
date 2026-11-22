@@ -25,6 +25,7 @@ bool waylandOpenGlCovers(const std::string& display, const std::string& openGl);
 void endPluginLogHeader(); // after the settings line (and line 8)
 void setPluginLogDebug(bool on);
 bool pluginLogDebug();
+bool stallWatchRunning();              // the main-loop stall timer runs (Debug log on, a GUI application)
 void logLine(const wxString& text);    // OpenCPN's log ("ChartGrabber: " + text) and the file
 void logWarning(const wxString& text); // the same as a warning ("warning: " in the file)
 void logFile(const wxString& text);    // the file only

@@ -24,6 +24,7 @@ set(CG_TEST_SOURCES
     float_text_test.cpp
     chart_folder_test.cpp
     plugin_conf_test.cpp
+    stall_meter_test.cpp
 )
 
 # Window tests (see the rule in wx_env.h): a second binary with a GUI wxApp, ctest label "gui".
@@ -57,6 +58,7 @@ if(CG_TEST_SOURCES)
         ${CMAKE_SOURCE_DIR}/src/wx/look.cpp
         ${CMAKE_SOURCE_DIR}/src/wx/messages.cpp
         ${CMAKE_SOURCE_DIR}/src/wx/plugin_log.cpp
+        ${CMAKE_SOURCE_DIR}/src/wx/stall_watch.cpp
     )
     target_include_directories(cg_tests SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/api ${wxWidgets_INCLUDE_DIRS})
     target_include_directories(cg_tests PRIVATE ${CMAKE_SOURCE_DIR}/src/wx)
@@ -95,6 +97,7 @@ if(CG_GUI_TEST_SOURCES)
         ${CMAKE_SOURCE_DIR}/src/wx/question.cpp
         ${CMAKE_SOURCE_DIR}/src/wx/plugin_log.cpp
         ${CMAKE_SOURCE_DIR}/src/wx/open_folder.cpp
+        ${CMAKE_SOURCE_DIR}/src/wx/stall_watch.cpp
     )
     target_include_directories(cg_gui_tests SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/api ${wxWidgets_INCLUDE_DIRS})
     target_include_directories(cg_gui_tests PRIVATE ${CMAKE_SOURCE_DIR}/src/wx)

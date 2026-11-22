@@ -12,6 +12,7 @@ geo_math.cpp
     portable.cpp
     chart_folder.cpp
     plugin_conf.cpp
+    stall_meter.cpp
 )
 
 if(CG_CORE_SOURCES)
