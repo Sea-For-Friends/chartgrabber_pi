@@ -283,8 +283,11 @@ void CliRunner::abandon(int waitMs) {
     const auto start = std::chrono::steady_clock::now();
     const auto deadline = start + std::chrono::milliseconds(waitMs);
     bool exited = childExited();
+    int pollMs =
+        2; // a just-killed child is a zombie within about a millisecond: poll short first, then 50 ms
     while (!exited && std::chrono::steady_clock::now() < deadline) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::this_thread::sleep_for(std::chrono::milliseconds(pollMs));
+        pollMs = std::min(pollMs * 4, 50);
         exited = childExited();
     }
     if (!exited)

@@ -2414,6 +2414,22 @@ TEST_F(DownloadTest, ChangesAreDebouncedAndOneRunGetsTheLastInputs) {
     // bound.
 }
 
+TEST_F(DownloadTest, ClosingWhileAnEstimateIgnoresTheStopLineDoesNotWait) {
+    sources_->estimateOut(estimate1950());
+    ready();
+    sources_->ignoreTerm(true);
+    sources_->holdEstimate(true);
+    pickZooms(9, 10);
+    waitEstimateRuns(2);
+    const auto start = std::chrono::steady_clock::now();
+    delete dialog_;
+    dialog_ = nullptr;
+    EXPECT_LT(std::chrono::steady_clock::now() - start, std::chrono::milliseconds(200))
+        << "no waiting in the destructor";
+    sources_->holdEstimate(false);
+    sources_->ignoreTerm(false);
+}
+
 TEST_F(DownloadTest, ANewChangeCancelsTheRunningEstimateAndItsResultIsDiscarded) {
     const std::string first = estimateOf(111, 1000000, 2000000);  // "About 111 tiles, 1.0 MB ..., 2.0 MB"
     const std::string second = estimateOf(222, 3000000, 4000000); // "About 222 tiles, 3.0 MB ..., 4.0 MB"
