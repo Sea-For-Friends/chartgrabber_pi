@@ -1592,3 +1592,160 @@ TEST_F(CliLogTest, ATerminatedRunSaysStopped) {
     EXPECT_TRUE(std::regex_match(lines().back(), std::regex(R"(cli exit pid \d+: code 0)")))
         << lines().back();
 }
+
+// ---- a give-up ends everything the child started ------------------------------------------------------
+namespace {
+// The pids a stand-in reports on stderr: its own, then the grandchild it started, then "ready". Whatever
+// is still alive at the end of the test is killed, so a failed test leaks no process into the next.
+struct TreePids {
+    long child = 0, grand = 0;
+    bool ready = false;
+    ~TreePids() {
+        for (const long p : {child, grand}) {
+            if (p > 1)
+                ::kill(static_cast<pid_t>(p), SIGKILL);
+        }
+    }
+    CliRunner::Callbacks watch(CliRunner::Callbacks cb) {
+        int seen = 0;
+        cb.onStderr = [this, seen, inner = cb.onStderr](const StderrLine& l) mutable {
+            inner(l);
+            const auto* m = std::get_if<MessageLine>(&l);
+            if (!m)
+                return;
+            if (m->text == "ready")
+                ready = true;
+            else if (seen++ == 0)
+                child = std::atol(m->text.c_str());
+            else
+                grand = std::atol(m->text.c_str());
+        };
+        return cb;
+    }
+};
+
+// Gone: no such process, or a zombie that init has not reaped yet (the orphan is not the test's child).
+bool isGone(long pid) {
+    if (::kill(static_cast<pid_t>(pid), 0) != 0 && errno == ESRCH)
+        return true;
+    std::ifstream in("/proc/" + std::to_string(pid) + "/stat");
+    std::string all;
+    std::getline(in, all);
+    const size_t close = all.rfind(')');
+    return close != std::string::npos && close + 2 < all.size() && all[close + 2] == 'Z';
+}
+
+// A stand-in that starts a grandchild, reports both pids and then waits (the stop line is ignored).
+const char* const kTreeIgnoringStop = "sleep 30 & echo $$ >&2; echo $! >&2; echo ready >&2; "
+                                      "while :; do sleep 0.05; done";
+} // namespace
+
+TEST_F(CliRunnerTest, TheChildLeadsItsOwnProcessGroup_P0283) {
+    TreePids pids;
+    Capture run;
+    CliRunner runner;
+    std::string error;
+    ASSERT_TRUE(runner.start(sh(kTreeIgnoringStop), pids.watch(run.callbacks()), &error)) << error;
+    ASSERT_TRUE(runUntil([&] { return pids.ready; }, 20000));
+    EXPECT_EQ(::getpgid(static_cast<pid_t>(pids.child)), static_cast<pid_t>(pids.child));
+    EXPECT_NE(::getpgid(static_cast<pid_t>(pids.child)), ::getpgrp());
+    EXPECT_EQ(::getpgid(static_cast<pid_t>(pids.grand)), static_cast<pid_t>(pids.child));
+    runner.abandon(0);
+}
+
+TEST_F(CliRunnerTest, AbandonKillsTheGrandchildOfAChildThatIgnoresTheStopLine_P0283) {
+    TreePids pids;
+    Capture run;
+    CliRunner runner;
+    std::string error;
+    ASSERT_TRUE(runner.start(sh(kTreeIgnoringStop), pids.watch(run.callbacks()), &error)) << error;
+    ASSERT_TRUE(runUntil([&] { return pids.ready; }, 20000));
+    ASSERT_GT(pids.grand, 1);
+    runner.abandon(0);
+    EXPECT_TRUE(runUntil([&] { return isGone(pids.child) && isGone(pids.grand); }, 3000));
+}
+
+TEST_F(CliRunnerTest, AbandonKillsTheGrandchildOfAChildThatExitedOnTheStopLine_P0283) {
+    TreePids pids;
+    Capture run;
+    CliRunner runner;
+    std::string error;
+    ASSERT_TRUE(runner.start(shStop("trap 'exit 143' TERM; sleep 30 & echo $$ >&2; echo $! >&2; "
+                                    "echo ready >&2; while :; do sleep 0.05; done"),
+                             pids.watch(run.callbacks()), &error))
+        << error;
+    ASSERT_TRUE(runUntil([&] { return pids.ready; }, 20000));
+    ASSERT_GT(pids.grand, 1);
+    const auto t0 = Clock::now();
+    runner.abandon(2000);
+    EXPECT_LT(Clock::now() - t0, std::chrono::milliseconds(1500));
+    EXPECT_TRUE(runUntil([&] { return isGone(pids.grand); }, 3000)) << "the grandchild outlived the leader";
+}
+
+// The leader was reaped by somebody else: its pid may belong to another group now, so nothing is sent.
+TEST_F(CliRunnerTest, AbandonSendsNothingWhenTheLeaderWasReapedByAnother_P0283) {
+    TempDir tmp;
+    TreePids pids;
+    const std::string pidFile = (tmp.dir() / "pid").string();
+    Capture run;
+    CliRunner runner;
+    std::string error;
+    ASSERT_TRUE(runner.start(
+        {"/bin/sh", "-c", "sleep 30 & echo $! > \"$0.g\"; echo $$ > \"$0\"; sleep 0.3; exit 0", pidFile},
+        run.callbacks(), &error))
+        << error;
+    for (int i = 0; i < 200 && (pids.child <= 0 || pids.grand <= 0); ++i) {
+        std::ifstream(pidFile) >> pids.child;
+        std::ifstream(pidFile + ".g") >> pids.grand;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    ASSERT_GT(pids.child, 1);
+    ASSERT_GT(pids.grand, 1);
+    siginfo_t info{};
+    for (int i = 0; i < 300 && info.si_pid != pids.child; ++i) {
+        ::waitid(P_PID, static_cast<id_t>(pids.child), &info, WEXITED | WNOHANG | WNOWAIT);
+        if (info.si_pid != pids.child)
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    ASSERT_EQ(info.si_pid, static_cast<pid_t>(pids.child));
+    ASSERT_EQ(::waitpid(static_cast<pid_t>(pids.child), nullptr, 0), static_cast<pid_t>(pids.child));
+    runner.abandon(2000);
+    runFor(300);
+    EXPECT_FALSE(isGone(pids.grand)) << "the group was killed although its leader was reaped";
+    pids.child = 0; // reaped: its pid is not ours to signal
+}
+
+TEST_F(CliRunnerTest, TheGraceKillAlsoEndsTheGrandchild_P0283) {
+    TreePids pids;
+    Capture run;
+    CliRunner runner;
+    runner.setStopGraceMs(200);
+    std::string error;
+    ASSERT_TRUE(runner.start(sh(kTreeIgnoringStop), pids.watch(run.callbacks()), &error)) << error;
+    ASSERT_TRUE(runUntil([&] { return pids.ready; }, 20000));
+    runner.terminate();
+    ASSERT_TRUE(runUntil([&] { return run.exits > 0; }, 10000));
+    EXPECT_EQ(run.exitCode, -9);
+    EXPECT_TRUE(runUntil([&] { return isGone(pids.grand); }, 3000));
+    runFor(100);
+    EXPECT_EQ(run.exits, 1);
+}
+
+TEST_F(CliProbeTest, ANoAnswerAlsoEndsTheGrandchild_P0283) {
+    TempDir tmp;
+    TreePids pids;
+    CliProbe probe;
+    const std::string cli = tmp.write("tree-cli",
+                                      "#!/bin/sh\nd=$(dirname \"$0\")\nsleep 30 &\necho $! > \"$d/g.tmp\"\n"
+                                      "mv \"$d/g.tmp\" \"$d/g\"\nwhile :; do sleep 0.05; done\n",
+                                      true);
+    std::vector<ProbeResult> results;
+    probe.setTimeoutMs(300);
+    probe.check(cli, cg::Settings{}, record(results));
+    ASSERT_TRUE(runUntil([&] { return fs::exists(tmp.dir() / "g"); }, 10000));
+    std::ifstream(tmp.dir() / "g") >> pids.grand;
+    ASSERT_GT(pids.grand, 1);
+    ASSERT_TRUE(runUntil([&] { return !results.empty(); }, 10000));
+    EXPECT_EQ(results, std::vector<ProbeResult>{ProbeResult::NoAnswer});
+    EXPECT_TRUE(runUntil([&] { return isGone(pids.grand); }, 3000));
+}

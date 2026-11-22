@@ -140,7 +140,7 @@ wxString keepScaleText(int zoom, double lat); // "Keep <scale>" (Escape and the 
 wxString warnDetailCheckText();               // "Warn before very large or very small detail choices"
 
 // My charts rows.
-wxString chartStateText(const cg::ChartRecord& r); // "Complete", "N of M tiles missing", "Interrupted", ...
+wxString chartStateText(const cg::ChartRecord& r); // "Complete", "N of M tiles missing", "Stopped", ...
 wxString unreadableStateText();                    // "Unreadable"
 wxString deleteChartQuestion(const wxString& name);
 // Frozen rows: "Stopped at 63 %" / "Failed at 28 %" when frozenPermille is set, else chartStateText.

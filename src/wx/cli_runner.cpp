@@ -166,10 +166,30 @@ bool CliRunner::start(const std::vector<std::string>& argv, Callbacks cb, std::s
             raw.push_back(t.wc_str());
         }
         raw.push_back(nullptr);
-        pid = wxExecute(raw.data(), wxEXEC_ASYNC, process);
+        // Own session and process group: a give-up kills the group, so what the child started ends with it.
+        pid = wxExecute(raw.data(), wxEXEC_ASYNC | wxEXEC_MAKE_GROUP_LEADER, process);
 #endif
     }
     starting_ = false;
+#ifdef __WINDOWS__
+    if (pid != 0) { // a process the child starts before the assignment is outside the job
+        HANDLE job = CreateJobObjectW(nullptr, nullptr);
+        HANDLE h = job ? OpenProcess(PROCESS_SET_QUOTA | PROCESS_TERMINATE, FALSE, static_cast<DWORD>(pid))
+                       : nullptr;
+        if (job && h && AssignProcessToJobObject(job, h)) {
+            job_ = job;
+        } else {
+            const DWORD err = GetLastError();
+            if (job)
+                CloseHandle(job);
+            cg::logFile(
+                wxString::Format("cli start pid %ld: no job object (error %lu); a stop ends the CLI only",
+                                 pid, static_cast<unsigned long>(err)));
+        }
+        if (h)
+            CloseHandle(h);
+    }
+#endif
     if (testEnd_) {
         startExit_ = testEnd_;
         testEnd_.reset();
@@ -264,11 +284,34 @@ void CliRunner::graceCheck() {
     }
 }
 
+// Ends the child and everything it started: the child's process group (POSIX; a child that is not a group
+// leader is killed alone) or its job object (Windows; without one, the child alone).
+void CliRunner::killTree() {
+#ifdef __WINDOWS__
+    if (job_) {
+        TerminateJobObject(static_cast<HANDLE>(job_), static_cast<UINT>(-1));
+        return;
+    }
+    wxProcess::Kill(static_cast<int>(pid_), wxSIGKILL, wxKILL_NOCHILDREN);
+#else
+    if (wxProcess::Kill(static_cast<int>(pid_), wxSIGKILL, wxKILL_CHILDREN) != wxKILL_OK)
+        wxProcess::Kill(static_cast<int>(pid_), wxSIGKILL, wxKILL_NOCHILDREN);
+#endif
+}
+
+void CliRunner::closeJob() {
+#ifdef __WINDOWS__
+    if (job_)
+        CloseHandle(static_cast<HANDLE>(job_));
+    job_ = nullptr;
+#endif
+}
+
 void CliRunner::kill() {
     if (process_) {
         stopped_ = true;
         killSent_ = true;
-        wxProcess::Kill(static_cast<int>(pid_), wxSIGKILL, wxKILL_NOCHILDREN);
+        killTree();
     }
 }
 
@@ -290,8 +333,19 @@ void CliRunner::abandon(int waitMs) {
         pollMs = std::min(pollMs * 4, 50);
         exited = childExited();
     }
-    if (!exited)
+    if (!exited) {
         kill();
+    } else {
+        // The leader ended by itself: what it started may still run. POSIX: only while the leader is an
+        // unreaped zombie, so its pid cannot belong to another group.
+#ifdef __WINDOWS__
+        if (job_)
+            TerminateJobObject(static_cast<HANDLE>(job_), static_cast<UINT>(-1));
+#else
+        if (!childReaped())
+            killTree();
+#endif
+    }
     const auto ms =
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
     cg::logFile(wxString::Format("cli stop pid %ld: abandoned after %lld ms (%s)", pid_,
@@ -299,6 +353,7 @@ void CliRunner::abandon(int waitMs) {
     timer_.Stop();
     process_->Detach();
     process_ = nullptr;
+    closeJob();
 }
 
 void CliRunner::onTimer(wxTimerEvent&) {
@@ -401,6 +456,7 @@ void CliRunner::finish(int exitCode) {
     cg::logFile(wxString::Format("cli exit pid %ld: code %d%s", pid_, exitCode, stopped_ ? ", stopped" : ""));
     delete process_;
     process_ = nullptr;
+    closeJob();
     Callbacks cb = std::move(cb_);
     cb_ = Callbacks();
     if (cb.onExit) { // last: it may call start() again
