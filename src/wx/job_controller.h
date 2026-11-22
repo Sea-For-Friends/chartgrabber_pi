@@ -78,10 +78,12 @@ public:
     std::function<void()> onPreferences;          // the strip's "Preferences..." button (StartFailed)
 
 private:
-    enum class Phase { Idle, Running, RetryWait, Stopping };
+    enum class Phase { Idle, Checking, Running, RetryWait, Stopping };
     using Buttons = std::vector<std::pair<wxString, std::function<void()>>>;
 
     bool beginRun();
+    void continueStart(const std::string& cli, const cg::Settings& cliSettings, const std::string& iniPath,
+                       cg::RunKind kind, bool overwrite);
     void onRecord(const cg::StdoutRecord& r);
     void onStderr(const cg::StderrLine& l);
     void onExit(int exitCode);
@@ -117,6 +119,7 @@ private:
     const Look& look_;
     AreaTool& area_;
     std::unique_ptr<CliRunner> runner_;
+    CliProbe probe_;                 // the version check before the first start of a program file
     wxWeakRef<ProgressStrip> strip_; // a child of the canvas: null once OpenCPN deleted it
     wxTimer tick_, staleTimer_, rescanTimer_;
     cg::RescanThrottle throttle_;
