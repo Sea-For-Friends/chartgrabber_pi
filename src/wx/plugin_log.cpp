@@ -192,8 +192,9 @@ void endPluginLogHeader() {
 }
 
 void setPluginLogDebug(bool on) {
+    // wxTheApp is a static_cast to wxApp: invalid under a console application (the tests).
     g_debug = on;
-    if (on && wxTheApp) {
+    if (on && wxAppConsole::GetInstance()) {
         if (!g_stall)
             g_stall = std::make_unique<StallWatch>();
         g_stall->start();
