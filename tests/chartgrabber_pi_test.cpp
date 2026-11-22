@@ -5,6 +5,7 @@
 #include "config_store.h"
 #include "job_controller.h"
 #include "job_files.h"
+#include "log_capture.h"
 #include "main_dialog.h"
 #include "ocpn_fakes.h"
 #include "plugin_log.h"
@@ -555,6 +556,16 @@ TEST_F(PluginToolTest, TheFirstOverlayCallOfEachKindWritesOneLine) {
     pi_->RenderGLOverlayMultiCanvas(nullptr, &vp, 0, OVERLAY_OVER_SHIPS);
     pi_->RenderGLOverlayMultiCanvas(nullptr, &vp, 0, OVERLAY_OVER_SHIPS);
     EXPECT_EQ(count("first chart draw: OpenGL"), 1);
+}
+
+// OpenCPN sends position fixes (the heartbeat of the frame-timer watch) only to a plugin with this flag; the
+// call itself changes nothing visible.
+TEST_F(PluginToolTest, InitAsksForNmeaEventsAndAPositionFixChangesNothing) {
+    EXPECT_NE(caps_ & WANTS_NMEA_EVENTS, 0);
+    PlugIn_Position_Fix_Ex fix{};
+    LogCapture log;
+    EXPECT_NO_THROW(pi_->SetPositionFixEx(fix));
+    EXPECT_TRUE(log.lines.empty());
 }
 
 // The version OpenCPN reports (hand-made message text) decides whether a stale file may be dropped.

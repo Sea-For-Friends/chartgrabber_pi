@@ -26,6 +26,7 @@ set(CG_TEST_SOURCES
     plugin_conf_test.cpp
     stall_meter_test.cpp
     rescan_throttle_test.cpp
+    frame_timer_watch_test.cpp
 )
 
 # Window tests (see the rule in wx_env.h): a second binary with a GUI wxApp, ctest label "gui".
@@ -45,6 +46,7 @@ set(CG_GUI_TEST_SOURCES
     plugin_log_test.cpp
     close_during_job_test.cpp
     open_folder_test.cpp
+    frame_timer_revive_test.cpp
 )
 
 if(CG_TEST_SOURCES)
@@ -60,6 +62,7 @@ if(CG_TEST_SOURCES)
         ${CMAKE_SOURCE_DIR}/src/wx/messages.cpp
         ${CMAKE_SOURCE_DIR}/src/wx/plugin_log.cpp
         ${CMAKE_SOURCE_DIR}/src/wx/stall_watch.cpp
+        ${CMAKE_SOURCE_DIR}/src/wx/frame_timer_revive.cpp
     )
     target_include_directories(cg_tests SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/api ${wxWidgets_INCLUDE_DIRS})
     target_include_directories(cg_tests PRIVATE ${CMAKE_SOURCE_DIR}/src/wx)
@@ -99,6 +102,7 @@ if(CG_GUI_TEST_SOURCES)
         ${CMAKE_SOURCE_DIR}/src/wx/plugin_log.cpp
         ${CMAKE_SOURCE_DIR}/src/wx/open_folder.cpp
         ${CMAKE_SOURCE_DIR}/src/wx/stall_watch.cpp
+        ${CMAKE_SOURCE_DIR}/src/wx/frame_timer_revive.cpp
     )
     target_include_directories(cg_gui_tests SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/api ${wxWidgets_INCLUDE_DIRS})
     target_include_directories(cg_gui_tests PRIVATE ${CMAKE_SOURCE_DIR}/src/wx)
