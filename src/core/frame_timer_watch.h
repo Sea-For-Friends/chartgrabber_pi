@@ -22,6 +22,8 @@ public:
     // Post = no heartbeat, fewer than kMaxPosts posts so far (stays armed, the caller re-arms the check);
     // GiveUp = kMaxPosts posted without a heartbeat (disarmed).
     Action check(std::int64_t nowMs);
+    // True from the update until a check disarms the watch. When the caller finds no main window to post to,
+    // it stops re-arming the check and the watch stays armed with no check pending; that is harmless.
     bool armed() const { return armed_; }
 
 private:
