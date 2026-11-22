@@ -16,6 +16,7 @@
 #include "my_charts_panel.h"
 #include "ocpn_fakes.h"
 #include "question_probe.h"
+#include "rescan_clock.h"
 #include "sources_stub.h"
 #include "wx_env.h"
 
@@ -361,6 +362,7 @@ protected:
 
     std::unique_ptr<wxEventLoopBase> loop_;
     std::unique_ptr<wxEventLoopActivator> activator_;
+    FakeRescanClock clock_; // the chart-list update throttle's clock
     fs::path root_;
     std::string cli_, oldHome_, home_;
     std::unique_ptr<wxFileConfig> config_;
@@ -847,10 +849,11 @@ TEST_F(ChartsTest, TheDeleteQuestionIsAModelessWindowAndTheActionHappensOnlyOnTh
     }
 }
 
-// Five deletes in a row: each one removes its files and rescans exactly once.
-TEST_F(ChartsTest, FiveDeletesInARowRescanOncePerDelete) {
+// Five deletes in a row: each one removes its files, the chart-list updates merge into the first one (the
+// throttle); a delete 31 s later updates again.
+TEST_F(ChartsTest, P0277FiveDeletesInARowMakeOneUpdateAndALaterDeleteAnother) {
     std::vector<std::string> ids;
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < 6; ++i) {
         std::string file = "c", id = "2026101", name = "C"; // GCC 12 -O3 -Wrestrict: no "lit" + to_string(i)
         file += std::to_string(i) + ".mbtiles";
         id += std::to_string(i) + "-090000";
@@ -865,8 +868,10 @@ TEST_F(ChartsTest, FiveDeletesInARowRescanOncePerDelete) {
     makeDialog();
     panel()->confirmDelete = [](const wxString&, std::function<void(bool)> done) { done(true); };
     for (std::size_t i = 0; i < ids.size(); ++i) {
+        if (i == 5)
+            clock_.advance(31000);
         panel()->act(MyChartsPanel::Action::Delete, ids[i]);
-        EXPECT_EQ(ocpn_fake::updates.size(), i + 1);
+        EXPECT_EQ(ocpn_fake::updates.size(), i < 5 ? 1u : 2u);
         EXPECT_EQ(rows().size(), ids.size() - i - 1);
     }
 }
@@ -1740,6 +1745,7 @@ TEST_F(BarsTest, DeleteYesOnEveryKindOfRowReturnsAndTheLoopGoesOn) {
     ASSERT_NE(barOf(rowPanels().back()), nullptr) << "a FrozenBar is on the frozen row";
     for (const std::string& id : {frozen.id, complete.id}) {
         SCOPED_TRACE(id);
+        clock_.advance(31000);
         panel()->act(MyChartsPanel::Action::Delete, id);
         ASSERT_EQ(qprobe::shown().size(), 1u);
         qprobe::press(qprobe::shown()[0], wxID_YES);
