@@ -26,6 +26,7 @@ set(CG_TEST_SOURCES
     plugin_conf_test.cpp
     stall_meter_test.cpp
     rescan_throttle_test.cpp
+    frame_timer_watch_test.cpp
 )
 
 # Window tests (see the rule in wx_env.h): a second binary with a GUI wxApp, ctest label "gui".
@@ -45,6 +46,7 @@ set(CG_GUI_TEST_SOURCES
     plugin_log_test.cpp
     close_during_job_test.cpp
     open_folder_test.cpp
+    frame_timer_revive_test.cpp
 )
 
 if(CG_TEST_SOURCES)
