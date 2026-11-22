@@ -188,6 +188,8 @@ void JobController::doRescan() {
     rescanDirs_.clear();
     cg::guarded("chart list update", [&] {
         UpdateChartDBInplace(dirs, false, false);
+        if (onChartListUpdated)
+            onChartListUpdated();
         cg::logLine(wxString::Format("chart list updated (%d folders)", static_cast<int>(dirs.GetCount())));
     });
     throttle_.called(rescanClockMs()());
@@ -259,6 +261,7 @@ JobController::~JobController() {
     onChartsChanged = nullptr;
     onBusyChanged = nullptr;
     onPreferences = nullptr;
+    onChartListUpdated = nullptr;
     runner_.reset();             // stop and wait up to 15 s; callbacks still arrive and only record
     if (phase_ != Phase::Idle) { // no exit arrived (detached, or a retry wait): the record says so
         record_.state = cg::ChartState::Interrupted;

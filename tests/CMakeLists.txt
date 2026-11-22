@@ -60,6 +60,7 @@ if(CG_TEST_SOURCES)
         ${CMAKE_SOURCE_DIR}/src/wx/messages.cpp
         ${CMAKE_SOURCE_DIR}/src/wx/plugin_log.cpp
         ${CMAKE_SOURCE_DIR}/src/wx/stall_watch.cpp
+        ${CMAKE_SOURCE_DIR}/src/wx/frame_timer_revive.cpp
     )
     target_include_directories(cg_tests SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/api ${wxWidgets_INCLUDE_DIRS})
     target_include_directories(cg_tests PRIVATE ${CMAKE_SOURCE_DIR}/src/wx)
@@ -99,6 +100,7 @@ if(CG_GUI_TEST_SOURCES)
         ${CMAKE_SOURCE_DIR}/src/wx/plugin_log.cpp
         ${CMAKE_SOURCE_DIR}/src/wx/open_folder.cpp
         ${CMAKE_SOURCE_DIR}/src/wx/stall_watch.cpp
+        ${CMAKE_SOURCE_DIR}/src/wx/frame_timer_revive.cpp
     )
     target_include_directories(cg_gui_tests SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/api ${wxWidgets_INCLUDE_DIRS})
     target_include_directories(cg_gui_tests PRIVATE ${CMAKE_SOURCE_DIR}/src/wx)

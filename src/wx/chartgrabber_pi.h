@@ -20,6 +20,7 @@ class Look;
 class AreaTool;
 class JobController;
 class MainDialog;
+class FrameTimerRevive;
 
 class ChartGrabberPi final : public opencpn_plugin_118 {
 public:
@@ -42,6 +43,7 @@ public:
     void ShowPreferencesDialog(wxWindow* parent) override;
     void SetColorScheme(PI_ColorScheme cs) override;
     void SetPluginMessage(wxString& message_id, wxString& message_body) override;
+    void SetPositionFixEx(PlugIn_Position_Fix_Ex& pfix) override; // only the frame-timer heartbeat
     bool MouseEventHook(wxMouseEvent& event) override;
     bool RenderOverlayMultiCanvas(wxDC& dc, PlugIn_ViewPort* vp, int canvasIndex, int priority) override;
     bool RenderGLOverlayMultiCanvas(wxGLContext* ctx, PlugIn_ViewPort* vp, int canvasIndex,
@@ -58,6 +60,7 @@ private:
     std::unique_ptr<Look> look_;
     std::unique_ptr<AreaTool> areaTool_;
     std::unique_ptr<JobController> jobs_;
+    std::unique_ptr<FrameTimerRevive> revive_;
     bool versionLogged_ = false;
     MainDialog* dialog_ = nullptr;       // modeless, parent GetOCPNCanvasWindow(), created on first use
     wxWeakRef<SettingsDialog> settings_; // opened from the strip; deleted first in DeInit

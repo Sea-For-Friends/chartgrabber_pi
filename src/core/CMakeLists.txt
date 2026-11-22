@@ -14,6 +14,7 @@ geo_math.cpp
     plugin_conf.cpp
     stall_meter.cpp
     rescan_throttle.cpp
+    frame_timer_watch.cpp
 )
 
 if(CG_CORE_SOURCES)

@@ -22,6 +22,7 @@
 // The unique_ptr members of the complete header need their types here. MainDialog is held by raw pointer.
 #include "cli_runner.h"
 #include "config_store.h"
+#include "frame_timer_revive.h"
 #include "job_controller.h"
 #include "look.h"
 #include "settings_dialog.h"
@@ -115,6 +116,7 @@ int ChartGrabberPi::Init() {
                 r.state = cg::ChartState::Interrupted;
                 config_->saveChart(r);
             }
+            revive_ = std::make_unique<FrameTimerRevive>();
             jobs_ = std::make_unique<JobController>(*config_, *look_, *areaTool_);
             jobs_->cleanupStaleAtStart();
             jobs_->onBusyChanged = [this](bool busy) {
@@ -127,6 +129,10 @@ int ChartGrabberPi::Init() {
                     dialog_->chartsChanged();
             };
             jobs_->onPreferences = [this] { openSettings(); };
+            jobs_->onChartListUpdated = [this] {
+                if (revive_)
+                    revive_->chartListUpdated();
+            };
         }
         menuViewId_ = addContextItem(_("Chart Grabber: new chart of this view..."), this, menuViewItem_);
         menuDrawId_ = addContextItem(_("Chart Grabber: draw an area..."), this, menuDrawItem_);
@@ -135,7 +141,7 @@ int ChartGrabberPi::Init() {
                                      wxString(cg::kPluginVersionString)));
         return WANTS_OVERLAY_CALLBACK | WANTS_OPENGL_OVERLAY_CALLBACK | WANTS_MOUSE_EVENTS |
                INSTALLS_TOOLBAR_TOOL | WANTS_TOOLBAR_CALLBACK | INSTALLS_CONTEXTMENU_ITEMS | WANTS_CONFIG |
-               WANTS_PREFERENCES | WANTS_PLUGIN_MESSAGING;
+               WANTS_PREFERENCES | WANTS_PLUGIN_MESSAGING | WANTS_NMEA_EVENTS;
     });
 }
 
@@ -151,6 +157,8 @@ bool ChartGrabberPi::DeInit() {
             d->Close();
             delete d;
         }
+        if (revive_)
+            revive_->shutdown();
         jobs_.reset(); // waits up to 15 s for the child, saves the record Interrupted
         if (toolId_ != -1) {
             RemovePlugInTool(toolId_);
@@ -171,6 +179,7 @@ bool ChartGrabberPi::DeInit() {
         areaTool_.reset();
         bitmap_.reset();
         look_.reset();
+        revive_.reset();
         config_.reset();
         cg::closePluginLog();
         return true;
@@ -321,12 +330,22 @@ void ChartGrabberPi::SetPluginMessage(wxString& message_id, wxString& message_bo
         const auto v = cg::openCpnVersion(cg::toUtf8(message_body));
         if (!v)
             return;
+        if (revive_)
+            revive_->setOpenCpnVersion(v->first, v->second);
         staleDropAllowed() = cg::chartListRemoveIsSafe(v->first, v->second);
         if (!versionLogged_) {
             versionLogged_ = true;
             cg::logLine(wxString::Format("OpenCPN %d.%d reported", v->first, v->second));
         }
     });
+}
+
+// The 1 Hz fix OpenCPN sends while its frame timer runs; no position is used or stored.
+void ChartGrabberPi::SetPositionFixEx(PlugIn_Position_Fix_Ex&) {
+    if (g_disabled || g_closing)
+        return;
+    if (revive_)
+        revive_->heartbeat();
 }
 
 bool ChartGrabberPi::MouseEventHook(wxMouseEvent& event) {
