@@ -9,15 +9,10 @@
 #include "area_tool.h"
 #include "chart_folder.h"
 #include "config_store.h"
-#include "job_controller.h"
 #include "look.h"
-#include "main_dialog.h"
-#include "new_chart_panel.h"
 #include "ocpn_fakes.h"
 #include "plugin_version.h"
 #include "question_probe.h"
-#include "settings_dialog.h"
-#include "sources_dialog.h"
 #include "sources_stub.h"
 #include "wx_env.h"
 
@@ -63,6 +58,16 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+
+// Test-only access to the version probes of the dialogs (their time limit). The standard and wx headers
+// are already in, so the macro touches only these headers.
+#define private public
+#include "job_controller.h"
+#include "main_dialog.h"
+#include "new_chart_panel.h"
+#include "settings_dialog.h"
+#include "sources_dialog.h"
+#undef private
 
 #include <ocpn_plugin.h>
 
@@ -4719,6 +4724,169 @@ TEST_F(PanelVesselTest, TheRecordsZoomLimitCutsTheJob) {
     waitEstimate();
     EXPECT_NE(sources_->estimateArgv().back().find(" --zooms 8-9"), std::string::npos)
         << sources_->estimateArgv().back();
+}
+
+// ---- the version check before the sources run and before the estimate: it never waits for the program ----
+
+// Counts the 100 ms ticks of the loop while a check waits.
+class ProbeTicker : public wxTimer {
+public:
+    int ticks = 0;
+    void Notify() override { ++ticks; }
+};
+
+const char* const kNoAnswer =
+    "Chart Grabber CLI did not answer within 10 seconds. Try again. If it happens again, send the log file "
+    "with a problem report.";
+
+// Moves the program's modification time on, so the next version probe is not answered from the cache.
+void touchProgram(const std::string& cli, int hours) {
+    fs::last_write_time(cli, fs::last_write_time(cli) + std::chrono::hours(hours));
+}
+
+// A program that never answers its version: the choice keeps saying "loading" while the loop runs, then the
+// row shows the no-answer text with Preferences and no sources; no sources run started.
+TEST_F(PanelTest, ASilentProgramEndsTheSourcesRowInTheNoAnswerTextWhileTheLoopKeepsRunning) {
+    sources_->holdVersion(true);
+    makeDialog(false);
+    ProbeTicker ticker;
+    ticker.Start(100);
+    ASSERT_TRUE(runUntil([&] { return sources_->probes() == 1; }));
+    EXPECT_TRUE(loading());
+    EXPECT_EQ(status(), kLoading);
+    // A reload while the probe runs restarts it; the limit is short in the test.
+    panel()->sourcesProbe_.setTimeoutMs(300);
+    panel()->reloadSources();
+    ASSERT_TRUE(runUntil([&] { return !loading(); }));
+    EXPECT_TRUE(shows(kNoAnswer));
+    EXPECT_TRUE(preferences()->IsShown());
+    EXPECT_EQ(chart()->GetCount(), 0u);
+    EXPECT_FALSE(chart()->IsEnabled());
+    EXPECT_GE(ticker.ticks, 2) << "the loop kept running during the wait";
+    EXPECT_EQ(sources_->probes(), 2) << "the reload started the probe again";
+    EXPECT_TRUE(sources_->argv().empty()) << "no sources run for a program that did not answer";
+}
+
+// The estimate with a program whose version is not answered from the cache any more: too old and silent
+// each end in their own text in place of the line; no estimate run starts and Download stays off.
+TEST_F(DownloadTest, AnEstimateWhoseVersionProbeIsTooOldOrSilentShowsThatTextAndRunsNothing) {
+    struct Row {
+        const char* name;
+        const char* version; // the stand-in's version line
+        bool silent;
+        const char* expected;
+    };
+    sources_->estimateOut(estimate1950());
+    ready();
+    ASSERT_EQ(sources_->estimateArgv().size(), 1u);
+    panel()->estimateProbe_.setTimeoutMs(300);
+    ProbeTicker ticker;
+    ticker.Start(100);
+    int probes = sources_->probes();
+    int n = 0;
+    for (const Row& row : {Row{"too old", "chart-grabber-cli 2026.10.3 (test)", false, kTooOld},
+                           Row{"silent", "chart-grabber-cli 2026.10.9 (test)", true, kNoAnswer}}) {
+        SCOPED_TRACE(row.name);
+        sources_->version(row.version);
+        sources_->holdVersion(row.silent);
+        touchProgram(sources_->cli(), ++n);
+        if (n % 2)
+            pickZooms(9, 10);
+        else
+            pickZooms(9, 12); // a different input every time
+        EXPECT_TRUE(shows(kEstimating)) << "waiting while the program is asked";
+        ASSERT_TRUE(runUntil([&] { return !shows(kEstimating); }));
+        EXPECT_EQ(sources_->probes(), ++probes) << "the program was asked";
+        EXPECT_TRUE(shows(row.expected)) << shownTexts();
+        EXPECT_EQ(estimateLine(), "");
+        EXPECT_FALSE(downloadButton()->IsEnabled());
+        EXPECT_EQ(sources_->estimateArgv().size(), 1u) << "no estimate run";
+    }
+    EXPECT_GE(ticker.ticks, 2) << "the loop kept running during the wait";
+    // The next answer clears the failure.
+    sources_->holdVersion(false);
+    sources_->version("chart-grabber-cli 2026.10.9 (test)");
+    touchProgram(sources_->cli(), ++n);
+    pickZooms(9, 13);
+    waitEstimate();
+    EXPECT_EQ(status(), "");
+    EXPECT_NE(estimateLine(), "");
+    EXPECT_TRUE(downloadButton()->IsEnabled());
+}
+
+// A slow answer: the page keeps "Working out the size..." and Download off while the program is asked; a
+// new input meanwhile restarts the check and only the later input is estimated.
+TEST_F(DownloadTest, ASlowVersionAnswerKeepsTheEstimateWaitingAndANewInputRestartsTheCheck) {
+    sources_->estimateOut(estimate1950());
+    ready();
+    sources_->holdVersion(true);
+    touchProgram(sources_->cli(), 1);
+    const int probes = sources_->probes();
+    pickZooms(9, 10);
+    ASSERT_TRUE(runUntil([&] { return sources_->probes() == probes + 1; }));
+    EXPECT_EQ(status(), kEstimating);
+    EXPECT_FALSE(downloadButton()->IsEnabled());
+    pickZooms(9, 11); // the first check is stale: it is restarted for the new input
+    ASSERT_TRUE(runUntil([&] { return sources_->probes() == probes + 2; }));
+    EXPECT_EQ(status(), kEstimating);
+    EXPECT_EQ(sources_->estimateArgv().size(), 1u) << "no estimate run while the program is silent";
+    sources_->holdVersion(false);
+    waitEstimateRuns(2);
+    waitEstimate();
+    ASSERT_EQ(sources_->estimateArgv().size(), 2u) << "one run, for the later input only";
+    EXPECT_NE(sources_->estimateArgv()[1].find(" --zooms 9-11"), std::string::npos)
+        << sources_->estimateArgv()[1];
+    EXPECT_TRUE(downloadButton()->IsEnabled());
+}
+
+// An answer of the version probe that arrives after the input changed, inside the wait before the next
+// estimate, starts no run at once: the run starts when the wait is over, for the later input only.
+TEST_F(DownloadTest, AVersionAnswerThatArrivesInsideTheWaitAfterANewInputStartsNoRunAtOnce) {
+    sources_->estimateOut(estimate1950());
+    ready();
+    sources_->holdVersion(true);
+    touchProgram(sources_->cli(), 1);
+    const int probes = sources_->probes();
+    pickZooms(9, 10);
+    ASSERT_TRUE(runUntil([&] { return sources_->probes() == probes + 1; }));
+    pickZooms(9, 11);             // the wait before the next estimate starts here
+    sources_->holdVersion(false); // the stale probe answers inside it
+    ASSERT_TRUE(runUntil([&] { return !panel()->estimateProbe_.running(); }));
+    if (panel()->estimateTimer_.IsRunning()) { // still inside the wait (a very slow machine may not be)
+        EXPECT_TRUE(!panel()->estimateRunner_ || !panel()->estimateRunner_->running())
+            << "no estimate run starts before the wait is over";
+    }
+    waitEstimateRuns(2);
+    waitEstimate();
+    runUntil([] { return false; }, 500); // a second run for the old input would show itself
+    ASSERT_EQ(sources_->estimateArgv().size(), 2u);
+    EXPECT_NE(sources_->estimateArgv()[1].find(" --zooms 9-11"), std::string::npos)
+        << sources_->estimateArgv()[1];
+}
+
+// Closing the page while the program is silent, for the sources row and for the estimate: it is killed
+// (the fixture checks that no process stays) and nothing is shown afterwards.
+TEST_F(DownloadTest, ClosingThePageWhileAVersionProbeRunsLeavesNoChildAndNoRun) {
+    sources_->holdVersion(true);
+    makeDialog(false);
+    ASSERT_TRUE(runUntil([&] { return sources_->probes() == 1; }));
+    destroyDialog();
+    EXPECT_TRUE(processesUnder(root_.string()).empty()) << "the sources probe's program is gone";
+    sources_->holdVersion(false);
+    runUntil([] { return false; }, 300); // let a stray callback show itself
+    EXPECT_TRUE(sources_->argv().empty());
+
+    sources_->estimateOut(estimate1950());
+    ready();
+    sources_->holdVersion(true);
+    touchProgram(sources_->cli(), 1);
+    pickZooms(9, 10);
+    ASSERT_TRUE(runUntil([&] { return sources_->probes() == 3; }));
+    destroyDialog();
+    EXPECT_TRUE(processesUnder(root_.string()).empty()) << "the estimate probe's program is gone";
+    sources_->holdVersion(false);
+    runUntil([] { return false; }, 300); // let a stray callback show itself
+    EXPECT_EQ(sources_->estimateArgv().size(), 1u) << "no estimate run after the page is gone";
 }
 
 } // namespace

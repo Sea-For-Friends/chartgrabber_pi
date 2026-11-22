@@ -301,6 +301,11 @@ protected:
         dialog_ = new MainDialog(frame_, *store_, look_, *area_, *jobs_);
         jobs_->onChartsChanged = [this] { dialog_->chartsChanged(); };
         jobs_->onBusyChanged = [this](bool b) { dialog_->busyChanged(b); };
+        // The New chart page checks the program's version without waiting; until that answer is cached a job
+        // start would wait for its own check, and these tests start jobs right after the dialog opens.
+        if (!cli_.empty()) {
+            EXPECT_TRUE(runUntil([&] { return !probedCliVersion(cli_).empty(); })) << "the version check";
+        }
     }
     MyChartsPanel* panel() {
         std::vector<MyChartsPanel*> v;
