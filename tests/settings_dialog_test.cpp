@@ -1027,7 +1027,7 @@ protected:
     }
     void TearDown() override {
         if (store_) {
-            dlg_.reset(); // the runner's stopAndWait pumps the loop
+            dlg_.reset(); // the runner's destructor waits without events
             expectNoProcessesUnder((root_ / "stubs").string());
             activator_.reset();
             loop_.reset();

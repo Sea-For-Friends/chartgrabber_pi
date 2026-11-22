@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// CliRunner (child process, pipes, record callbacks, terminate / kill / stop-and-wait, version log)
+// CliRunner (child process, pipes, record callbacks, terminate / kill / abandon, version log)
 // and resolveCli. Children are small `sh` scripts (inline or written to a temp directory), never the real
 // CLI. Needs a wx event loop: a global environment starts a wxAppConsole, each test runs inside its own loop.
 #include "cli_runner.h"
@@ -35,6 +35,7 @@
 #include <string_view>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <thread>
 #include <unistd.h>
 #include <variant>
 #include <vector>
@@ -334,30 +335,131 @@ TEST_F(CliRunnerTest, SignalledChildIsMinusTheSignal) {
     }
 }
 
-// Proof 4a: a child that exits on TERM; stopAndWait returns true, the exit has been delivered inside.
-TEST_F(CliRunnerTest, StopAndWaitTrueForAChildThatExitsOnTerm) {
+// A child that exits on the stop line: abandon() returns as soon as it has ended, dispatches no event (a
+// 10 ms timer set before the call has not fired), calls no exit callback, and wx reaps
+// the zombie on the next turns of the loop.
+TEST_F(CliRunnerTest, AbandonReturnsAsSoonAsAChildThatExitsOnTheStopLineEndedAndRunsNoEvent) {
     Capture run;
     bool ready = false;
+    long pid = 0;
     CliRunner::Callbacks cb = run.callbacks();
     cb.onStderr = [&](const StderrLine& l) {
-        if (const auto* m = std::get_if<MessageLine>(&l); m && m->text == "ready") {
-            ready = true;
+        if (const auto* m = std::get_if<MessageLine>(&l)) {
+            if (m->text == "ready")
+                ready = true;
+            else
+                pid = std::atol(m->text.c_str());
         }
     };
     CliRunner runner;
     std::string error;
     ASSERT_TRUE(
-        runner.start(shStop("trap 'exit 143' TERM; echo ready >&2; k=0; while [ $k -lt 1200 ]; do sleep "
-                            "0.05; k=$((k + 1)); done"),
+        runner.start(shStop("trap 'exit 143' TERM; echo $$ >&2; echo ready >&2; k=0; while [ $k -lt 1200 ]; "
+                            "do sleep 0.05; k=$((k + 1)); done"),
                      cb, &error))
         << error;
     ASSERT_TRUE(runUntil([&] { return ready; }, 20000));
+    ASSERT_GT(pid, 1);
+    bool timerRan = false;
+    wxEvtHandler handler;
+    wxTimer timer(&handler);
+    handler.Bind(wxEVT_TIMER, [&](wxTimerEvent&) { timerRan = true; });
+    timer.StartOnce(10);
+    std::this_thread::sleep_for(std::chrono::milliseconds(30)); // the timer is due when abandon runs
     const auto t0 = Clock::now();
-    EXPECT_TRUE(runner.stopAndWait(15000));
-    EXPECT_LT(Clock::now() - t0, std::chrono::seconds(10));
+    runner.abandon(2000);
+    EXPECT_LT(Clock::now() - t0, std::chrono::milliseconds(1500));
     EXPECT_FALSE(runner.running());
-    EXPECT_EQ(run.exits, 1);
-    EXPECT_EQ(run.exitCode, 143);
+    EXPECT_FALSE(timerRan) << "an event was dispatched inside abandon";
+    EXPECT_EQ(run.exits, 0);
+    EXPECT_TRUE(runUntil([&] { return ::kill(static_cast<pid_t>(pid), 0) != 0 && errno == ESRCH; }, 3000))
+        << "the zombie stays after the next turns of the loop";
+    runFor(50);
+    EXPECT_TRUE(timerRan) << "the timer was live";
+    EXPECT_EQ(run.exits, 0);
+}
+
+// A child that ignores the stop line is killed when the wait is over: after about waitMs, at once for 0;
+// the process is gone, no callback.
+TEST_F(CliRunnerTest, AbandonKillsAChildThatIgnoresTheStopLineAfterTheWait) {
+    struct Row {
+        int waitMs;
+        int minMs, maxMs;
+    };
+    for (const Row& row : {Row{300, 290, 1500}, Row{0, 0, 200}}) {
+        SCOPED_TRACE(row.waitMs);
+        Capture run;
+        bool ready = false;
+        long pid = 0;
+        CliRunner::Callbacks cb = run.callbacks();
+        cb.onStderr = [&](const StderrLine& l) {
+            if (const auto* m = std::get_if<MessageLine>(&l)) {
+                if (m->text == "ready")
+                    ready = true;
+                else
+                    pid = std::atol(m->text.c_str());
+            }
+        };
+        CliRunner runner;
+        std::string error;
+        ASSERT_TRUE(runner.start(sh("echo $$ >&2; echo ready >&2; exec sleep 30"), cb, &error)) << error;
+        ASSERT_TRUE(runUntil([&] { return ready; }, 20000));
+        ASSERT_GT(pid, 1);
+        const auto t0 = Clock::now();
+        runner.abandon(row.waitMs);
+        const auto took = Clock::now() - t0;
+        EXPECT_GE(took, std::chrono::milliseconds(row.minMs));
+        EXPECT_LT(took, std::chrono::milliseconds(row.maxMs));
+        EXPECT_FALSE(runner.running());
+        EXPECT_TRUE(runUntil([&] { return ::kill(static_cast<pid_t>(pid), 0) != 0 && errno == ESRCH; }, 3000))
+            << "the child was killed and reaped";
+        EXPECT_EQ(run.exits, 0);
+    }
+}
+
+// A child that has ended but is not reaped yet (a zombie: wx reaps only from the loop, which abandon does not
+// run) or that somebody else reaped counts as ended: abandon returns at once and kills nothing.
+TEST_F(CliRunnerTest, AbandonTakesAZombieAndAReapedChildAsEnded) {
+    for (const bool reap : {false, true}) {
+        SCOPED_TRACE(reap);
+        TempDir tmp;
+        const std::string pidFile = (tmp.dir() / "pid").string();
+        Capture run;
+        CliRunner runner;
+        std::string error;
+        ASSERT_TRUE(runner.start({"/bin/sh", "-c", "echo $$ > \"$0\"; sleep 0.3; exit 0", pidFile},
+                                 run.callbacks(), &error))
+            << error;
+        long pid = 0;
+        for (int i = 0; i < 200 && pid <= 0; ++i) { // no event is dispatched while the child ends
+            std::ifstream(pidFile) >> pid;
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        ASSERT_GT(pid, 1);
+        siginfo_t info{};
+        for (int i = 0; i < 300 && info.si_pid != pid; ++i) {
+            ::waitid(P_PID, static_cast<id_t>(pid), &info, WEXITED | WNOHANG | WNOWAIT);
+            if (info.si_pid != pid)
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        ASSERT_EQ(info.si_pid, static_cast<pid_t>(pid)) << "the child did not end as a zombie";
+        if (reap) {
+            ASSERT_EQ(::waitpid(static_cast<pid_t>(pid), nullptr, 0), static_cast<pid_t>(pid));
+        }
+        const auto t0 = Clock::now();
+        runner.abandon(2000);
+        EXPECT_LT(Clock::now() - t0, std::chrono::milliseconds(500));
+        EXPECT_FALSE(runner.running());
+        runFor(100);
+        EXPECT_EQ(run.exits, 0);
+    }
+}
+
+TEST_F(CliRunnerTest, AbandonWithoutAProcessReturnsAtOnce) {
+    CliRunner runner;
+    const auto t0 = Clock::now();
+    runner.abandon(15000);
+    EXPECT_LT(Clock::now() - t0, std::chrono::milliseconds(200));
 }
 
 // --stop-on-stdin is the LAST argument (after the caller's), and stdin is a pipe.
@@ -468,69 +570,39 @@ TEST_F(CliRunnerTest, TerminateOnAChildThatClosedItsStdinSurvivesSigpipe) {
     delete buffer;
 }
 
-// No active event loop: the end cannot be observed, so stopAndWait says false at once.
-TEST_F(CliRunnerTest, StopAndWaitWithoutALoopReturnsFalseAtOnce) {
-    Capture run;
+// The production wait of the destructor is 2 s.
+TEST_F(CliRunnerTest, DestructorWaitDefaultsToTwoSeconds) {
     CliRunner runner;
-    std::string error;
-    ASSERT_TRUE(runner.start(
-        shStop("trap 'exit 143' TERM; k=0; while [ $k -lt 1200 ]; do sleep 0.05; k=$((k + 1)); done"),
-        run.callbacks(), &error))
-        << error;
-    activator_.reset();
-    const auto t0 = Clock::now();
-    EXPECT_FALSE(runner.stopAndWait(15000));
-    EXPECT_LT(Clock::now() - t0, std::chrono::seconds(2));
-    activator_ = std::make_unique<wxEventLoopActivator>(loop_.get());
-    EXPECT_TRUE(runUntil([&] { return run.exits > 0; }, 20000));
+    EXPECT_EQ(runner.destructorWaitMs(), 2000);
 }
 
-TEST_F(CliRunnerTest, StopAndWaitWithoutAProcessIsTrue) {
-    CliRunner runner;
-    EXPECT_TRUE(runner.stopAndWait(15000));
-}
-
-// Proof 4b: a child that ignores TERM. stopAndWait gives up after its timeout; the destructor then waits its
-// injected wait (300 ms instead of the production 15 s) and detaches: no crash, no onExit, the child
-// is still alive when the runner is gone.
-TEST_F(CliRunnerTest, StopAndWaitFalseForAChildThatIgnoresTermAndTheDestructorDetaches) {
+// The destructor of a running runner is abandon(destructorWaitMs()): it waits for a child that ignores the
+// stop line for the set time (here 300 ms, not the production 2 s), then kills it; no callback.
+TEST_F(CliRunnerTest, TheDestructorAbandonsARunningChildAfterItsWait) {
     Capture run;
     bool ready = false;
+    long pid = 0;
     CliRunner::Callbacks cb = run.callbacks();
-    cb.onStderr = [&, inner = cb.onStderr](const StderrLine& l) {
-        inner(l);
-        if (const auto* m = std::get_if<MessageLine>(&l); m && m->text == "ready") {
-            ready = true;
+    cb.onStderr = [&](const StderrLine& l) {
+        if (const auto* m = std::get_if<MessageLine>(&l)) {
+            if (m->text == "ready")
+                ready = true;
+            else
+                pid = std::atol(m->text.c_str());
         }
     };
     auto runner = std::make_unique<CliRunner>();
     runner->setDestructorWaitMs(300);
     std::string error;
-    ASSERT_TRUE(runner->start(shStop("trap '' TERM; echo \"$$\" >&2; echo ready >&2; sleep 22"), cb, &error))
-        << error;
+    ASSERT_TRUE(runner->start(sh("echo $$ >&2; echo ready >&2; exec sleep 30"), cb, &error)) << error;
     ASSERT_TRUE(runUntil([&] { return ready; }, 20000));
-    auto t0 = Clock::now();
-    EXPECT_FALSE(runner->stopAndWait(200));
-    EXPECT_GE(Clock::now() - t0, std::chrono::milliseconds(200));
-    EXPECT_LT(Clock::now() - t0, std::chrono::seconds(5));
-    EXPECT_TRUE(runner->running());
-    t0 = Clock::now();
-    runner.reset();
-    const auto took = Clock::now() - t0;
-    EXPECT_GE(took, std::chrono::milliseconds(290));
-    EXPECT_LT(took, std::chrono::seconds(5));
-    EXPECT_EQ(run.exits, 0);
-    // The shell is still there: its pid was printed as the first stderr line.
-    ASSERT_GE(run.lines.size(), 1u);
-    const long pid = std::atol(std::get<MessageLine>(run.lines[0]).text.c_str());
     ASSERT_GT(pid, 1);
-    EXPECT_EQ(::kill(static_cast<pid_t>(pid), 0), 0);
-}
-
-// The production wait of the destructor is 15 s.
-TEST_F(CliRunnerTest, DestructorWaitDefaultsToFifteenSeconds) {
-    CliRunner runner;
-    EXPECT_EQ(runner.destructorWaitMs(), 15000);
+    const auto t0 = Clock::now();
+    runner.reset();
+    EXPECT_GE(Clock::now() - t0, std::chrono::milliseconds(290));
+    EXPECT_LT(Clock::now() - t0, std::chrono::milliseconds(1500));
+    EXPECT_EQ(run.exits, 0);
+    EXPECT_TRUE(runUntil([&] { return ::kill(static_cast<pid_t>(pid), 0) != 0 && errno == ESRCH; }, 3000));
 }
 
 // Proof 5.
@@ -1501,40 +1573,74 @@ TEST_F(CliRunnerTest, AnEndReportedInsideStartFinishesTheRunWithThatCode) {
     EXPECT_EQ(cap.exitCode, 4);
 }
 
-// a child that ignores the line is killed once the grace has passed (exit -9), by the timer
-// and by stopAndWait; the kill is logged once.
+// a child that ignores the line is killed once the grace has passed (exit -9), by the timer;
+// the kill is logged once.
 TEST_F(CliLogTest, AChildThatIgnoresTheStopLineIsKilledAfterTheGrace) {
-    for (const bool wait : {false, true}) {
+    Capture run;
+    bool ready = false;
+    CliRunner::Callbacks cb = run.callbacks();
+    cb.onStderr = [&, inner = cb.onStderr](const StderrLine& l) {
+        inner(l);
+        if (const auto* m = std::get_if<MessageLine>(&l); m && m->text == "ready")
+            ready = true;
+    };
+    CliRunner runner;
+    runner.setStopGraceMs(300);
+    std::string error;
+    ASSERT_TRUE(runner.start(sh("echo ready >&2; exec sleep 30"), cb, &error)) << error;
+    ASSERT_TRUE(runUntil([&] { return ready; }, 20000));
+    const auto t0 = Clock::now();
+    runner.terminate();
+    runFor(150);
+    EXPECT_EQ(run.exits, 0) << "killed before the grace";
+    ASSERT_TRUE(runUntil([&] { return run.exits > 0; }, 10000));
+    EXPECT_GE(Clock::now() - t0, std::chrono::milliseconds(290));
+    EXPECT_LT(Clock::now() - t0, std::chrono::seconds(5));
+    EXPECT_EQ(run.exitCode, -9);
+    size_t killed = 0;
+    for (const std::string& l : lines())
+        killed += std::regex_match(l, std::regex(R"(cli stop pid \d+: no exit after 300 ms; killed)"));
+    EXPECT_EQ(killed, 1u);
+}
+
+// abandon logs one line with the outcome, and not the grace line.
+TEST_F(CliLogTest, AbandonWritesOneLineWithTheOutcome) {
+    struct Row {
+        const char* script;
+        bool stopLine; // the script ends on the stop line
+        int waitMs;
+        const char* outcome;
+    };
+    const std::vector<Row> rows = {
+        {"echo ready >&2; trap 'exit 143' TERM; k=0; while [ $k -lt 1200 ]; do sleep 0.05; k=$((k + 1)); "
+         "done",
+         true, 2000, "exited"},
+        {"echo ready >&2; exec sleep 30", false, 100, "killed"},
+    };
+    size_t total = 0;
+    for (const Row& row : rows) {
+        SCOPED_TRACE(row.outcome);
         Capture run;
         bool ready = false;
         CliRunner::Callbacks cb = run.callbacks();
-        cb.onStderr = [&, inner = cb.onStderr](const StderrLine& l) {
-            inner(l);
+        cb.onStderr = [&](const StderrLine& l) {
             if (const auto* m = std::get_if<MessageLine>(&l); m && m->text == "ready")
                 ready = true;
         };
         CliRunner runner;
-        runner.setStopGraceMs(300);
         std::string error;
-        ASSERT_TRUE(runner.start(sh("echo ready >&2; exec sleep 30"), cb, &error)) << error;
+        ASSERT_TRUE(runner.start(row.stopLine ? shStop(row.script) : sh(row.script), cb, &error)) << error;
         ASSERT_TRUE(runUntil([&] { return ready; }, 20000));
-        const auto t0 = Clock::now();
-        if (wait) {
-            EXPECT_TRUE(runner.stopAndWait(10000));
-        } else {
-            runner.terminate();
-            runFor(150);
-            EXPECT_EQ(run.exits, 0) << "killed before the grace";
-            ASSERT_TRUE(runUntil([&] { return run.exits > 0; }, 10000));
-        }
-        EXPECT_GE(Clock::now() - t0, std::chrono::milliseconds(290));
-        EXPECT_LT(Clock::now() - t0, std::chrono::seconds(5));
-        EXPECT_EQ(run.exitCode, -9);
+        runner.abandon(row.waitMs);
+        size_t seen = 0;
+        for (const std::string& l : lines())
+            seen +=
+                std::regex_match(l, std::regex(std::string(R"(cli stop pid \d+: abandoned after \d+ ms \()") +
+                                               row.outcome + R"(\))"));
+        EXPECT_EQ(seen, 1u);
+        EXPECT_EQ(count("cli stop pid"), ++total) << "no grace line";
+        runFor(100);
     }
-    size_t killed = 0;
-    for (const std::string& l : lines())
-        killed += std::regex_match(l, std::regex(R"(cli stop pid \d+: no exit after 300 ms; killed)"));
-    EXPECT_EQ(killed, 2u);
 }
 
 TEST_F(CliLogTest, ATerminatedRunSaysStopped) {
