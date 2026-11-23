@@ -270,3 +270,12 @@ capabilities (read 2026-11-23), in the same `.source.json` format as the others.
     ef218f32df17ed9cc0e2620bc98795d74e9ecad242ba48354041ca1f45ab7dec  Satellite/Beeldmateriaal-Bonaire-Ortho-2024.source.json
     19cd8400e44d60d94d56c5ceebd0e87192d88098e3774b812f5e808b698c197e  Satellite/Beeldmateriaal-Saba-Ortho-2023-24.source.json
     a6e0649afdffc30792bfb12a17d647520ceaedeba8b247cb5b5955cda03174af  Satellite/Beeldmateriaal-Sint-Eustatius-Ortho-2023-24.source.json
+
+## 2026-11-23: German coast orthophotos
+
+Four new files, written by this repository from the services' capabilities (read 2026-11-23), in the same `.source.json` format as the others. Downloaded once each with the CLI 2026.11.3 (two connections, three zooms of a small box per source). sha256:
+
+    bd123e398baf7d648ad14a7616e4483f0d479e8ff103475c56ff5512e97aebdf  Satellite/LVermGeo-SH-DOP20.source.json
+    4f60669d351a710610d5aae14e8e21749b06aed67bd3b194515ebe031aba303c  Satellite/LGLN-NI-DOP20.source.json
+    7a6ebfc052ad413d2e2c76fcb1776caaa9931430565cb4b9cfc0e23534a0b007  Satellite/GeoInformation-Bremen-DOP10-2025.source.json
+    455b3a65c66425594da25af6832f1fc3c63e1b82a72f0d53f5ad5093634aea5d  Satellite/LGV-Hamburg-DOP-2026.source.json

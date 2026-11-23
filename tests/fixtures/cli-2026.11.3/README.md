@@ -7,6 +7,7 @@ The folder was renamed from `cli-2026.11.1` for the CLI 2026.11.3 (core tag `v20
 - NOTHING else differs in the offline cases; the kept network cases are not rewritten. `run-refused-busy` was re-captured and differs only by live numbers (one cache-hit estimate line, the lock folder name, the process id), so the 2026.11.1 files stay.
 - (2026-11-20): `sources-bundled-all.stdout` re-captured with the same CLI after the Gulf of Morbihan lidar source was added: one more row (87 rows), nothing else differs.
 - (2026-11-23): `sources-bundled-all.stdout` re-captured with the same CLI after the three Caribbean Netherlands orthophoto sources were added: three more rows (90 rows), nothing else differs.
+- (2026-11-23): `sources-bundled-all.stdout` re-captured with the same CLI after four German coast orthophoto sources were added: four more rows (94 rows), nothing else differs.
 The history of the earlier pins follows.
 
 
@@ -41,7 +42,7 @@ Folder `A` = `OpenTopoMap` (`data/sources/Coast and land`), `OpenSeaMap-Seamarks
 | `sources-two-folders` | `sources --format=tsv --maps A --maps B`: 4 rows of 15 columns, field 10 (`origin`) `user` on all, the last column (`navigationWarning`) `0`; the duplicate GUID gives the later folder's row (`Copy-Topo.source.json`); stderr's first line `warning: map source {51C1079B-...}: $SCRATCH/B/Copy-Topo.source.json replaces $SCRATCH/A/OpenTopoMap.source.json` | 0 |
 | `sources-no-maps` | `sources --format=tsv` (no `--maps`): stdout empty, stderr `error: no map sources given: pass --maps DIR, ...` | 3 |
 | `sources-navigation-warning` | `sources --format=tsv --maps N-bundled --maps N-sailor`: bundled = `OpenTopoMap`; sailor folder = `Flagged.zmp`, a copy of OpenTopoMap with a new GUID, the name `Flagged copy` and `NavigationWarning=1` added; 2 rows, the last column `1` for `Flagged copy`, `0` for OpenTopoMap | 0 |
-| `sources-bundled-all` | `sources --format=tsv --maps <repo>/data/sources` (re-captured whenever the bundled set changes): 90 rows in seven groups, the last column `1` for exactly the forty-two sources of `Nautical charts` (IH Portugal chart too), `Depth`, the three overlays IDEIB Posidonia, EMODnet seagrass and NOAA NCCOS Saipan and the nine SHOM layers, the two STOFS layers and the NOAA OFS currents, `0` for the other 48 | 0 |
+| `sources-bundled-all` | `sources --format=tsv --maps <repo>/data/sources` (re-captured whenever the bundled set changes): 94 rows in seven groups, the last column `1` for exactly the forty-two sources of `Nautical charts` (IH Portugal chart too), `Depth`, the three overlays IDEIB Posidonia, EMODnet seagrass and NOAA NCCOS Saipan and the nine SHOM layers, the two STOFS layers and the NOAA OFS currents, `0` for the other 52 | 0 |
 | `run-navigation-warning` | `run --source={C44877A0-...} --bbox=23.5,37.9,23.7,38.0 --zooms=6-7 --format=tsv --progress=lines --maps <repo>/data/sources` into an EMPTY cache (network): stderr has the `warning: "EMODnet Bathymetry (world)": not for navigation. ...` line once, after `phase estimate` and before the first `progress download` | 0 |
 | `export-navigation-warning` | the same job as `export` from the cache the run filled: no navigation line | 0 |
 | `estimate-refused-3395` | `estimate --source=5E04039A-... --bbox=-1.6,50.6,-1.0,50.9 --zooms=9-12 --maps <scratch>/E-maps` (offline; `Yandex/YaSat.zmp`, EPSG:3395, copied from a local chart-source set; captured 2026-10-18): stdout empty, stderr `error: the projection of "Yandex - Satellite" is EPSG:3395; only EPSG:3857 ...` | 3 |
@@ -105,4 +106,4 @@ captured on 2026-10-21 (their text names no group).
 files exist, so a recapture does not churn the test literals. `--all` rewrites them (then the tests' literals must be re-read).
 The first refetch run's exit code is saved as `run-weather-refetch.first-exit`; a non-zero code stops the script.
 
-`sources-bundled-all` is re-captured with the case's own command whenever the bundled set changes (90 rows now); its `.stderr` and `.exit` stay. The other network cases stay as captured before (their text names no group; tests read literals from them).
+`sources-bundled-all` is re-captured with the case's own command whenever the bundled set changes (94 rows now); its `.stderr` and `.exit` stay. The other network cases stay as captured before (their text names no group; tests read literals from them).

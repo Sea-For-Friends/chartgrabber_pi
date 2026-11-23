@@ -121,7 +121,7 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 
 ## Bundled charts
 
-90 sources come with the plugin, in seven groups (the menus under **Chart**).
+94 sources come with the plugin, in seven groups (the menus under **Chart**).
 
 | Group | Source | What it is for | Area |
 |---|---|---|---|
@@ -175,6 +175,10 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 | Satellite | Beeldmateriaal aerial photo 2024 (Bonaire) | Sharp aerial photo of Bonaire: Kralendijk harbour, the moorings and the reef edge; flown 2024 | Bonaire |
 | Satellite | Beeldmateriaal aerial photo 2023-24 (Saba) | Sharp aerial photo of Saba: Fort Bay harbour and the moorings; flown 2023-24 | Saba |
 | Satellite | Beeldmateriaal aerial photo 2023-24 (Sint Eustatius) | Sharp aerial photo of Sint Eustatius: the Oranjestad roadstead and piers; flown 2023-24 | Sint Eustatius |
+| Satellite | LVermGeo SH orthophoto (Schleswig-Holstein) | Sharp 20 cm photo of Kiel fjord, the Schlei, Fehmarn and the North Frisian islands; flight year varies by area | Schleswig-Holstein |
+| Satellite | LGLN orthophoto (Lower Saxony, East Frisian Islands) | Sharp 20 cm photo of the Wadden coast: East Frisian islands, gullies, drying banks and the Ems, Jade and Weser; flight year varies by area | Lower Saxony, East Frisian Islands |
+| Satellite | GeoInformation Bremen orthophoto 2025 (Bremen, Bremerhaven) | Sharp 10 cm photo of the Bremerhaven harbours and the Weser in Bremen; flown 2025 | Bremerhaven, Bremen |
+| Satellite | LGV orthophoto 2026 (Hamburg, the Elbe) | Sharp 20 cm photo of the port of Hamburg and the Elbe through the city; spring flight 2026 | Hamburg |
 | Satellite | Esri World Imagery | Sharp satellite picture worldwide: anchorages, reefs and passes; use within Esri's terms | Worldwide |
 | Coast and land | OpenTopoMap | Land relief along the shore: what gives shelter, where squalls come down; light use at the server's request | Worldwide |
 | Coast and land | IDEIB Posidonia and protected seabed (Balearics) | Posidonia meadows and the Decree 25/2018 zones where anchoring is regulated; informative | Balearics |
@@ -273,7 +277,7 @@ NOAA NCCOS seabed habitat map (Saipan) colours: pale yellow bare sand, olive san
 
 ## Your own sources
 
-- The 90 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
+- The 94 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
 - Add your own `.zmp` source folders to `Charts/Chart sources` in your home folder (Settings, **Chart sources**, **Open folder** creates it), or pick another folder with **Change...**. They are read after the bundled ones.
 - Sources that need a key are not bundled: put the source folder there and enter your key where its file says `KEY`.
 

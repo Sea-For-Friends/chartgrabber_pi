@@ -128,20 +128,20 @@ TEST(CliRecordsStdout, SourceEmptyGroupAndExtraFields) {
 }
 
 // the captured `sources` answers of the pinned CLI. Bundled
-// data/sources after 90 rows (four weather sources more, CHS chart,
+// data/sources after 94 rows (four weather sources more, CHS chart,
 // CHS NONNA-10, IGN, PNOA, PDOK, four Coast and land overlays, nine SHOM
 // depth layers, seven more depth layers, nine SHOM layers, four more Satellite
 // layers and the IH Portugal chart, eight more Weather now sources, four more Ocean
 // currents and waves, one of those Satellite layers removed, four more sources, the
 // INEGI row removed, four more Satellite sources (Japan, Africa, Hong Kong, Madeira) and one Coast and land
-// overlay (Saipan), the Gulf of Morbihan lidar layer and the three Caribbean Netherlands orthophotos), the
-// flag is 1 for exactly the forty-two sources of the groups `Nautical charts` (Norway, Finland, NOAA chart,
-// CHS chart, IH Portugal chart) and `Depth` (EMODnet Europe and World, GEBCO, BlueTopo, CHS NONNA-10, the
-// nine SHOM layers, the seven more layers) and of the three overlays IDEIB Posidonia, EMODnet seagrass and
-// NOAA NCCOS Saipan, nine more SHOM layers (buoyage, wrecks, navigation rules, tidal ranges, tidal stream, 3D
-// currents, tide zones), the two STOFS layers (surge water level, peak water level) and the NOAA OFS
-// currents, and 0 for the other 48. A sailor-folder definition with NavigationWarning=1 gets the flag too;
-// the plain bundled one does not.
+// overlay (Saipan), the Gulf of Morbihan lidar layer, the three Caribbean Netherlands orthophotos and the
+// four German coast orthophotos), the flag is 1 for exactly the forty-two sources of the groups `Nautical
+// charts` (Norway, Finland, NOAA chart, CHS chart, IH Portugal chart) and `Depth` (EMODnet Europe and World,
+// GEBCO, BlueTopo, CHS NONNA-10, the nine SHOM layers, the seven more layers) and of the three overlays IDEIB
+// Posidonia, EMODnet seagrass and NOAA NCCOS Saipan, nine more SHOM layers (buoyage, wrecks, navigation
+// rules, tidal ranges, tidal stream, 3D currents, tide zones), the two STOFS layers (surge water level, peak
+// water level) and the NOAA OFS currents, and 0 for the other 52. A sailor-folder definition with
+// NavigationWarning=1 gets the flag too; the plain bundled one does not.
 TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
     const auto flags = [](const char* file) {
         std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.3/" + file, std::ios::binary);
@@ -156,7 +156,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
         return out;
     };
     const auto all = flags("sources-bundled-all.stdout");
-    ASSERT_EQ(all.size(), 90u);
+    ASSERT_EQ(all.size(), 94u);
     const std::set<std::string> flagged = {
         "{25DBA489-D484-4A13-B65D-ABA8967FF3DA}", // Norway sea chart
         "{8A9C3A53-0512-4401-A6D3-050E08934949}", // Finland sea chart
@@ -210,7 +210,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
 }
 
 // the regrouped bundled set as the pinned CLI lists it. Seven groups with these counts
-// (Nautical charts 5, Seamarks and traffic 6, Depth 22, Satellite 18,
+// (Nautical charts 5, Seamarks and traffic 6, Depth 22, Satellite 22,
 // Coast and land 7, Weather now 18, Ocean 14 with eight
 // snapshots (NASA sea surface temperature and sea ice, NOAA RTOFS east and west, NOAA OFS, three Copernicus)
 // and the six static SHOM layers, and every snapshot is in Weather now or Ocean (twenty-six); the six static
@@ -241,9 +241,9 @@ TEST(Records, BundledSetGroupsAndSnapshots) {
         }
     }
     const std::map<std::string, int> expected = {
-        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 22}, {"Satellite", 18},
+        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 22}, {"Satellite", 22},
         {"Coast and land", 7},  {"Weather now", 18},         {"Ocean", 14}};
-    EXPECT_EQ(rows, 90);
+    EXPECT_EQ(rows, 94);
     EXPECT_EQ(groups, expected);
     EXPECT_EQ(snapshots, 26);
 }
@@ -286,6 +286,43 @@ TEST(Records, R0014SourcesOfThePinnedRelease) {
         EXPECT_EQ(s.refresh, "static") << s.name;
         EXPECT_EQ(s.maxZoom, r.maxZoom) << s.name;
         EXPECT_EQ(s.navigationWarning, r.navigationWarning) << s.name;
+        EXPECT_EQ(s.license, r.license) << s.name;
+    }
+}
+
+// The four German coast orthophotos as the pinned CLI lists them: verdict ok, EPSG 3857, a static base map
+// of the Satellite group, the max zoom, the navigation flag and the licence line of its definition.
+TEST(Records, GermanCoastOrthophotosOfThePinnedRelease) {
+    struct Row {
+        const char* guid;
+        int maxZoom;
+        const char* license;
+    };
+    const Row rows[] = {
+        {"{B7950BF1-42A5-4DBD-9277-317E8173B40E}", 19, "© GeoBasis-DE/LVermGeo SH/CC BY 4.0"},
+        {"{C5486F37-67D7-4306-8412-9261B62EDF71}", 19,
+         "LGLN (2026) Creative Commons Namensnennung – 4.0 International (CC BY 4.0)"},
+        {"{CE3EB174-5386-46B5-932B-B36FA0125CD7}", 20, "Landesamt GeoInformation Bremen — DOP10 2025, CC BY"},
+        {"{82DF084C-7FCB-4451-9AFA-E5D71309D0AD}", 19,
+         "Freie und Hansestadt Hamburg, Landesbetrieb Geoinformation und Vermessung (LGV) — DOP 2026, "
+         "dl-de/by-2-0"},
+    };
+    std::map<std::string, SourceRecord> byGuid;
+    for (const auto& line : fixtureLines("sources-bundled-all.stdout")) {
+        const SourceRecord s = std::get<SourceRecord>(*parseStdoutLine(line));
+        byGuid.emplace(s.guid, s);
+    }
+    for (const Row& r : rows) {
+        const auto it = byGuid.find(r.guid);
+        ASSERT_NE(it, byGuid.end()) << r.guid;
+        const SourceRecord& s = it->second;
+        EXPECT_EQ(s.verdict, "ok") << s.name;
+        EXPECT_EQ(s.epsg, 3857) << s.name;
+        EXPECT_EQ(s.kind, "map") << s.name;
+        EXPECT_EQ(s.group, "Satellite") << s.name;
+        EXPECT_EQ(s.refresh, "static") << s.name;
+        EXPECT_EQ(s.maxZoom, r.maxZoom) << s.name;
+        EXPECT_FALSE(s.navigationWarning) << s.name;
         EXPECT_EQ(s.license, r.license) << s.name;
     }
 }
@@ -434,7 +471,7 @@ TEST(Records, AfricaMosaicOfThePinnedRelease) {
         "Contains modified Copernicus Sentinel data 2025, processed by Digital Earth Africa. CC BY 4.0");
 }
 
-// the shipped folder holds the 90 bundled definitions; the removed INEGI file is gone.
+// the shipped folder holds the 94 bundled definitions; the removed INEGI file is gone.
 TEST(Records, ShippedSourceFiles) {
     int shipped = 0;
     bool inegi = false;
@@ -446,7 +483,7 @@ TEST(Records, ShippedSourceFiles) {
         }
         inegi = inegi || name == "Mexico-INEGI-Ortho.source.json";
     }
-    EXPECT_EQ(shipped, 90);
+    EXPECT_EQ(shipped, 94);
     EXPECT_FALSE(inegi);
 }
 
