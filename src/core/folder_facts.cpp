@@ -23,7 +23,10 @@ FolderFacts FolderFactsCache::get(const std::string& folder) {
     }
     if (entries_.size() >= kMaxEntries)
         entries_.erase(entries_.begin());
-    entries_.push_back({folder, measure_(folder), now});
+    // Stamp after the measurement: a slow mount that takes longer than the
+    // TTL would otherwise store an entry that is already expired.
+    FolderFacts facts = measure_(folder);
+    entries_.push_back({folder, std::move(facts), clock_()});
     return entries_.back().facts;
 }
 
