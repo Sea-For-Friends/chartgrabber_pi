@@ -326,9 +326,15 @@ wxString preflightText(cg::Preflight p, const cg::PreflightInput& in, const wxSt
 }
 
 wxString chartFolderRefusal(const wxString& folder, bool isDefault) {
-    const bool exists = wxFileName::DirExists(folder);
-    switch (cg::checkChartFolder(folder.utf8_string(), isDefault, exists,
-                                 exists && wxFileName::IsDirWritable(folder), cg::sandboxProbe()())) {
+    cg::FolderFacts facts;
+    facts.exists = wxFileName::DirExists(folder);
+    facts.writable = facts.exists && wxFileName::IsDirWritable(folder);
+    return chartFolderRefusal(folder, isDefault, facts);
+}
+
+wxString chartFolderRefusal(const wxString& folder, bool isDefault, const cg::FolderFacts& facts) {
+    switch (cg::checkChartFolder(folder.utf8_string(), isDefault, facts.exists, facts.writable,
+                                 cg::sandboxProbe()())) {
     case cg::FolderVerdict::Ok:
         break;
     case cg::FolderVerdict::CannotWrite:

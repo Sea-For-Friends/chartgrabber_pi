@@ -24,7 +24,11 @@ std::vector<std::string> flatpakGranted(std::string_view infoText, std::string_v
 // Reads `infoPath` (/.flatpak-info): present -> flatpak = true. A missing file gives flatpak = false.
 Sandbox detectSandbox(const std::string& infoPath = "/.flatpak-info");
 
-// The one injectable detection: tests assign it; the default is detectSandbox().
+// A probe that calls `read` on its first use and returns that result ever after (the sandbox does not change
+// during a session).
+std::function<Sandbox()> memoizedProbe(std::function<Sandbox()> read);
+
+// The one injectable detection: tests assign it; the default reads /.flatpak-info once per session.
 std::function<Sandbox()>& sandboxProbe();
 
 enum class FolderVerdict { Ok, CannotWrite, FlatpakOutsideHome };

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "cli_records.h"
+#include "folder_facts.h"
 #include "geo_math.h"
 #include "job_files.h"
 #include "question.h"
@@ -98,6 +99,8 @@ private:
     wxString outputFolder() const; // the Advanced folder, else the chart folder
     wxString chartName() const;    // the Name field trimmed, without apostrophes
     void updateDefaultName();      // defaultChartName(place, source) until the user edits Name
+    // The facts of a folder: measured at most once per 5 s per folder, see cg::FolderFactsCache.
+    cg::FolderFacts folderFacts(const wxString& folder) const;
     cg::Preflight preflight(const cg::Settings& settings, cg::PreflightInput* in) const;
     void chooseOutputFolder();
 
@@ -189,9 +192,10 @@ private:
     std::vector<cg::EstimateRecord> estimateRecords_;
     std::string estimateError_; // last Error line of the estimate run
     cg::EstimateTotals totals_;
-    wxString estimateFailure_; // the status reason while estimateState_ == Failed
-    bool nameEdited_ = false;  // the user typed in Name: no more default
-    wxString outputDir_;       // Advanced output folder; empty = the chart folder
+    wxString estimateFailure_;             // the status reason while estimateState_ == Failed
+    bool nameEdited_ = false;              // the user typed in Name: no more default
+    wxString outputDir_;                   // Advanced output folder; empty = the chart folder
+    mutable cg::FolderFactsCache folders_; // the chart folder and the saved-tiles folder
 
     wxScrolledWindow* body_ = nullptr; // every row down to the Advanced fold
     wxBoxSizer* column_ = nullptr;     // the sizer of body_
