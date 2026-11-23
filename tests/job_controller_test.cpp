@@ -54,6 +54,7 @@
 #include <map>
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <sys/stat.h>
 #include <thread>
@@ -4272,6 +4273,39 @@ TEST_F(HoldStaleTest, P0296AJobEndingInAHoldKeepsTheStalePathAndArmsTheRetry) {
     EXPECT_EQ(chart(r.id).stale, (std::vector<std::string>{planned("W.mbtiles")}));
     ASSERT_TRUE(jc().staleTimer_.IsRunning());
     EXPECT_EQ(jc().staleTimer_.GetInterval(), 120000);
+}
+
+// An exception that leaves the removal call is logged by the stale tick's guard, does not leave the tick, and
+// leaves no chart-list call held as busy: the next request calls OpenCPN at once.
+TEST_F(HoldStaleTest, P0298AThrowFromTheRemovalIsLoggedAndDoesNotHoldLaterChartListCalls) {
+    ocpn_fake::onRemove = [] { throw std::runtime_error("remove failed"); };
+    LogCollector log;
+    tick();
+    EXPECT_EQ(
+        std::count(log.messages.begin(), log.messages.end(), "ChartGrabber: stale timer: remove failed"), 1);
+    EXPECT_EQ(chart(held_.id).stale, held_.stale) << "the record was not changed";
+    EXPECT_TRUE(ocpn_fake::updates.empty());
+    EXPECT_FALSE(jc().calling_);
+
+    ocpn_fake::onRemove = nullptr;
+    jc().requestRescan();
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u) << "not held: no call of ours is running";
+}
+
+// The rescan timer's own guard: a failure of the throttle clock (outside the chart list call, which has its
+// own guard) is logged and does not leave the handler.
+TEST_F(HoldStaleTest, P0298AThrowInTheRescanTimerIsLoggedAndNotRethrown) {
+    const auto fake = rescanClockMs();
+    struct Restore {
+        std::function<std::int64_t()> clock;
+        ~Restore() { rescanClockMs() = clock; }
+    } restore{fake};
+    rescanClockMs() = []() -> std::int64_t { throw std::runtime_error("clock failed"); };
+    LogCollector log;
+    EXPECT_NO_THROW(fireRescanTimer());
+    EXPECT_EQ(
+        std::count(log.messages.begin(), log.messages.end(), "ChartGrabber: rescan timer: clock failed"), 1);
+    EXPECT_TRUE(ocpn_fake::updates.empty());
 }
 
 } // namespace

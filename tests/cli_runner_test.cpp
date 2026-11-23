@@ -1802,3 +1802,156 @@ TEST_F(CliRunnerTest, TheTreeCleanupEndsTheGrandchildItOwns_P0285) {
     EXPECT_TRUE(runUntil([&] { return isGone(grand); }, 3000));
     runner.abandon(0);
 }
+
+// ---- bounded reads of the child's output ----
+
+namespace {
+// Ends the `yes` writers g1..gN a stand-in recorded next to itself, if they are still there.
+void killWriters(const TempDir& tmp, int count) {
+    for (int n = 1; n <= count; ++n) {
+        std::ifstream in(tmp.dir() / ("g" + std::to_string(n)));
+        long pid = 0;
+        in >> pid;
+        std::ifstream comm("/proc/" + std::to_string(pid) + "/comm");
+        std::string what;
+        comm >> what;
+        if (pid > 1 && what == "yes")
+            ::kill(static_cast<pid_t>(pid), SIGKILL);
+    }
+}
+} // namespace
+
+// A child that never stops writing must not hold the main loop: the limit of the version check still
+// fires (the loop keeps ticking), done(NoAnswer) arrives within seconds and the child is killed.
+TEST_F(CliProbeTest, AChildThatWritesWithoutPauseDoesNotHoldTheLoopAndEndsInNoAnswer_P0298) {
+    TempDir tmp;
+    CliProbe probe;
+    // The child and four `yes` writers on the same pipe: several writers keep the pipe full.
+    const std::string cli = tmp.write(
+        "flood-cli",
+        countingScript("d=$(dirname \"$0\")\necho $$ > \"$d/pid.tmp\"\nmv \"$d/pid.tmp\" \"$d/pid\"\n"
+                       "line=$(printf '%0100d' 0)\n"
+                       "for n in 1 2 3 4; do\n  (exec yes \"$line\") &\n  echo $! > \"$d/g$n\"\ndone\n"
+                       "while :; do printf '%01000d\\n' 0; done"),
+        true);
+    LogScope log;
+    std::vector<ProbeResult> results;
+    Ticker ticker;
+    ticker.Start(100);
+    probe.setTimeoutMs(300);
+    const auto t0 = Clock::now();
+    probe.check(cli, cg::Settings{}, record(results));
+    const int pid = pidOf(tmp);
+    ASSERT_GT(pid, 0) << "the child started";
+    ASSERT_TRUE(runUntil([&] { return !results.empty(); }, 15000));
+    EXPECT_LT(Clock::now() - t0, std::chrono::seconds(3));
+    EXPECT_EQ(results, std::vector<ProbeResult>{ProbeResult::NoAnswer});
+    EXPECT_GE(ticker.ticks, 1) << "timers ran while the child was writing";
+    EXPECT_TRUE(waitGone(pid)) << "the flooding child was killed";
+    killWriters(tmp, 4); // the probe ends the child's tree; this only makes sure
+}
+
+// A child that prints a lot and ends at once: every line arrives, the budget loses no tail.
+TEST_F(CliRunnerTest, ALargeOutputOfAChildThatEndsAtOnceIsDeliveredCompletely_P0298) {
+    // 25000 lines of 9 bytes: 225000 bytes, more than three budgets
+    const std::string script = "awk 'BEGIN { for (i = 1; i <= 25000; i++) printf \"L%07d\\n\", i }'";
+    int lines = 0;
+    std::string last;
+    Capture run;
+    CliRunner::Callbacks cb = run.callbacks();
+    cb.onText = [&](std::string_view l) {
+        ++lines;
+        last = std::string(l);
+    };
+    CliRunner runner;
+    std::string error;
+    ASSERT_TRUE(runner.start(sh(script), cb, &error)) << error;
+    runUntilQuiet([&] { return run.exits > 0; }, [&] { return static_cast<size_t>(lines); });
+    ASSERT_EQ(run.exits, 1);
+    EXPECT_EQ(run.exitCode, 0);
+    EXPECT_EQ(lines, 25000);
+    EXPECT_EQ(last, "L0025000");
+}
+
+// Grandchildren that keep the pipe open and keep writing after the child ended: the final read stops at
+// 4 MiB with one log line, so the end of the run is not held for ever. The writers race the reader: when the
+// pipe happens to run empty first, the final read legitimately ends early (and logs nothing), so a run is
+// repeated until the cap was reached; the cap's rules are checked on that run.
+TEST_F(CliRunnerTest, TheFinalReadAfterTheEndStopsAt4MibWithOneLogLine_P0298) {
+    bool reached = false;
+    for (int attempt = 0; attempt < 8 && !reached; ++attempt) {
+        TempDir tmp;
+        const std::string cli =
+            tmp.write("grand-cli",
+                      "#!/bin/sh\nd=$(dirname \"$0\")\nline=$(printf '%0100d' 0)\n"
+                      "for n in 1 2 3 4; do\n  (exec yes \"$line\") &\n  echo $! > \"$d/g$n\"\ndone\n"
+                      "sleep 0.3\nexit 0\n",
+                      true);
+        LogScope log;
+        Capture run;
+        CliRunner::Callbacks cb = run.callbacks();
+        size_t lines = 0;
+        cb.onText = [&](std::string_view) { ++lines; };
+        CliRunner runner;
+        std::string error;
+        ASSERT_TRUE(runner.start({cli}, cb, &error)) << error;
+        const bool ended = runUntil([&] { return run.exits > 0; }, 30000);
+        killWriters(tmp, 4); // the greedy children are ended whatever the runner did
+        ASSERT_TRUE(ended) << "the end of the run was held by a child that never stops writing";
+        EXPECT_EQ(run.exitCode, 0);
+        const auto cuts =
+            std::count(log->messages.begin(), log->messages.end(), "ChartGrabber: cli output cut");
+        // 101 bytes a line: 4 MiB are 41527 lines; at most one more read of 64 KiB, plus what the ticks read
+        EXPECT_LE(lines, 52000u);
+        if (cuts == 1) {
+            EXPECT_GE(lines, 40000u) << "the line is logged only once the cap was read";
+        }
+        EXPECT_LE(cuts, 1);
+        reached = cuts == 1;
+    }
+    EXPECT_TRUE(reached) << "the cap was not reached in 8 runs";
+}
+
+// A line longer than 64 KiB is cut and delivered once; "cli line cut" is logged once per run, again in the
+// next run of the same runner.
+TEST_F(CliRunnerTest, ACutLineIsLoggedOncePerRun_P0298) {
+    const std::string script =
+        "awk 'BEGIN { s = sprintf(\"%0100000d\", 0); print s; print s; print \"ok\" }'";
+    LogScope log;
+    CliRunner runner;
+    for (int run = 1; run <= 2; ++run) {
+        std::vector<size_t> sizes;
+        Capture cap;
+        CliRunner::Callbacks cb = cap.callbacks();
+        cb.onText = [&](std::string_view l) { sizes.push_back(l.size()); };
+        std::string error;
+        ASSERT_TRUE(runner.start(sh(script), cb, &error)) << error;
+        ASSERT_TRUE(runUntil([&] { return cap.exits > 0; }, 20000));
+        EXPECT_EQ(sizes, (std::vector<size_t>{65536, 65536, 2})) << "run " << run;
+        EXPECT_EQ(std::count(log->messages.begin(), log->messages.end(), "ChartGrabber: cli line cut"), run);
+    }
+}
+
+// The version check's time limit is guarded: a done that throws is logged by the handler and not rethrown.
+TEST_F(CliProbeTest, AThrowingDoneAtTheTimeLimitIsLoggedAndNotRethrown_P0298) {
+    TempDir tmp;
+    CliProbe probe;
+    const std::string cli = tmp.write("hang-cli", hangScript(), true);
+    LogScope log;
+    int calls = 0;
+    probe.setTimeoutMs(300);
+    probe.check(cli, cg::Settings{}, [&](ProbeResult) {
+        ++calls;
+        throw std::runtime_error("done failed");
+    });
+    const int pid = pidOf(tmp);
+    ASSERT_GT(pid, 0);
+    ASSERT_TRUE(runUntil([&] { return calls > 0; }, 15000));
+    runFor(200);
+    EXPECT_EQ(calls, 1);
+    EXPECT_EQ(std::count(log->messages.begin(), log->messages.end(),
+                         "ChartGrabber: version check timeout: done failed"),
+              1);
+    EXPECT_FALSE(probe.running());
+    EXPECT_TRUE(waitGone(pid));
+}

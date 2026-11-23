@@ -19,6 +19,7 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -185,6 +186,40 @@ TEST_F(FrameTimerReviveTest, ShutdownAndDestructionStopAnArmedCheck) {
     pumpFor(5800);
     EXPECT_TRUE(ids_.empty());
     EXPECT_EQ(count("frame timer"), 0);
+}
+
+// The check handler is guarded: a failure inside it (here the log refusing the "restarted" line) is logged by
+// the guard, does not leave the handler, and the watch is not re-armed (no second post).
+TEST_F(FrameTimerReviveTest, AFailureInTheCheckIsLoggedByTheGuardAndNotRethrown_P0298) {
+    class RefusingLog : public wxLog {
+    public:
+        RefusingLog() : previous_(wxLog::SetActiveTarget(this)) {}
+        ~RefusingLog() override { wxLog::SetActiveTarget(previous_); }
+        std::vector<std::string> lines;
+
+    protected:
+        void DoLogRecord(wxLogLevel, const wxString& msg, const wxLogRecordInfo&) override {
+            if (msg.Contains("frame timer restarted"))
+                throw std::runtime_error("log refused");
+            lines.push_back(msg.utf8_string());
+        }
+
+    private:
+        wxLog* previous_;
+    } refusing;
+    revive_->setOpenCpnVersion(5, 14);
+    revive_->chartListUpdated();
+    ASSERT_TRUE(pumpUntil(
+        [&] {
+            return std::count(refusing.lines.begin(), refusing.lines.end(),
+                              "ChartGrabber: frame timer check: log refused") == 1;
+        },
+        7000));
+    pumpFor(300);
+    EXPECT_EQ(ids_.size(), 1u) << "the post itself had been queued before the failure";
+    EXPECT_EQ(std::count(refusing.lines.begin(), refusing.lines.end(),
+                         "ChartGrabber: frame timer check: log refused"),
+              1);
 }
 
 } // namespace
