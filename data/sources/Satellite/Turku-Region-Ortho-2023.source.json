@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{500EAC92-A190-489E-A856-69EFDC80E432}",
+  "name": "Turku region orthophoto 2023 (Turku, Naantali)",
+  "group": "Satellite",
+  "url": "https://turku.asiointi.fi/TeklaOGCWeb/WMS.ashx?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=Ilmakuva%202023&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Satellite_Turku_Seutu_Ilmakuva_2023",
+  "license": "© Turun kaupunki — Turun seudun ilmakuva 2023, CC BY 4.0",
+  "maxConnections": 2,
+  "maxZoom": 19
+}

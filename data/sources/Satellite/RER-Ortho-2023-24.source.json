@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{E2F995F8-02EB-4F3F-9AAA-7FFA0B7D1410}",
+  "name": "Regione Emilia-Romagna orthophoto 2023-24 (Rimini coast)",
+  "group": "Satellite",
+  "url": "https://servizigis.regione.emilia-romagna.it/wms/rer2023_24_rgb?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=RER2023_24_RGB&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_RER_Ortofoto_2023_24",
+  "license": "Regione Emilia-Romagna — Ortofoto RER 2023–24, CC BY 4.0",
+  "maxConnections": 2,
+  "maxZoom": 19
+}

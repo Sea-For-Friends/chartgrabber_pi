@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{C29D7414-801D-40C9-8909-77B3A2CCAA84}",
+  "name": "Regione Emilia-Romagna orthophoto 2022-23 (Ferrara coast)",
+  "group": "Satellite",
+  "url": "https://servizigis.regione.emilia-romagna.it/wms/rer2022_rgb?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=RER2022_RGB&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_RER_Ortofoto_2022",
+  "license": "Regione Emilia-Romagna — Ortofoto RER 2022, CC BY 4.0",
+  "maxConnections": 2,
+  "maxZoom": 19
+}

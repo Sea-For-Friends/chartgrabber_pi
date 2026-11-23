@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{82DF084C-7FCB-4451-9AFA-E5D71309D0AD}",
+  "name": "LGV orthophoto 2026 (Hamburg, the Elbe)",
+  "group": "Satellite",
+  "url": "https://geodienste.hamburg.de/wms_dop_zeitreihe_unbelaubt?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=dop_zeitreihe_unbelaubt&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg&TIME=2026",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_LGV_Hamburg_DOP_2026",
+  "license": "Freie und Hansestadt Hamburg, Landesbetrieb Geoinformation und Vermessung (LGV) — DOP 2026, dl-de/by-2-0",
+  "maxConnections": 2,
+  "maxZoom": 19
+}

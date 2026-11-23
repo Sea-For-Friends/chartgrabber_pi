@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{E70897C7-B9A6-4AA0-9E14-79102C5A66EA}",
+  "name": "DGT OrtoSat satellite photo 2023 (mainland Portugal)",
+  "group": "Satellite",
+  "url": "https://ortos.dgterritorio.gov.pt/wms/ortosat2023?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=ortoSat2023-CorVerdadeira&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_DGT_OrtoSat2023",
+  "license": "© Direção-Geral do Território — OrtoSat2023, CC BY 4.0",
+  "maxConnections": 2,
+  "maxZoom": 19
+}

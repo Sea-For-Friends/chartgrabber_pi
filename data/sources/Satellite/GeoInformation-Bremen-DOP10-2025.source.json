@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{CE3EB174-5386-46B5-932B-B36FA0125CD7}",
+  "name": "GeoInformation Bremen orthophoto 2025 (Bremen, Bremerhaven)",
+  "group": "Satellite",
+  "url": "https://geodienste.bremen.de/wms_dop_lb?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=dop10_2025_HB,dop10_2025_BHV&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_GeoInformation_Bremen_DOP10_2025",
+  "license": "Landesamt GeoInformation Bremen — DOP10 2025, CC BY",
+  "maxConnections": 2,
+  "maxZoom": 20
+}

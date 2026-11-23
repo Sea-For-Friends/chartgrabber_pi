@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{1378C96F-6D91-45F6-9A5F-6267C32CBE8E}",
+  "name": "Regione Abruzzo orthophoto 2018-19 (Abruzzo)",
+  "group": "Satellite",
+  "url": "http://geocatalogo.regione.abruzzo.it/erdas-iws/ogc/wms/?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=Mosaici_UTM-WGS84_2018_2019_Regione_Abruzzo.ecw&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_Abruzzo_Ortofoto_2018_19",
+  "license": "Regione Abruzzo — Ortofoto 2018–2019, CC BY-NC 3.0",
+  "maxConnections": 2,
+  "maxZoom": 19
+}
