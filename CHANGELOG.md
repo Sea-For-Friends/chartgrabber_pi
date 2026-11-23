@@ -2,6 +2,18 @@
 
 Versions are calendar-based: `YYYY.MM.N` (year and month of the release, N = release count within that month, from 0).
 
+## 2026.11.4
+
+- 111 chart sources are bundled, 25 more: orthophotos of the German coast (Hamburg, Bremen, Lower Saxony, Schleswig-Holstein), Belgium (Flanders), Sweden (Gothenburg), Finland (Helsinki, Turku), Estonia, Albania, Italy (Abruzzo, Emilia-Romagna, Sicily), Portugal and the Dutch Caribbean (Bonaire, Saba, Sint Eustatius); SHOM lidar depths for the Gulf of Morbihan, Mayotte, Réunion and the Îles Éparses; seabed type charts for European seas (EMODnet), Ireland (GSI) and Norway (NGU).
+- Stability on OpenCPN 5.14 and 5.15. These changes work around OpenCPN's own behaviour in the plugin; they do not cure it. After a chart-list update OpenCPN's own ship position and timers could freeze (OpenCPN issue https://github.com/OpenCPN/OpenCPN/issues/5518, proposed fix https://github.com/OpenCPN/OpenCPN/pull/5519, both still open): the plugin now restarts OpenCPN's frame timers after such an update when no position fix arrives. Every chart-list update makes OpenCPN read all charts again (https://github.com/OpenCPN/OpenCPN/issues/4261, still open): the plugin now sends at most one update per 30 s and holds it while Options is open.
+- Quitting OpenCPN or closing the Chart Grabber window no longer waits with the window frozen for a download program that is ending: the plugin sends the stop line, waits up to 2 s, then ends the program.
+- The check of the Chart Grabber CLI version in Settings, New chart and at the start of a download no longer blocks the window; it gives up after 10 s.
+- When a download is given up, the CLI and everything it started are ended, also on Windows.
+- With **Debug log** on, the plugin log notes every time OpenCPN's main loop stalled for 250 ms or more.
+- The user guide has new screenshots and a route example over open water.
+- Chart Grabber CLI 2026.11.3 is bundled and recommended (unchanged).
+- Updating from 2026.11.3: Import the new file over the old one.
+
 ## 2026.11.3
 
 - 86 chart sources are bundled: new are the Hong Kong aerial photo (LandsD), the Madeira orthophoto 2018-19 (DROTe) and the NOAA seabed habitat chart of Saipan; the Digital Earth Africa mosaic is back.
