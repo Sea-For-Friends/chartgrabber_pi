@@ -33,7 +33,7 @@ Chart Grabber has two parts:
 
 ## Install
 
-You need OpenCPN 5.10.2 or newer. The Chart Grabber CLI 2026.11.1 is inside the plugin file on every system, so there is nothing else to install. The plugin always uses this bundled CLI unless you choose another one in [Settings](#settings-reference), for example one you installed from the CLI's `.deb` or Windows zip for your own scripts.
+You need OpenCPN 5.10.2 or newer. The Chart Grabber CLI 2026.11.3 is inside the plugin file on every system, so there is nothing else to install. The plugin always uses this bundled CLI unless you choose another one in [Settings](#settings-reference), for example one you installed from the CLI's `.deb` or Windows zip for your own scripts.
 
 **Getting OpenCPN:**
 
@@ -74,7 +74,7 @@ Use this route on Arch and CachyOS, which are not in the catalog, or if you pref
 
 1. **Pick the tarball** for your system (full notes: the release's COMPAT.md):
 
-   | System | `chartgrabber_pi-2026.11.1-` ... |
+   | System | `chartgrabber_pi-2026.11.5-` ... |
    |---|---|
    | Debian 13 x86-64 | `debian-x86_64-13-x86_64.tar.gz` |
    | Debian 13 arm64, Raspberry Pi OS trixie 64-bit | `debian-arm64-13-arm64.tar.gz` |
@@ -342,7 +342,7 @@ OpenCPN, Options, Plugins, Chart Grabber, **Preferences**.
 | Symptom | Fix |
 |---|---|
 | "Chart Grabber CLI was not found" | Import the plugin file of this release again (the CLI is inside it), or choose the CLI under Advanced in Settings. |
-| "Chart Grabber CLI ... is too old" | Import the plugin file of this release (it carries CLI 2026.11.1), or choose a CLI 2026.10.9 or newer under Advanced in Settings. |
+| "Chart Grabber CLI ... is too old" | Import the plugin file of this release (it carries CLI 2026.11.3), or choose a CLI 2026.10.9 or newer under Advanced in Settings. |
 | Chart added but not visible | Click it in the chart bar; turn on OpenGL (Options > Display > Advanced). |
 | Source greyed in More sources, or Seamarks on top disabled | It cannot be made into an OpenCPN chart; the text beside it says why. |
 | "Area too large for this detail" | Choose a smaller area or less detail. |
