@@ -277,6 +277,8 @@ void MyChartsPanel::updateLiveRow() {
 }
 
 void MyChartsPanel::onLiveTick() {
+    if (!jobs_.busy())
+        live_.Stop(); // a job that ended while the dialog was hidden: nothing left to tick
     if (!closing_ && IsShownOnScreen())
         updateLiveRow();
 }

@@ -81,6 +81,7 @@ public:
     // The 1 s timer's handler (public for the tests): nothing while closing or not on screen, else
     // updateLiveRow().
     void onLiveTick();
+    bool liveTimerRunning() const { return live_.IsRunning(); }
 
     // The popup of the More... menu: the item id chosen or wxID_NONE (default: a popup under the anchor).
     std::function<int(wxWindow* anchor, wxMenu& menu)> popupMenu = [](wxWindow* anchor, wxMenu& menu) {

@@ -1967,6 +1967,21 @@ TEST_F(ChartsTest, P0297AHiddenDialogRebuildsNothingUntilItIsShown) {
     }
 }
 
+// A job that ends while the dialog is hidden stops the 1 s live timer at its next tick.
+TEST_F(BarsTest, P0297AJobEndedWhileHiddenStopsTheLiveTimer) {
+    save("20261016-080000", "Whole", cg::ChartState::Complete);
+    makeDialog();
+    dialog_->showMyCharts();
+    startRunning("20261016-080100", 0, progressLine(10), "feed");
+    ASSERT_TRUE(runUntil([&] { return jobs_->live()->donePermille == 100; }));
+    ASSERT_TRUE(panel()->liveTimerRunning());
+    dialog_->Hide();
+    jobs_->stop();
+    ASSERT_TRUE(waitIdle(10000));
+    panel()->onLiveTick();
+    EXPECT_FALSE(panel()->liveTimerRunning());
+}
+
 // A rebuild made between the end of the handler and the queued call satisfies the request: the queued call
 // does not rebuild a second time.
 TEST_F(ChartsTest, P0297AQueuedRebuildIsSkippedWhenARebuildCameFirst) {
