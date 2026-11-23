@@ -25,12 +25,13 @@
 #include "frame_timer_revive.h"
 #include "job_controller.h"
 #include "look.h"
+#include "open_folder.h"
 #include "settings_dialog.h"
 
 namespace {
 
-// Set first in DeInit, reset in Init: while set, the entry points that OpenCPN may call during the
-// event loop that DeInit pumps return at once.
+// Set first in DeInit, reset in Init: while set, a late callback from OpenCPN or wx returns at once.
+// Nothing in DeInit dispatches events.
 bool g_closing = false;
 
 // Set by Init when the load guard refuses; every later callback returns at once.
@@ -181,6 +182,7 @@ bool ChartGrabberPi::DeInit() {
         look_.reset();
         revive_.reset();
         config_.reset();
+        cg::shutdownOpenFolder(); // before the library can be unloaded
         cg::closePluginLog();
         return true;
     });
@@ -284,7 +286,7 @@ void ChartGrabberPi::OnContextMenuItemCallback(int id) {
 }
 void ChartGrabberPi::ShowPreferencesDialog(wxWindow* parent) {
     if (g_disabled || g_closing || !config_ ||
-        !look_) // g_closing: DeInit pumps events; the others are unreachable
+        !look_) // g_closing: a late callback after DeInit began; the others are unreachable
         return;
     cg::guarded("preferences", [this, parent] {
         SettingsDialog dialog(parent, *config_, *look_, [this] { return jobs_ && jobs_->busy(); });
@@ -295,7 +297,7 @@ void ChartGrabberPi::ShowPreferencesDialog(wxWindow* parent) {
 // or this, is raised.
 void ChartGrabberPi::openSettings() {
     if (g_disabled || g_closing || !config_ ||
-        !look_) // g_closing: DeInit pumps events; the others are unreachable
+        !look_) // g_closing: a late callback after DeInit began; the others are unreachable
         return;
     cg::guarded("settings", [this] {
         if (SettingsDialog* open = SettingsDialog::shown()) {

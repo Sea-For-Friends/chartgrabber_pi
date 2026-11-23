@@ -120,8 +120,14 @@ public:
               const std::function<void(std::string_view)>& onLine); // '\n', drops '\r'
     void finish(const std::function<void(std::string_view)>& onLine);
 
+    // A line longer than this is cut here, delivered once, and the rest up to the next '\n' is dropped.
+    static constexpr std::size_t kMaxLine = 64 * 1024;
+    std::size_t cutLines() const { return cutLines_; } // lines cut so far
+
 private:
     std::string pending_;
+    bool skipping_ = false; // inside the dropped tail of a cut line
+    std::size_t cutLines_ = 0;
 };
 
 struct EstimateTotals {

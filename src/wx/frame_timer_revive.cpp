@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "frame_timer_revive.h"
 
+#include "guard.h"
 #include "plugin_log.h"
 
 #include <wx/app.h>
@@ -51,19 +52,21 @@ void FrameTimerRevive::shutdown() {
 }
 
 void FrameTimerRevive::onCheck(wxTimerEvent&) {
-    if (down_)
-        return;
-    switch (watch_.check(steadyMs())) {
-    case cg::FrameTimerWatch::Action::Post:
-        if (post()) // no main window: the check is not re-armed (the watch gives up)
-            check_.StartOnce(cg::FrameTimerWatch::kCheckDelayMs);
-        break;
-    case cg::FrameTimerWatch::Action::GiveUp:
-        cg::logLine("frame timer did not restart");
-        break;
-    case cg::FrameTimerWatch::Action::None:
-        break;
-    }
+    cg::guarded("frame timer check", [&] {
+        if (down_)
+            return;
+        switch (watch_.check(steadyMs())) {
+        case cg::FrameTimerWatch::Action::Post:
+            if (post()) // no main window: the check is not re-armed (the watch gives up)
+                check_.StartOnce(cg::FrameTimerWatch::kCheckDelayMs);
+            break;
+        case cg::FrameTimerWatch::Action::GiveUp:
+            cg::logLine("frame timer did not restart");
+            break;
+        case cg::FrameTimerWatch::Action::None:
+            break;
+        }
+    });
 }
 
 // QueueEvent, never ProcessEvent: OpenCPN's handler runs later from the main loop, not in this call stack.

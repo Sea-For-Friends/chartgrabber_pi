@@ -192,17 +192,19 @@ void JobController::requestRescan(const std::vector<std::string>& extraDirs) {
 }
 
 void JobController::onRescanTimer(wxTimerEvent&) {
-    if (closing_)
-        return;
-    const std::int64_t now = rescanClockMs()();
-    const bool options = hostHold(calling_) != HostHold::None;
-    if (throttle_.due(now, !staleDropAllowed(), options) == cg::RescanThrottle::Decision::CallNow) {
-        doRescan();
-        return;
-    }
-    const std::int64_t wait = throttle_.waitMs(now, options);
-    if (wait > 0)
-        rescanTimer_.StartOnce(static_cast<int>(wait));
+    cg::guarded("rescan timer", [&] {
+        if (closing_)
+            return;
+        const std::int64_t now = rescanClockMs()();
+        const bool options = hostHold(calling_) != HostHold::None;
+        if (throttle_.due(now, !staleDropAllowed(), options) == cg::RescanThrottle::Decision::CallNow) {
+            doRescan();
+            return;
+        }
+        const std::int64_t wait = throttle_.waitMs(now, options);
+        if (wait > 0)
+            rescanTimer_.StartOnce(static_cast<int>(wait));
+    });
 }
 
 // ONE UpdateChartDBInplace over OpenCPN's chart folders plus the remembered folders (a per-file add hangs
@@ -231,27 +233,29 @@ void JobController::doRescan() {
 }
 
 void JobController::onStaleTimer(wxTimerEvent&) {
-    if (closing_)
-        return;
-    dropHeld_ = false;
-    bool freed =
-        rescanLeft_; // this tick removed a file: OpenCPN's list must be rescanned even after a job rescan
-    for (cg::ChartRecord r : config_.loadCharts()) {
-        if (r.stale.empty() || (busy() && r.id == record_.id))
-            continue;
-        std::vector<std::string> left = dropStale(r.stale);
-        if (left == r.stale)
-            continue;
-        staleRemoved_ = freed = true;
-        r.stale = std::move(left);
-        config_.saveChart(r);
-    }
-    if (dropHeld_)
-        staleTimer_.StartOnce(cg::RescanThrottle::kOptionsPollMs);
-    if (!freed && (!staleRemoved_ || rescanned_))
-        return;
-    rescanLeft_ = false;
-    requestRescan();
+    cg::guarded("stale timer", [&] {
+        if (closing_)
+            return;
+        dropHeld_ = false;
+        bool freed =
+            rescanLeft_; // this tick removed a file: OpenCPN's list must be rescanned even after a job rescan
+        for (cg::ChartRecord r : config_.loadCharts()) {
+            if (r.stale.empty() || (busy() && r.id == record_.id))
+                continue;
+            std::vector<std::string> left = dropStale(r.stale);
+            if (left == r.stale)
+                continue;
+            staleRemoved_ = freed = true;
+            r.stale = std::move(left);
+            config_.saveChart(r);
+        }
+        if (dropHeld_)
+            staleTimer_.StartOnce(cg::RescanThrottle::kOptionsPollMs);
+        if (!freed && (!staleRemoved_ || rescanned_))
+            return;
+        rescanLeft_ = false;
+        requestRescan();
+    });
 }
 
 // Windows weather update: job.ini Out= names another file, so the CLI's rename never meets the

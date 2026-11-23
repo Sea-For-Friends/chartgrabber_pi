@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "stall_watch.h"
 
+#include "guard.h"
 #include "plugin_log.h"
 #include "wx_util.h"
 
@@ -40,9 +41,11 @@ void StallWatch::stop() {
 }
 
 void StallWatch::onTick(wxTimerEvent&) {
-    const int ms = meter_.tick(steadyMs());
-    if (ms > 0)
-        logFile(fromUtf8(stallLine(ms)));
+    guarded("stall watch", [&] {
+        const int ms = meter_.tick(steadyMs());
+        if (ms > 0)
+            logFile(fromUtf8(stallLine(ms)));
+    });
 }
 
 } // namespace cg
