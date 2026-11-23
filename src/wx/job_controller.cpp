@@ -17,11 +17,8 @@
 #include <wx/filename.h>
 #include <wx/intl.h>
 #include <wx/log.h>
+#include <wx/progdlg.h>
 #include <wx/toplevel.h>
-// clang-format off
-#include <wx/progdlg.h> // first: generic/progdlgg.h needs its style flags
-#include <wx/generic/progdlgg.h>
-// clang-format on
 
 #include <algorithm>
 #include <chrono>
@@ -112,27 +109,32 @@ std::vector<std::string> JobController::dropStale(std::vector<std::string> stale
     const wxArrayString dirs = GetChartDBDirArrayString();
     std::vector<std::string> left;
     calling_ = true;
-    for (const std::string& p : stale) {
-        std::vector<std::string> candidates; // the path as OpenCPN lists it, then the record's own
-        for (const wxString& d : dirs) {
-            if (cg::sameDir(cg::toUtf8(d), cg::parentDir(p))) {
-                candidates.push_back(cg::chartListPath(cg::toUtf8(d), p, weatherSwapOs()));
-                break;
+    try {
+        for (const std::string& p : stale) {
+            std::vector<std::string> candidates; // the path as OpenCPN lists it, then the record's own
+            for (const wxString& d : dirs) {
+                if (cg::sameDir(cg::toUtf8(d), cg::parentDir(p))) {
+                    candidates.push_back(cg::chartListPath(cg::toUtf8(d), p, weatherSwapOs()));
+                    break;
+                }
             }
+            if (candidates.empty() || candidates[0] != p)
+                candidates.push_back(p);
+            bool gone = false;
+            for (const std::string& c : candidates) {
+                wxString path = cg::fromUtf8(c);
+                RemoveChartFromDBInPlace(path);
+                cg::logLine("old weather file dropped from the chart list");
+                gone = staleRemove(p);
+                if (gone)
+                    break;
+            }
+            if (!gone)
+                left.push_back(p);
         }
-        if (candidates.empty() || candidates[0] != p)
-            candidates.push_back(p);
-        bool gone = false;
-        for (const std::string& c : candidates) {
-            wxString path = cg::fromUtf8(c);
-            RemoveChartFromDBInPlace(path);
-            cg::logLine("old weather file dropped from the chart list");
-            gone = staleRemove(p);
-            if (gone)
-                break;
-        }
-        if (!gone)
-            left.push_back(p);
+    } catch (...) {
+        calling_ = false; // a throw must not leave every later chart-list call held as busy
+        throw;
     }
     calling_ = false;
     return left;

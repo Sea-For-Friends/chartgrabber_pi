@@ -35,10 +35,7 @@
 #include <wx/gauge.h>
 #include <wx/log.h>
 #include <wx/panel.h>
-// clang-format off
-#include <wx/progdlg.h> // first: generic/progdlgg.h needs its style flags
-#include <wx/generic/progdlgg.h>
-// clang-format on
+#include <wx/progdlg.h>
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
 #include <wx/timer.h>
@@ -4235,6 +4232,20 @@ TEST_F(HoldStaleTest, P0296TheDropWaitsInsideAYieldAndTheRetryMakesIt) {
     expectDropped();
 }
 
+// A chart-list request made from inside the plugin's own removal call is held as busy.
+TEST_F(HoldStaleTest, P0296ARequestFromInsideTheRemoveCallIsHeldAsBusy) {
+    LogCollector log;
+    ocpn_fake::onRemove = [this] {
+        makeWritable();
+        jc().requestRescan();
+    };
+    tick();
+    expectDropped();
+    EXPECT_EQ(std::count(log.messages.begin(), log.messages.end(),
+                         "ChartGrabber: chart list update held (OpenCPN busy)"),
+              1);
+}
+
 TEST_F(HoldStaleTest, P0296TheDropWaitsWhileAProgressDialogIsShownAndTheRetryMakesIt) {
     auto* dlg = new wxGenericProgressDialog("Update", "Updating charts", 100, canvas_);
     tick();
@@ -4245,7 +4256,7 @@ TEST_F(HoldStaleTest, P0296TheDropWaitsWhileAProgressDialogIsShownAndTheRetryMak
     dlg->Destroy();
 }
 
-// A job that ends while Options is shown: the drop is held, the 120 s retry is armed, the retry drops.
+// A job that ends while Options is shown: the drop is held and the 120 s retry is armed.
 TEST_F(HoldStaleTest, P0296AJobEndingInAHoldKeepsTheStalePathAndArmsTheRetry) {
     makeWritable();
     fs::remove(planned("H (2).mbtiles"));
