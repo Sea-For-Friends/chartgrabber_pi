@@ -4,35 +4,67 @@
 #include "chart_folder.h"
 #include "plugin_log.h"
 
+#include <wx/event.h>
 #include <wx/intl.h>
 #include <wx/log.h>
 #include <wx/msgdlg.h>
 #include <wx/process.h>
 #include <wx/utils.h>
 
+#include <map>
+#include <memory>
 #include <utility>
 
 namespace cg {
 namespace {
 
-// Reports the end of one xdg-open; wxProcess deletes itself once OnTerminate has returned.
-class OpenProcess : public wxProcess {
+// The owner of every running xdg-open: wx sends the end of a process to its parent handler, which owns the
+// process then. Destroyed in shutdownOpenFolder, so no plugin code is called after the library is unloaded.
+class OpenHandler : public wxEvtHandler {
 public:
-    OpenProcess(wxString folder, std::function<void(const wxString&)> onFailed)
-        : folder_(std::move(folder)), onFailed_(std::move(onFailed)) {}
+    OpenHandler() { Bind(wxEVT_END_PROCESS, &OpenHandler::onEnd, this); }
 
-    void OnTerminate(int, int status) override {
-        if (status != 0) {
-            logWarning(wxString::Format("xdg-open exited with %d for %s", status, folder_));
-            onFailed_(folder_);
-        }
-        delete this;
+    // The process is told apart by its event id (the event carries no object).
+    wxProcess* make(wxString folder, std::function<void(const wxString&)> onFailed, int* id) {
+        *id = ++lastId_;
+        auto* process = new wxProcess(this, *id);
+        live_[*id] = {process, std::move(folder), std::move(onFailed)};
+        return process;
+    }
+    void forget(int id) { live_.erase(id); }
+    // wx deletes a detached process itself at its end, without any event.
+    void detachAll() {
+        for (auto& entry : live_)
+            entry.second.process->Detach();
+        live_.clear();
     }
 
 private:
-    wxString folder_;
-    std::function<void(const wxString&)> onFailed_;
+    struct Entry {
+        wxProcess* process;
+        wxString folder;
+        std::function<void(const wxString&)> onFailed;
+    };
+
+    void onEnd(wxProcessEvent& event) {
+        const auto it = live_.find(event.GetId());
+        if (it == live_.end())
+            return;
+        Entry entry = std::move(it->second);
+        live_.erase(it);
+        delete entry.process;
+        if (event.GetExitCode() != 0) {
+            logWarning(wxString::Format("xdg-open exited with %d for %s", event.GetExitCode(), entry.folder));
+            // From the event loop, not inside wx's process-end callback (the failure box is modal).
+            CallAfter([entry] { entry.onFailed(entry.folder); });
+        }
+    }
+
+    std::map<int, Entry> live_;
+    int lastId_ = 0;
 };
+
+std::unique_ptr<OpenHandler> g_handler;
 
 } // namespace
 
@@ -46,7 +78,10 @@ void openFolderInFileManager(const wxString& folder, std::function<void(const wx
         onFailed = [](const wxString& f) {
             wxMessageBox(cannotOpenFolderText(f), _("Chart Grabber"), wxOK | wxICON_INFORMATION);
         };
-    auto* process = new OpenProcess(folder, onFailed);
+    if (!g_handler)
+        g_handler = std::make_unique<OpenHandler>();
+    int id;
+    wxProcess* process = g_handler->make(folder, onFailed, &id); // before wxExecute: it may report the end
     const wchar_t* argv[] = {L"xdg-open", folder.wc_str(), nullptr};
     long pid;
     {
@@ -54,10 +89,17 @@ void openFolderInFileManager(const wxString& folder, std::function<void(const wx
         pid = wxExecute(argv, wxEXEC_ASYNC, process);
     }
     if (pid == 0) {
+        g_handler->forget(id);
         delete process;
         logWarning(wxString::Format("cannot start xdg-open for %s", folder));
         onFailed(folder);
     }
+}
+
+void shutdownOpenFolder() {
+    if (g_handler)
+        g_handler->detachAll();
+    g_handler.reset(); // its queued CallAfter events die with it
 }
 
 wxString cannotOpenFolderText(const wxString& folder) {

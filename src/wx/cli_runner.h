@@ -41,7 +41,7 @@ public:
     CliRunner();
     ~CliRunner(); // running: abandon(destructorWaitMs())
 
-    // The destructor's wait (2 s). setDestructorWaitMs is for tests only.
+    // The destructor's wait (2 s). setDestructorWaitMs: the probes use 0 (they kill first); tests use it too.
     static constexpr int kDefaultDestructorWaitMs = 2000;
     int destructorWaitMs() const { return destructorWaitMs_; }
     void setDestructorWaitMs(int ms) { destructorWaitMs_ = ms; }
@@ -71,7 +71,8 @@ public:
 private:
     void onTimer(wxTimerEvent&);
     void onEnd(wxProcessEvent& event);
-    void drain();
+    size_t drain();
+    void drainAll();
     void graceCheck();
     void killTree();
     void closeJob(); // Windows: release the job object; nothing elsewhere
@@ -92,7 +93,8 @@ private:
     bool terminated_ = false;
     bool stopped_ = false; // terminate() / kill() / abandon ran for this run (the exit log line)
     bool draining_ = false;
-    std::string proxy_; // the --proxy value of the last start: redacted in the debug copies of CLI lines
+    bool cutLogged_ = false; // "cli line cut" is logged once per run
+    std::string proxy_;      // the --proxy value of the last start: redacted in the debug copies of CLI lines
     int destructorWaitMs_ = kDefaultDestructorWaitMs;
     int stopGraceMs_ = kDefaultStopGraceMs;
     std::chrono::steady_clock::time_point stopDeadline_;

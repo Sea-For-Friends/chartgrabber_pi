@@ -337,6 +337,28 @@ StderrLine parseStderrLine(std::string_view line) {
 void LineSplitter::feed(std::string_view bytes, const std::function<void(std::string_view)>& onLine) {
     while (!bytes.empty()) {
         const std::size_t nl = bytes.find('\n');
+        if (skipping_) { // the tail of a cut line: dropped up to its newline
+            if (nl == std::string_view::npos)
+                return;
+            skipping_ = false;
+            bytes.remove_prefix(nl + 1);
+            continue;
+        }
+        const std::size_t take = nl == std::string_view::npos ? bytes.size() : nl;
+        if (pending_.size() + take > kMaxLine) { // too long: deliver the first kMaxLine bytes, drop the rest
+            pending_.append(bytes.substr(0, kMaxLine - pending_.size()));
+            ++cutLines_;
+            const std::string line = std::move(pending_);
+            pending_.clear();
+            if (nl == std::string_view::npos) {
+                skipping_ = true;
+                bytes = {};
+            } else {
+                bytes.remove_prefix(nl + 1);
+            }
+            onLine(line);
+            continue;
+        }
         if (nl == std::string_view::npos) {
             pending_.append(bytes);
             return;
@@ -353,6 +375,7 @@ void LineSplitter::feed(std::string_view bytes, const std::function<void(std::st
 }
 
 void LineSplitter::finish(const std::function<void(std::string_view)>& onLine) {
+    skipping_ = false;
     if (!pending_.empty() && pending_.back() == '\r') {
         pending_.pop_back();
     }

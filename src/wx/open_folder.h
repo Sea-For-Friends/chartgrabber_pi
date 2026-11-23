@@ -15,6 +15,10 @@ namespace cg {
 void openFolderInFileManager(const wxString& folder,
                              std::function<void(const wxString& folder)> onFailed = {});
 
+// Detaches every xdg-open still running and drops the pending failure calls: nothing of the plugin runs
+// when one of them ends later. Called from DeInit.
+void shutdownOpenFolder();
+
 // The sailor's sentence when no file manager window could be opened.
 wxString cannotOpenFolderText(const wxString& folder);
 

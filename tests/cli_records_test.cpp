@@ -1521,6 +1521,76 @@ TEST(LineSplitter, CrlfAndFinish) {
     EXPECT_TRUE(splitAll({}).empty());
 }
 
+// A line without a newline is cut at 64 KiB (65536 bytes) and delivered once; its tail up to the next newline
+// is dropped, whatever the chunking; the lines after it are intact.
+TEST(LineSplitter, ALongLineIsCutAt64KibAndItsTailDropped_P0298) {
+    ASSERT_EQ(LineSplitter::kMaxLine, 65536u);
+    const std::string head(65536, 'a');
+    const std::string whole = std::string(102400, 'a') + "\nnext\n";
+    const std::vector<std::string> expected = {head, "next"};
+    EXPECT_EQ(splitAll({whole}), expected);
+    // chunks of 4096 (the runner's read size), of 1000 and of 65537 give the same lines
+    for (const std::size_t step : {std::size_t{4096}, std::size_t{1000}, std::size_t{65537}}) {
+        std::vector<std::string> chunks;
+        for (std::size_t i = 0; i < whole.size(); i += step)
+            chunks.push_back(whole.substr(i, step));
+        EXPECT_EQ(splitAll(chunks), expected) << "chunk " << step;
+    }
+    LineSplitter sp;
+    std::vector<std::string> out;
+    const auto take = [&out](std::string_view l) { out.emplace_back(l); };
+    sp.feed(whole, take);
+    EXPECT_EQ(sp.cutLines(), 1u);
+    sp.feed("x\n", take);
+    EXPECT_EQ(sp.cutLines(), 1u) << "a normal line is not counted";
+    EXPECT_EQ(out.back(), "x");
+}
+
+// The cut line is delivered as soon as it passes the limit, not at its newline, and the memory held after it
+// stays below the limit: no line grows beyond 64 KiB however much is fed.
+TEST(LineSplitter, ACutLineIsDeliveredAtOnceAndNothingMoreGrowsFromItsTail_P0298) {
+    LineSplitter sp;
+    std::vector<std::string> out;
+    const auto take = [&out](std::string_view l) { out.emplace_back(l); };
+    sp.feed(std::string(40000, 'b'), take);
+    EXPECT_TRUE(out.empty());
+    sp.feed(std::string(40000, 'c'), take); // 80000 bytes without a newline
+    ASSERT_EQ(out.size(), 1u);
+    EXPECT_EQ(out[0], std::string(40000, 'b') + std::string(25536, 'c'));
+    for (int i = 0; i < 40; ++i) // 1.6 MB more of the same line
+        sp.feed(std::string(40000, 'd'), take);
+    EXPECT_EQ(out.size(), 1u) << "the tail is dropped, not delivered as more lines";
+    sp.finish(take); // the dropped tail leaves nothing to flush
+    EXPECT_EQ(out.size(), 1u);
+    EXPECT_EQ(sp.cutLines(), 1u);
+    sp.feed("after\n", take); // finish ended the skipping: the next bytes are a new line
+    ASSERT_EQ(out.size(), 2u);
+    EXPECT_EQ(out[1], "after");
+}
+
+// A line of exactly 64 KiB is whole; one byte more is cut.
+TEST(LineSplitter, ALineOfExactly64KibIsNotCutAndOneByteMoreIs_P0298) {
+    const std::string exact(65536, 'e');
+    LineSplitter sp;
+    std::vector<std::string> out;
+    const auto take = [&out](std::string_view l) { out.emplace_back(l); };
+    sp.feed(exact + "\nz\n", take);
+    EXPECT_EQ(out, (std::vector<std::string>{exact, "z"}));
+    EXPECT_EQ(sp.cutLines(), 0u);
+    sp.feed(exact + "f\nz\n", take);
+    ASSERT_EQ(out.size(), 4u);
+    EXPECT_EQ(out[2], exact) << "the extra byte is dropped";
+    EXPECT_EQ(out[3], "z");
+    EXPECT_EQ(sp.cutLines(), 1u);
+    // the same line fed in two parts that meet at the limit is not cut either
+    LineSplitter two;
+    out.clear();
+    two.feed(exact.substr(0, 30000), take);
+    two.feed(exact.substr(30000) + "\n", take);
+    EXPECT_EQ(out, std::vector<std::string>{exact});
+    EXPECT_EQ(two.cutLines(), 0u);
+}
+
 TEST(Sums, EstimatesOverGuidsAndZooms) {
     const auto rec = [](const char* g, int z, std::int64_t tiles, std::int64_t dl, bool assumed,
                         std::int64_t disk) {

@@ -44,6 +44,8 @@ namespace {
 
 constexpr int kPollMs = 100;
 constexpr size_t kChunk = 4096;
+constexpr size_t kDrainBudget = 64 * 1024;       // per stream and call
+constexpr size_t kDrainAllCap = 4 * 1024 * 1024; // after the child ended, in total
 // The probe cache: (path, size, mtime) -> the supported version and the version text; GUI thread only.
 using ProbeKey = std::tuple<std::string, std::uintmax_t, std::filesystem::file_time_type>;
 struct ProbeEntry {
@@ -213,6 +215,7 @@ bool CliRunner::start(const std::vector<std::string>& argv, Callbacks cb, std::s
     cb_ = std::move(cb);
     outSplit_ = cg::LineSplitter();
     errSplit_ = cg::LineSplitter();
+    cutLogged_ = false;
     terminated_ = false;
     stopped_ = false;
     killed_ = false;
@@ -411,7 +414,7 @@ void CliRunner::onEnd(wxProcessEvent& event) {
 void CliRunner::endRun(int raw) {
     startExit_.reset();
     cg::guarded("runner end", [&] {
-        drain();
+        drainAll();
         const int code = cg::normalizeExit(raw, cg::kHostOs, killSent_);
 #ifdef __WINDOWS__
         if (code != raw) // an NTSTATUS crash code stays visible
@@ -421,20 +424,26 @@ void CliRunner::endRun(int raw) {
     });
 }
 
-// Reads both pipes empty (a full pipe would block the CLI) and feeds the line splitters.
-void CliRunner::drain() {
+// Reads both pipes (a full pipe would block the CLI) and feeds the line splitters: at most kDrainBudget
+// bytes per stream, the rest stays in the pipe for the next tick, so a child that never stops writing cannot
+// hold the main thread. Returns the bytes read.
+size_t CliRunner::drain() {
     if (!process_ || draining_) {
-        return;
+        return 0;
     }
     draining_ = true;
+    size_t total = 0;
     char buf[kChunk];
     auto pump = [&](wxInputStream* s, cg::LineSplitter& split, bool isStdout) {
-        while (process_ && s && s->CanRead()) {
+        size_t got = 0;
+        while (process_ && s && got < kDrainBudget && s->CanRead()) {
             s->Read(buf, sizeof buf);
             const size_t n = s->LastRead();
             if (n == 0) {
                 break;
             }
+            got += n;
+            total += n;
             split.feed(std::string_view(buf, n), [&](std::string_view line) {
                 if (isStdout) {
                     onStdoutLine(line);
@@ -447,6 +456,24 @@ void CliRunner::drain() {
     pump(process_->GetInputStream(), outSplit_, true);
     pump(process_->GetErrorStream(), errSplit_, false);
     draining_ = false;
+    if (!cutLogged_ && outSplit_.cutLines() + errSplit_.cutLines() > 0) {
+        cutLogged_ = true;
+        cg::logLine("cli line cut");
+    }
+    return total;
+}
+
+// After the child ended: reads everything left, at most kDrainAllCap bytes; the rest is dropped.
+void CliRunner::drainAll() {
+    size_t total = 0;
+    size_t n;
+    while ((n = drain()) > 0) {
+        total += n;
+        if (total >= kDrainAllCap) {
+            cg::logLine("cli output cut");
+            break;
+        }
+    }
 }
 
 void CliRunner::finish(int exitCode) {
@@ -582,8 +609,10 @@ void CliProbe::check(const std::string& program, const cg::Settings& cliSettings
     line_.clear();
     haveLine_ = false;
     done_ = std::move(done);
-    if (!runner_)
+    if (!runner_) {
         runner_ = std::make_unique<CliRunner>();
+        runner_->setDestructorWaitMs(0); // the probe kills the child before it lets go
+    }
     CliRunner::Callbacks cb;
     cb.onText = [this](std::string_view line) {
         if (!haveLine_) {
@@ -616,12 +645,14 @@ void CliProbe::onExit(int exitCode) {
 }
 
 void CliProbe::onTimeout(wxTimerEvent&) {
-    if (!done_)
-        return;
-    if (runner_)
-        runner_->kill();
-    cg::logLine("tile program did not answer in 10 s; stopped");
-    Done d = std::move(done_);
-    done_ = nullptr;
-    d(Result::NoAnswer);
+    cg::guarded("version check timeout", [this] {
+        if (!done_)
+            return;
+        if (runner_)
+            runner_->kill();
+        cg::logLine("tile program did not answer in 10 s; stopped");
+        Done d = std::move(done_);
+        done_ = nullptr;
+        d(Result::NoAnswer);
+    });
 }
