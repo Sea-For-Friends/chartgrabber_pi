@@ -2603,7 +2603,7 @@ TEST_F(DownloadTest, TheReasonsFollowTheOrderEstimateNameLargeDiskAndTheirBounda
         fs::create_directories(root_ / "charts d'x"); // a configured folder must exist
         setSettings([&](cg::Settings& s) { s.chartDir = (root_ / "charts d'x").string(); });
         ready();
-        if (!row.chartDir.empty()) { // chosen with the folder button: a loaded setting must be absolute (8.7)
+        if (!row.chartDir.empty()) { // chosen with the folder button: a loaded setting must be absolute
             ocpn_fake::dirResult = wxID_OK;
             ocpn_fake::dirSelected = wxString::FromUTF8(row.chartDir);
             click(chooseFolder());
