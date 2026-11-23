@@ -325,7 +325,7 @@ std::map<std::string, SourceRecord> fixtureRecords() {
 
 TEST(FavouriteSources, TheShippedFileParsesCleanlyAndEveryGuidIsAFittingBundledRecord) {
     const auto records = fixtureRecords();
-    ASSERT_EQ(records.size(), 108u);
+    ASSERT_EQ(records.size(), 111u);
     const ConfFile conf =
         readConf((std::filesystem::path(CG_SOURCE_DIR) / "data" / "favourite-sources.conf").string());
     ASSERT_TRUE(conf.found);

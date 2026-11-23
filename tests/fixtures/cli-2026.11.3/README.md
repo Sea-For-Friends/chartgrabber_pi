@@ -11,6 +11,7 @@ The folder was renamed from `cli-2026.11.1` for the CLI 2026.11.3 (core tag `v20
 - (2026-11-23): `sources-bundled-all.stdout` re-captured with the same CLI after four German coast orthophoto sources were added: four more rows (97 rows), nothing else differs.
 - (2026-11-23): `sources-bundled-all.stdout` re-captured with the same CLI after five North Sea and Baltic orthophoto sources were added: five more rows (102 rows), nothing else differs.
 - (2026-11-23): `sources-bundled-all.stdout` re-captured with the same CLI after six Mediterranean and Atlantic orthophoto sources were added: six more rows (108 rows), nothing else differs.
+- (2026-11-23): `sources-bundled-all.stdout` re-captured with the same CLI after the three seabed type overlays (EMODnet Geology, Geological Survey Ireland, NGU) were added: three more rows (111 rows), nothing else differs.
 The history of the earlier pins follows.
 
 
@@ -109,4 +110,4 @@ captured on 2026-10-21 (their text names no group).
 files exist, so a recapture does not churn the test literals. `--all` rewrites them (then the tests' literals must be re-read).
 The first refetch run's exit code is saved as `run-weather-refetch.first-exit`; a non-zero code stops the script.
 
-`sources-bundled-all` is re-captured with the case's own command whenever the bundled set changes (108 rows now); its `.stderr` and `.exit` stay. The other network cases stay as captured before (their text names no group; tests read literals from them).
+`sources-bundled-all` is re-captured with the case's own command whenever the bundled set changes (111 rows now); its `.stderr` and `.exit` stay. The other network cases stay as captured before (their text names no group; tests read literals from them).

@@ -311,3 +311,13 @@ Six new files, written by this repository from the service pages and their metad
     cc468741a4e829b2e5e4a8fd5edb6900ba6857a3b0353d6050d903768c9eb55d  Satellite/Abruzzo-Ortho-2018-19.source.json
     7383fb9af87eb7f9fe500c3f957e37364b1e8210ae1bd8d929b165f18b4fbaae  Satellite/ASIG-Albania-Ortho-2015.source.json
     ec9a3a7aa3126cf79709255ae6c5a056105a89c2e9d99677029d0d07e41b3919  Satellite/SITR-Sicily-Ortho-2012-13.source.json
+
+## 2026-11-23: seabed type overlays, Europe, Ireland and Norway
+
+Three new files, written by this repository from the WMS capabilities of EMODnet Geology, Geological Survey Ireland
+and NGU and their licence pages (read 2026-11-23), in the same `.source.json` format as the others. Downloaded once
+each with the CLI 2026.11.3 (two connections, zooms 13 to 15 of a small anchorage box). sha256:
+
+    8a72a559bb4f78809b850234129867a23a0c4effa574bacda3a66ddd646f1451  Depth/EMODnet-Geology-Seabed-Type.source.json
+    80f33c2b7e0f172027d7735f8d03c403bb43d193ad113bd19554c75b92893ed7  Depth/Ireland-GSI-Seabed-Type.source.json
+    77acdeed9090fc5a11ec29be6575985264515dc6577232bd24038494d3efcc7c  Depth/Norway-NGU-Seabed-Type.source.json

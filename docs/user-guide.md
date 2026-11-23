@@ -121,7 +121,7 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 
 ## Bundled charts
 
-108 sources come with the plugin, in seven groups (the menus under **Chart**).
+111 sources come with the plugin, in seven groups (the menus under **Chart**).
 
 | Group | Source | What it is for | Area |
 |---|---|---|---|
@@ -160,6 +160,9 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 | Depth | SHOM 100 m depth, Tahiti and Moorea | Offshore depth model on a 100 m grid; not for navigation | Tahiti, Moorea |
 | Depth | SHOM 100 m depth, New Caledonia | Offshore depth model on a 100 m grid; not for navigation | New Caledonia |
 | Depth | SHOM seabed type (France) | Sand, mud or rock: the holding ground for anchoring; not for navigation | French coasts |
+| Depth | EMODnet seabed type (European seas) | Sand, mud or rock: the holding ground for anchoring; detailed only in some bays; not for navigation | European seas |
+| Depth | Geological Survey Ireland seabed type (Irish waters) | Sand, mud or rock: the holding ground for anchoring, from multibeam surveys; grey where not classified; not for navigation | Irish waters |
+| Depth | NGU seabed type (Norway) | Sand, mud or rock: the holding ground for anchoring, in surveyed fjords and coastal waters; not for navigation | Norwegian coast |
 | Depth | Satellite-derived depth (Pacific islands, DEP) | Approximate depths from satellite over reefs and lagoons; not for navigation | Pacific islands |
 | Satellite | Sentinel-2 Cloudless 2025 (EOX) | Reef edges, banks, passes where charts are poor | Worldwide |
 | Satellite | USGS Imagery (USA) | Reef edges, banks and pass entrances in US waters, not Alaska | USA, not Alaska |
@@ -291,7 +294,7 @@ NOAA NCCOS seabed habitat map (Saipan) colours: pale yellow bare sand, olive san
 
 ## Your own sources
 
-- The 108 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
+- The 111 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
 - Add your own `.zmp` source folders to `Charts/Chart sources` in your home folder (Settings, **Chart sources**, **Open folder** creates it), or pick another folder with **Change...**. They are read after the bundled ones.
 - Sources that need a key are not bundled: put the source folder there and enter your key where its file says `KEY`.
 

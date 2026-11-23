@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{A6633591-1547-41BF-A6C3-6F8B74112EBE}",
+  "name": "EMODnet seabed type (European seas)",
+  "group": "Depth",
+  "layer": true,
+  "url": "https://drive.emodnet-geology.eu/geoserver/gtk/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=seabed_substrate_1m,seabed_substrate_250k,seabed_substrate_100k,seabed_substrate_70k_multiscale,seabed_substrate_60k_multiscale,seabed_substrate_50k_multiscale,seabed_substrate_45k_multiscale,seabed_substrate_30k_multiscale,seabed_substrate_25k_multiscale,seabed_substrate_20k_multiscale,seabed_substrate_15k_multiscale,seabed_substrate_10k_multiscale,seabed_substrate_5k_multiscale,seabed_substrate_1k5_multiscale&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Depth_EMODnet_Seabed_Type",
+  "license": "Licensed under CC BY 4.0 from EMODnet Geology. Not for navigation",
+  "maxConnections": 2,
+  "maxZoom": 15,
+  "navigationWarning": true
+}

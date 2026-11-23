@@ -147,7 +147,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
         return out;
     };
     const auto all = flags("sources-bundled-all.stdout");
-    ASSERT_EQ(all.size(), 108u);
+    ASSERT_EQ(all.size(), 111u);
     const std::set<std::string> flagged = {
         "{25DBA489-D484-4A13-B65D-ABA8967FF3DA}", // Norway sea chart
         "{8A9C3A53-0512-4401-A6D3-050E08934949}", // Finland sea chart
@@ -181,6 +181,9 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
         "{75AD4560-CDA0-4C4B-B185-CBB90795FAB1}", // SHOM 100 m depth, Tahiti and Moorea
         "{9441ED23-4236-4D96-BF7D-FDFB4C8BCF4C}", // SHOM 100 m depth, New Caledonia
         "{8BC59B43-9257-40CA-B59C-807A2652EAE5}", // SHOM seabed type (France)
+        "{A6633591-1547-41BF-A6C3-6F8B74112EBE}", // EMODnet seabed type (European seas)
+        "{32A5CE5D-0FE1-4AD0-A14C-E0B147B3E392}", // Geological Survey Ireland seabed type (Irish waters)
+        "{F85B7E2A-801F-464A-B064-8F6A418489EC}", // NGU seabed type (Norway)
         "{F12728E1-8C83-4B3C-9763-E0651ED9371C}", // Satellite-derived depth (Pacific islands, DEP)
         "{F8736AA0-56B2-49E8-9D55-9EF7263BD128}", // SHOM buoyage (France)
         "{B3F0F721-11B0-4806-AC4C-2A7219913F06}", // SHOM wrecks and obstructions (France)
@@ -204,7 +207,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
 }
 
 // the regrouped bundled set as the pinned CLI lists it. Seven groups with these counts
-// (Nautical charts 5, Seamarks and traffic 6, Depth 25, Satellite 33,
+// (Nautical charts 5, Seamarks and traffic 6, Depth 28, Satellite 33,
 // Coast and land 7, Weather now 18, Ocean 14 with eight
 // snapshots (NASA sea surface temperature and sea ice, NOAA RTOFS east and west, NOAA OFS, three Copernicus)
 // and the six static SHOM layers, and every snapshot is in Weather now or Ocean (twenty-six); the six static
@@ -235,9 +238,9 @@ TEST(Records, BundledSetGroupsAndSnapshots) {
         }
     }
     const std::map<std::string, int> expected = {
-        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 25}, {"Satellite", 33},
+        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 28}, {"Satellite", 33},
         {"Coast and land", 7},  {"Weather now", 18},         {"Ocean", 14}};
-    EXPECT_EQ(rows, 108);
+    EXPECT_EQ(rows, 111);
     EXPECT_EQ(groups, expected);
     EXPECT_EQ(snapshots, 26);
 }
@@ -595,7 +598,7 @@ TEST(Records, NorthSeaAndBalticOrthophotosOfThePinnedRelease) {
     }
 }
 
-// the shipped folder holds the 108 bundled definitions; the removed INEGI file is gone. Each definition has
+// the shipped folder holds the 111 bundled definitions; the removed INEGI file is gone. Each definition has
 // its own GUID and cache folder name: a repeated one would make two sources share a menu entry or a tile
 // cache.
 TEST(Records, ShippedSourceFiles) {
@@ -619,9 +622,9 @@ TEST(Records, ShippedSourceFiles) {
         }
         inegi = inegi || name == "Mexico-INEGI-Ortho.source.json";
     }
-    EXPECT_EQ(shipped, 108);
+    EXPECT_EQ(shipped, 111);
     EXPECT_FALSE(inegi);
-    EXPECT_EQ(guids.size(), 108u);
+    EXPECT_EQ(guids.size(), 111u);
     for (const auto& kv : guids)
         EXPECT_EQ(kv.second, 1) << "GUID " << kv.first;
     for (const auto& kv : caches)
