@@ -43,7 +43,7 @@ Debian 12 gets OpenCPN from bookworm-backports.
 1. Download the plugin file for your system (the table below).
 2. In OpenCPN: Options > Plugins > **Import plugin...**, pick the plugin file, **Enable** it, then **OK** (or restart OpenCPN).
 
-The [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) 2026.11.1, the program that does the download, is inside the plugin file on every system: there is nothing else to install.
+The [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) 2026.11.3, the program that does the download, is inside the plugin file on every system: there is nothing else to install.
 It is kept in the plugin folder of OpenCPN. A CLI you choose yourself in the plugin's Settings is used instead.
 The Linux file needs the graphics libraries `libopengl0`, `libglx0` and `libegl1`; OpenCPN's own package from Debian 12, Debian 13 or Ubuntu 24.04 installs them, a hand-built OpenCPN may not (Arch and CachyOS: `libglvnd`).
 
@@ -58,25 +58,24 @@ Exception: if you once chose a CLI yourself under Settings > Advanced > **Chart 
 
 | System | Plugin | [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) |
 |---|---|---|
-| Debian 12, 64-bit PC | [chartgrabber_pi-2026.11.1-debian-x86_64-12-x86_64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.1/chartgrabber_pi-2026.11.1-debian-x86_64-12-x86_64.tar.gz) | included |
-| Debian 13, 64-bit PC | [chartgrabber_pi-2026.11.1-debian-x86_64-13-x86_64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.1/chartgrabber_pi-2026.11.1-debian-x86_64-13-x86_64.tar.gz) | included |
-| Debian 12 and Raspberry Pi OS bookworm, ARM 64-bit | [chartgrabber_pi-2026.11.1-debian-arm64-12-arm64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.1/chartgrabber_pi-2026.11.1-debian-arm64-12-arm64.tar.gz) | included |
-| Debian 13 and Raspberry Pi OS trixie, ARM 64-bit | [chartgrabber_pi-2026.11.1-debian-arm64-13-arm64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.1/chartgrabber_pi-2026.11.1-debian-arm64-13-arm64.tar.gz) | included |
-| Ubuntu 24.04, 64-bit PC | [chartgrabber_pi-2026.11.1-debian-x86_64-12-x86_64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.1/chartgrabber_pi-2026.11.1-debian-x86_64-12-x86_64.tar.gz) | included |
-| Ubuntu 24.04, ARM 64-bit | [chartgrabber_pi-2026.11.1-debian-arm64-12-arm64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.1/chartgrabber_pi-2026.11.1-debian-arm64-12-arm64.tar.gz) | included |
-| Ubuntu 26.04, 64-bit PC | [chartgrabber_pi-2026.11.1-ubuntu-x86_64-26.04-x86_64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.1/chartgrabber_pi-2026.11.1-ubuntu-x86_64-26.04-x86_64.tar.gz) | included |
-| Ubuntu 26.04, ARM 64-bit | [chartgrabber_pi-2026.11.1-ubuntu-arm64-26.04-arm64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.1/chartgrabber_pi-2026.11.1-ubuntu-arm64-26.04-arm64.tar.gz) | included |
-| Arch, 64-bit PC | [chartgrabber_pi-2026.11.1-arch-x86_64-rolling-x86_64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.1/chartgrabber_pi-2026.11.1-arch-x86_64-rolling-x86_64.tar.gz) | included |
-| CachyOS, 64-bit PC | [chartgrabber_pi-2026.11.1-cachyos-x86_64-rolling-x86_64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.1/chartgrabber_pi-2026.11.1-cachyos-x86_64-rolling-x86_64.tar.gz) | included |
-| Windows 10/11, 64-bit PC | [chartgrabber_pi-2026.11.1-windows-x86.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.1/chartgrabber_pi-2026.11.1-windows-x86.tar.gz) | included |
-| Debian 12, 32-bit ARM (armhf) | [chartgrabber_pi-2026.11.1-debian-armhf-12-armhf.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.1/chartgrabber_pi-2026.11.1-debian-armhf-12-armhf.tar.gz) | included |
-| Debian 13, 32-bit ARM (armhf) | [chartgrabber_pi-2026.11.1-debian-armhf-13-armhf.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.1/chartgrabber_pi-2026.11.1-debian-armhf-13-armhf.tar.gz) | included |
-| Raspberry Pi OS 32-bit (Trixie) | [chartgrabber_pi-2026.11.1-raspbian-armhf-13-armhf.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.1/chartgrabber_pi-2026.11.1-raspbian-armhf-13-armhf.tar.gz) | included |
-| macOS 12 or newer, Apple and Intel | [chartgrabber_pi-2026.11.1-macos-universal.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.1/chartgrabber_pi-2026.11.1-macos-universal.tar.gz) | included |
-| Flatpak OpenCPN 5.12, 64-bit PC | [chartgrabber_pi-2026.11.1-flatpak-x86_64-24.08-x86_64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.1/chartgrabber_pi-2026.11.1-flatpak-x86_64-24.08-x86_64.tar.gz) | included |
-| Flatpak OpenCPN 5.12, ARM 64-bit | [chartgrabber_pi-2026.11.1-flatpak-aarch64-24.08-aarch64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.1/chartgrabber_pi-2026.11.1-flatpak-aarch64-24.08-aarch64.tar.gz) | included |
-| Flatpak OpenCPN 5.14, 64-bit PC | [chartgrabber_pi-2026.11.1-flatpak-x86_64-25.08-x86_64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.1/chartgrabber_pi-2026.11.1-flatpak-x86_64-25.08-x86_64.tar.gz) | included |
-| Flatpak OpenCPN 5.14, ARM 64-bit | [chartgrabber_pi-2026.11.1-flatpak-aarch64-25.08-aarch64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.1/chartgrabber_pi-2026.11.1-flatpak-aarch64-25.08-aarch64.tar.gz) | included |
+| Debian 12, 64-bit PC | [chartgrabber_pi-2026.11.5-debian-x86_64-12-x86_64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.5/chartgrabber_pi-2026.11.5-debian-x86_64-12-x86_64.tar.gz) | included |
+| Debian 13, 64-bit PC | [chartgrabber_pi-2026.11.5-debian-x86_64-13-x86_64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.5/chartgrabber_pi-2026.11.5-debian-x86_64-13-x86_64.tar.gz) | included |
+| Debian 12 and Raspberry Pi OS bookworm, ARM 64-bit | [chartgrabber_pi-2026.11.5-debian-arm64-12-arm64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.5/chartgrabber_pi-2026.11.5-debian-arm64-12-arm64.tar.gz) | included |
+| Debian 13 and Raspberry Pi OS trixie, ARM 64-bit | [chartgrabber_pi-2026.11.5-debian-arm64-13-arm64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.5/chartgrabber_pi-2026.11.5-debian-arm64-13-arm64.tar.gz) | included |
+| Ubuntu 24.04, 64-bit PC | [chartgrabber_pi-2026.11.5-debian-x86_64-12-x86_64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.5/chartgrabber_pi-2026.11.5-debian-x86_64-12-x86_64.tar.gz) | included |
+| Ubuntu 24.04, ARM 64-bit | [chartgrabber_pi-2026.11.5-debian-arm64-12-arm64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.5/chartgrabber_pi-2026.11.5-debian-arm64-12-arm64.tar.gz) | included |
+| Ubuntu 26.04, 64-bit PC | [chartgrabber_pi-2026.11.5-ubuntu-x86_64-26.04-x86_64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.5/chartgrabber_pi-2026.11.5-ubuntu-x86_64-26.04-x86_64.tar.gz) | included |
+| Ubuntu 26.04, ARM 64-bit | [chartgrabber_pi-2026.11.5-ubuntu-arm64-26.04-arm64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.5/chartgrabber_pi-2026.11.5-ubuntu-arm64-26.04-arm64.tar.gz) | included |
+| CachyOS, 64-bit PC | [chartgrabber_pi-2026.11.5-cachyos-x86_64-rolling-x86_64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.5/chartgrabber_pi-2026.11.5-cachyos-x86_64-rolling-x86_64.tar.gz) | included |
+| Windows 10/11, 64-bit PC | [chartgrabber_pi-2026.11.5-windows-x86.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.5/chartgrabber_pi-2026.11.5-windows-x86.tar.gz) | included |
+| Debian 12, 32-bit ARM (armhf) | [chartgrabber_pi-2026.11.5-debian-armhf-12-armhf.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.5/chartgrabber_pi-2026.11.5-debian-armhf-12-armhf.tar.gz) | included |
+| Debian 13, 32-bit ARM (armhf) | [chartgrabber_pi-2026.11.5-debian-armhf-13-armhf.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.5/chartgrabber_pi-2026.11.5-debian-armhf-13-armhf.tar.gz) | included |
+| Raspberry Pi OS 32-bit (Trixie) | [chartgrabber_pi-2026.11.5-raspbian-armhf-13-armhf.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.5/chartgrabber_pi-2026.11.5-raspbian-armhf-13-armhf.tar.gz) | included |
+| macOS 12 or newer, Apple and Intel | [chartgrabber_pi-2026.11.5-macos-universal.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.5/chartgrabber_pi-2026.11.5-macos-universal.tar.gz) | included |
+| Flatpak OpenCPN 5.12, 64-bit PC | [chartgrabber_pi-2026.11.5-flatpak-x86_64-24.08-x86_64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.5/chartgrabber_pi-2026.11.5-flatpak-x86_64-24.08-x86_64.tar.gz) | included |
+| Flatpak OpenCPN 5.12, ARM 64-bit | [chartgrabber_pi-2026.11.5-flatpak-aarch64-24.08-aarch64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.5/chartgrabber_pi-2026.11.5-flatpak-aarch64-24.08-aarch64.tar.gz) | included |
+| Flatpak OpenCPN 5.14, 64-bit PC | [chartgrabber_pi-2026.11.5-flatpak-x86_64-25.08-x86_64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.5/chartgrabber_pi-2026.11.5-flatpak-x86_64-25.08-x86_64.tar.gz) | included |
+| Flatpak OpenCPN 5.14, ARM 64-bit | [chartgrabber_pi-2026.11.5-flatpak-aarch64-25.08-aarch64.tar.gz](https://github.com/Sea-For-Friends/chartgrabber_pi/releases/download/v2026.11.5/chartgrabber_pi-2026.11.5-flatpak-aarch64-25.08-aarch64.tar.gz) | included |
 
 Checksums are on the release page. All releases: [plugin](https://github.com/Sea-For-Friends/chartgrabber_pi/releases),
 [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli/releases).
