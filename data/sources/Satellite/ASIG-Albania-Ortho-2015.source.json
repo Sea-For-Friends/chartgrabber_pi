@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{B4088F26-9BD5-42DE-8F12-271097547A77}",
+  "name": "ASIG orthophoto 2015 (Albania)",
+  "group": "Satellite",
+  "url": "https://geoportal.asig.gov.al/service/orthophoto_2015/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=OrthoImagery_20cm&STYLES=&CRS=EPSG:900913&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_ASIG_Ortofoto_2015",
+  "license": "ASIG — Ortofoto 2015, CC BY 4.0",
+  "maxConnections": 2,
+  "maxZoom": 19
+}
