@@ -137,6 +137,42 @@ TEST(FolderFactsCache, TheDefaultClockIsTheRealOne_P0299) {
     EXPECT_EQ(calls, 1) << "two gets a few microseconds apart share one measurement";
 }
 
+// A measurement that itself takes `slow` (a stalled mount): the fake clock moves inside the call.
+struct SlowFixture {
+    std::chrono::steady_clock::time_point now{seconds(1000)};
+    seconds slow{6};
+    int calls = 0;
+    cg::FolderFactsCache cache{[this](const std::string& folder) {
+                                   ++calls;
+                                   now += slow;
+                                   cg::FolderFacts f;
+                                   f.exists = true;
+                                   f.ancestor = folder;
+                                   return f;
+                               },
+                               [this] { return now; }};
+};
+
+TEST(FolderFactsCache, ASlowMeasurementIsStillCachedAfterItReturns_P0302) {
+    SlowFixture f;
+    f.cache.get("/mnt/dead");
+    f.now += seconds(1);
+    f.cache.get("/mnt/dead");
+    f.cache.get("/mnt/dead");
+    EXPECT_EQ(f.calls, 1) << "a 6 s measurement must not be expired when stored";
+}
+
+TEST(FolderFactsCache, ASlowMeasurementExpiresFiveSecondsAfterItReturns_P0302) {
+    SlowFixture f;
+    f.cache.get("/mnt/dead");
+    f.now += milliseconds(4999);
+    f.cache.get("/mnt/dead");
+    EXPECT_EQ(f.calls, 1);
+    f.now += milliseconds(1);
+    f.cache.get("/mnt/dead");
+    EXPECT_EQ(f.calls, 2);
+}
+
 TEST(SandboxProbe, AMemoizedProbeReadsOnceAndKeepsTheFirstResult_P0299) {
     int reads = 0;
     auto probe = cg::memoizedProbe([&] {
