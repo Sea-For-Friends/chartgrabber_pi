@@ -173,7 +173,14 @@ MyChartsPanel::~MyChartsPanel() {
 }
 
 void MyChartsPanel::refresh() {
-    // A refresh may run inside the handler of a button of the old rows: Destroy() defers the deletion.
+    // Destroy() of a child window deletes it at once, so no row may be rebuilt while a row's handler, or the
+    // menu it opened, is running: the button would be deleted under it. The rebuild is made after the
+    // handler.
+    if (handlerDepth_ > 0) {
+        refreshPending_ = true;
+        return;
+    }
+    refreshPending_ = false;
     rowsSizer_->Clear(false);
     liveGauge_ = nullptr; // the old rows are destroyed below
     liveWords_ = nullptr;
@@ -203,6 +210,30 @@ void MyChartsPanel::refresh() {
     list_->FitInside();
     list_->Layout();
     Layout();
+    if (onRefreshed)
+        onRefreshed();
+}
+
+void MyChartsPanel::runHandler(const std::function<void()>& body) {
+    ++handlerDepth_;
+    try {
+        body();
+    } catch (...) {
+        endHandler();
+        throw;
+    }
+    endHandler();
+}
+
+void MyChartsPanel::endHandler() {
+    if (--handlerDepth_ > 0 || !refreshPending_ || refreshQueued_)
+        return;
+    refreshQueued_ = true;
+    CallAfter([this] {
+        refreshQueued_ = false;
+        if (!closing_ && handlerDepth_ == 0 && refreshPending_)
+            refresh();
+    });
 }
 
 // look.apply resets the gauges' colours; the strip's rule gives them the control colour.
@@ -333,7 +364,7 @@ void MyChartsPanel::addRow(const cg::ChartRecord* chart, const std::string& id) 
         b->Bind(wxEVT_BUTTON, [this, a, id](wxCommandEvent&) {
             cg::guarded("my charts button", [&] {
                 if (!closing_)
-                    act(a, id);
+                    runHandler([&] { act(a, id); });
             });
         });
         line->Add(b, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 4);
@@ -359,7 +390,7 @@ void MyChartsPanel::addRow(const cg::ChartRecord* chart, const std::string& id) 
                     return;
                 const auto it = std::ranges::find(charts_, id, &cg::ChartRecord::id);
                 if (it != charts_.end())
-                    showMenu(more, *it);
+                    runHandler([&] { showMenu(more, *it); });
             });
         });
         line->Add(more, 0, wxALIGN_CENTER_VERTICAL);
@@ -403,8 +434,9 @@ void MyChartsPanel::showMenu(wxWindow* anchor, const cg::ChartRecord& chart) {
     // The popup runs a nested event loop: a job ending meanwhile refreshes the panel and reassigns charts_,
     // so `chart` dangles after it; only this copy of the id is used afterwards.
     const std::string id = chart.id;
-    // GetPopupMenuSelectionFromUser returns after the menu closed: the action then runs outside the menu.
-    const int chosen = anchor->GetPopupMenuSelectionFromUser(menu, 0, anchor->GetSize().y);
+    // The popup returns after the menu closed. Rows are not rebuilt while it is open (a job event would
+    // delete the menu's anchor button); the rebuild follows once the handler returned.
+    const int chosen = popupMenu(anchor, menu);
     if (chosen == wxID_NONE || closing_)
         return;
     act(static_cast<Action>(chosen - 1), id);
