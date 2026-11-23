@@ -1916,7 +1916,7 @@ TEST_F(CliRunnerTest, TheFinalReadAfterTheEndStopsAt4MibWithOneLogLine_P0298) {
 // next run of the same runner.
 TEST_F(CliRunnerTest, ACutLineIsLoggedOncePerRun_P0298) {
     const std::string script =
-        "awk 'BEGIN { s = sprintf(\"%0100000d\", 0); print s; print s; print \"ok\" }'";
+        "s=$(head -c 100000 /dev/zero | tr '\\0' 0); printf '%s\\n%s\\nok\\n' \"$s\" \"$s\"";
     LogScope log;
     CliRunner runner;
     for (int run = 1; run <= 2; ++run) {
