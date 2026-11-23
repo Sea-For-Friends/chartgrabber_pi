@@ -270,3 +270,14 @@ capabilities (read 2026-11-23), in the same `.source.json` format as the others.
     ef218f32df17ed9cc0e2620bc98795d74e9ecad242ba48354041ca1f45ab7dec  Satellite/Beeldmateriaal-Bonaire-Ortho-2024.source.json
     19cd8400e44d60d94d56c5ceebd0e87192d88098e3774b812f5e808b698c197e  Satellite/Beeldmateriaal-Saba-Ortho-2023-24.source.json
     a6e0649afdffc30792bfb12a17d647520ceaedeba8b247cb5b5955cda03174af  Satellite/Beeldmateriaal-Sint-Eustatius-Ortho-2023-24.source.json
+
+## 2026-11-23: SHOM Litto3D lidar, Indian Ocean
+
+Three new files, written by this repository from the SHOM WMTS `/INSPIRE/` layer list (read 2026-11-23), in the same
+`.source.json` format as the others. sha256:
+
+    45118512ffd825b09affa83381d537c56737bf79b27075d86c4049dff65f6950  Depth/SHOM-Litto3D-Mayotte.source.json
+    bcb3c41a5b57d95dea80e951b94a05523593907c92e6f60207da84dfc4761dcb  Depth/SHOM-Litto3D-Reunion.source.json
+    c7c10d4acb4b39ba8f2699ad492d2700f5e0ac0c750efd68a4e2356b4d786b7a  Depth/SHOM-Litto3D-Iles-Eparses.source.json
+
+`Depth/SHOM-Lidar-Morbihan.source.json`: licence text punctuation changed (a comma after Litto3D®); new sha256 06fcfaeb3d55e7007a817a3a5f90c45a7052dd4610a72a9db34eac7627c52e5c.
