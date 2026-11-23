@@ -1,6 +1,6 @@
 # Shipped chart-source definitions
 
-Ninety-four JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
+Ninety-seven JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
 copied from the SAS.Planet map catalogue; the GUID and `NameInCache` are reused only for the three services the
 catalogue also has (OpenSeaMap seamarks, Esri World Imagery, OpenTopoMap), so an existing tile cache stays valid.
 The folder name is the menu group (the `group` value of the definitions); seven groups, below. The definition
@@ -205,6 +205,27 @@ SHOM serves each survey as its own WMTS layer and its WMS refuses layer lists, s
 - Attribution: © Shom / IGN — Litto3D® / HOMONIM, Licence Ouverte 2.0. Non certifié pour la navigation. Max zoom 17.
 - Coverage: Saint-Barthélemy coast (survey 2019).
 
+### SHOM Litto3D lidar depth, Mayotte 2012
+- GUID `{BACDAA84-2A28-48A1-8AD3-DAE910A37367}` (overlay layer), `"navigationWarning": true`
+- Service: WMTS `https://services.data.shom.fr/INSPIRE/wmts`, layer `LITTO3D_MAYOT_2012_PYR_3857_WMTS`, style `normal`, matrix set `3857` (ids `0`..`21`, XYZ grid), PNG
+- Terms: datasets under Licence Ouverte 2.0; the `/INSPIRE/` capabilities say `Fees` "Soumis à abonnement" and the WMS/r "sauf pour les thématiques INSPIRE qui sont en accès libre"; the data.shom.fr CGU was not found. Dataset "Litto3D Mayotte 2012" on data.gouv.fr: Licence Ouverte 2.0 (read 2026-11-23).
+- Attribution: © Shom / IGN — Litto3D®, Licence Ouverte 2.0. Non certifié pour la navigation. Max zoom 17.
+- Coverage: Mayotte lagoon and coast (survey 2012).
+
+### SHOM Litto3D lidar depth, Réunion 2016
+- GUID `{E57F0098-371E-4477-A23E-A6330FF9075D}` (overlay layer), `"navigationWarning": true`
+- Service: WMTS `https://services.data.shom.fr/INSPIRE/wmts`, layer `LITTO3D_REUNION_2016_PYR_3857_WMTS`, style `normal`, matrix set `3857` (ids `0`..`21`, XYZ grid), PNG
+- Terms: datasets under Licence Ouverte 2.0; the `/INSPIRE/` capabilities say `Fees` "Soumis à abonnement" and the WMS/r "sauf pour les thématiques INSPIRE qui sont en accès libre"; the data.shom.fr CGU was not found. Dataset "Litto3D Réunion 2016" on data.gouv.fr: Licence Ouverte 2.0 (read 2026-11-23).
+- Attribution: © Shom / IGN — Litto3D®, Licence Ouverte 2.0. Non certifié pour la navigation. Max zoom 16.
+- Coverage: Réunion coast (survey 2016).
+
+### SHOM Litto3D lidar depth, Îles Éparses 2012
+- GUID `{A24D9447-118F-4C65-B649-84F3DC66D88C}` (overlay layer), `"navigationWarning": true`
+- Service: WMTS `https://services.data.shom.fr/INSPIRE/wmts`, layer `LITTO3D_EPARSES_2012_PYR_3857_WMTS`, style `normal`, matrix set `3857` (ids `0`..`21`, XYZ grid), PNG
+- Terms: datasets under Licence Ouverte 2.0; the `/INSPIRE/` capabilities say `Fees` "Soumis à abonnement" and the WMS/r "sauf pour les thématiques INSPIRE qui sont en accès libre"; the data.shom.fr CGU was not found. Dataset "Litto3D Iles Eparses 2012" on data.gouv.fr: Licence Ouverte 2.0 (read 2026-11-23).
+- Attribution: © Shom / IGN — Litto3D®, Licence Ouverte 2.0. Non certifié pour la navigation. Max zoom 17.
+- Coverage: Îles Éparses: Europa, Bassas da India, Juan de Nova, Glorieuses (survey 2012); transparent between the islands.
+
 ### SHOM lidar depth, Corsica 2017-2018
 - GUID `{49DBB292-F25F-4FF3-AF2C-D2CFB2D56775}` (overlay layer), `"navigationWarning": true`
 - Service: WMTS `https://services.data.shom.fr/INSPIRE/wmts`, layer `L3D_LIDAR_CORSE_2017_2018_PYR_3857_WMTS`, style `normal`, matrix set `3857` (ids `0`..`21`, XYZ grid), PNG
@@ -216,7 +237,7 @@ SHOM serves each survey as its own WMTS layer and its WMS refuses layer lists, s
 - GUID `{935B45A2-1B70-4F02-8C6E-11878F5CADCB}` (overlay layer), `"navigationWarning": true`
 - Service: WMTS `https://services.data.shom.fr/INSPIRE/wmts`, layer `L3D_MAR_MORBIHAN_2015_PYR_3857_WMTS`, style `normal`, matrix set `3857` (ids `0`..`21`, XYZ grid), PNG
 - Terms: datasets under Licence Ouverte 2.0; the `/INSPIRE/` capabilities say `Fees` "Soumis à abonnement" and the WMS/r "sauf pour les thématiques INSPIRE qui sont en accès libre"; the data.shom.fr CGU was not found.
-- Attribution: © Shom / IGN — Litto3D® Licence Ouverte 2.0. Non certifié pour la navigation. Max zoom 17.
+- Attribution: © Shom / IGN — Litto3D®, Licence Ouverte 2.0. Non certifié pour la navigation. Max zoom 17.
 - Coverage: Gulf of Morbihan (product dated 2015; the lidar itself was flown in 2005, with echo-sounder data of 2003 and 2013).
 
 ### SHOM 100 m depth, Guadeloupe and Martinique

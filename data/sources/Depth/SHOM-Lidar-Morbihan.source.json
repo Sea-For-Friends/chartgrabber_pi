@@ -8,7 +8,7 @@
   "contentType": "image/png",
   "ext": ".png",
   "nameInCache": "Depth_SHOM_Lidar_Morbihan",
-  "license": "© Shom / IGN — Litto3D® Licence Ouverte 2.0. Non certifié pour la navigation",
+  "license": "© Shom / IGN — Litto3D®, Licence Ouverte 2.0. Non certifié pour la navigation",
   "maxConnections": 2,
   "maxZoom": 17,
   "navigationWarning": true
