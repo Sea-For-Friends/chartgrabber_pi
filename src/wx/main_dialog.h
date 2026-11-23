@@ -43,6 +43,8 @@ private:
     void showHint(const wxString& text);
     wxWindow* makeMyChartsPage(wxWindow* parent); // an empty panel
     void refreshMyCharts();                       // empty
+    void refreshMyChartsIfDirty();                // a refresh was skipped while the dialog was hidden
+    bool myChartsDirty_ = false;
 
     ConfigStore& config_;
     const Look& look_;

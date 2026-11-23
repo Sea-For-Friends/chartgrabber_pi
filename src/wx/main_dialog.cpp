@@ -154,7 +154,7 @@ MainDialog::~MainDialog() {
         area_.abandon(); // no done call: its owner is going away
     area_.onAreaError = nullptr;
     area_.setShownArea(std::nullopt);
-    pages_->DeleteAllPages(); // runs ~NewChartPanel, which may pump events
+    pages_->DeleteAllPages(); // runs ~NewChartPanel
     newChart_ = nullptr;
     myChartsPage_ = nullptr;
     if (hint_)
@@ -165,7 +165,7 @@ MainDialog::~MainDialog() {
 wxWindow* MainDialog::makeMyChartsPage(wxWindow* parent) {
     auto* panel = new MyChartsPanel(parent, config_, look_, area_, jobs_);
     myChartsButton_->SetLabel(myChartsButtonText(panel->rows()));
-    panel->onDeleted = [this, panel] {
+    panel->onDeleted = panel->onRefreshed = [this, panel] {
         myChartsButton_->SetLabel(myChartsButtonText(panel->rows()));
         Layout();
     };
@@ -174,9 +174,13 @@ wxWindow* MainDialog::makeMyChartsPage(wxWindow* parent) {
 
 void MainDialog::refreshMyCharts() {
     auto* panel = static_cast<MyChartsPanel*>(myChartsPage_); // made by makeMyChartsPage
-    panel->refresh();
-    myChartsButton_->SetLabel(myChartsButtonText(panel->rows()));
-    Layout();
+    myChartsDirty_ = false;
+    panel->refresh(); // onRefreshed updates the button; a postponed rebuild does it when it is made
+}
+
+void MainDialog::refreshMyChartsIfDirty() {
+    if (myChartsDirty_)
+        refreshMyCharts();
 }
 
 void MainDialog::hideDialog() {
@@ -214,6 +218,7 @@ void MainDialog::showNewChart(cg::AreaKind kind, std::optional<cg::BBox> box) {
     }
     selectPage(0);
     newChart_->setArea(kind, box);
+    refreshMyChartsIfDirty();
     Show();
     Raise();
 }
@@ -238,6 +243,7 @@ void MainDialog::present() {
         newChart_->refreshArea();
     else
         refreshMyCharts();
+    refreshMyChartsIfDirty();
     Show();
     Raise();
 }
@@ -266,6 +272,7 @@ void MainDialog::drawArea() {
             return;
         }
         selectPage(0); // the page never changed its area: it shows the one it had
+        refreshMyChartsIfDirty();
         Show();
         Raise();
         newChart_->outlineArea(true);
@@ -282,13 +289,20 @@ void MainDialog::showMyCharts() {
 }
 
 void MainDialog::chartsChanged() {
-    if (!closing_)
+    if (closing_)
+        return;
+    if (IsShown())
         refreshMyCharts();
+    else
+        myChartsDirty_ = true; // nobody sees the rows: the next show rebuilds them
 }
 
 void MainDialog::busyChanged(bool busy) {
     if (closing_)
         return;
     newChart_->setBusy(busy);
-    refreshMyCharts();
+    if (IsShown())
+        refreshMyCharts();
+    else
+        myChartsDirty_ = true;
 }

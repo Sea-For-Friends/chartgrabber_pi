@@ -296,9 +296,13 @@ protected:
     }
 
     // ---- dialog and window access
-    void makeDialog() {
+    // A dialog that is hidden rebuilds no rows (the next show does); the row tests use a shown one, as a
+    // sailor does.
+    void makeDialog(bool show = true) {
         jobs_ = std::make_unique<JobController>(*store_, look_, *area_);
         dialog_ = new MainDialog(frame_, *store_, look_, *area_, *jobs_);
+        if (show)
+            dialog_->Show();
         jobs_->onChartsChanged = [this] { dialog_->chartsChanged(); };
         jobs_->onBusyChanged = [this](bool b) { dialog_->busyChanged(b); };
         // The New chart page checks the program's version without waiting; until that answer is cached a job
@@ -360,6 +364,13 @@ protected:
             loop_->DispatchTimeout(20);
         }
         return true;
+    }
+    // Runs the events queued so far: a call queued afterwards (on another window, so after the panel's own
+    // pending calls) has run when this returns.
+    void drain() {
+        bool reached = false;
+        frame_->CallAfter([&] { reached = true; });
+        EXPECT_TRUE(runUntil([&] { return reached; }));
     }
     bool waitIdle(int timeoutMs = 15000) {
         return runUntil([&] { return !jobs_->busy(); }, timeoutMs);
@@ -785,7 +796,8 @@ TEST_F(ChartsTest, UnreadableDirectoryIsDeletedByItsButton) {
     EXPECT_FALSE(fs::exists(jobDir("20261015-090000")));
     EXPECT_TRUE(fs::exists(jobDir("20261016-090000")));
     EXPECT_TRUE(ocpn_fake::updates.empty());
-    EXPECT_EQ(rows().size(), 1u);
+    EXPECT_EQ(rows().size(), 2u) << "the rows are rebuilt after the button's handler, from the loop";
+    ASSERT_TRUE(runUntil([&] { return rows().size() == 1u; }));
     EXPECT_EQ(pageButton(), "My charts (1)");
 }
 
@@ -1770,6 +1782,242 @@ TEST_F(BarsTest, DeleteYesOnEveryKindOfRowReturnsAndTheLoopGoesOn) {
         qprobe::press(q, wxID_YES);
     panel()->act(MyChartsPanel::Action::Stop, "20261016-120000");
     ASSERT_TRUE(waitIdle(10000));
+}
+
+// ---- rows are never rebuilt under a running row handler or the More... menu; none while hidden ----
+
+// Counts the rebuilds of the rows, keeping the dialog's own hook (the page button).
+struct RebuildCounter {
+    int n = 0;
+    explicit RebuildCounter(MyChartsPanel& panel) {
+        auto prev = panel.onRefreshed;
+        panel.onRefreshed = [this, prev] {
+            ++n;
+            if (prev)
+                prev();
+        };
+    }
+};
+
+// The More... menu of a Complete chart while a job event refreshes the panel inside the popup (a nested
+// event loop in the real menu): the anchor button stays alive until the handler returned, the chosen action
+// runs, and the rows are rebuilt once from the loop afterwards, showing the busy state.
+TEST_F(ChartsTest, P0297AJobEventInsideTheMoreMenuNeverDeletesTheMenusButton) {
+    const fs::path file = root_ / "charts" / "a.mbtiles";
+    spit(file, "a");
+    auto done = save("20261015-080000", "Done", cg::ChartState::Complete);
+    done.files = {file.string()};
+    store_->saveChart(done);
+    save("20261014-080000", "Other", cg::ChartState::Interrupted);
+    scenario(done.id, 1, "", 0, "wait");
+    makeDialog();
+    ASSERT_EQ(rows().size(), 2u);
+    wxButton* more = rows()[0].widgets[1];
+    ASSERT_EQ(u(more->GetLabel()), "More...");
+    wxWeakRef<wxWindow> anchor(more);
+    wxWeakRef<wxWindow> otherResume(rows()[1].widgets[0]);
+    RebuildCounter counter(*panel());
+
+    bool seamRan = false, anchorInSeam = false;
+    panel()->popupMenu = [&](wxWindow* a, wxMenu& menu) {
+        seamRan = true;
+        EXPECT_EQ(a, more);
+        dialog_->chartsChanged(); // what a job end or start does while the menu is open
+        anchorInSeam = anchor.get() != nullptr;
+        return menu.FindItem("Top up");
+    };
+    click(more);
+    EXPECT_TRUE(seamRan);
+    EXPECT_TRUE(anchorInSeam) << "the menu's anchor was deleted inside the popup";
+    EXPECT_NE(anchor.get(), nullptr) << "the anchor was deleted before the handler returned";
+    EXPECT_TRUE(jobs_->busy()) << "the chosen item ran";
+    EXPECT_EQ(counter.n, 0) << "no rebuild under the handler";
+
+    ASSERT_TRUE(runUntil([&] { return counter.n > 0; }));
+    drain(); // a second rebuild would be made by now
+    EXPECT_EQ(counter.n, 1);
+    EXPECT_EQ(anchor.get(), nullptr);
+    EXPECT_EQ(otherResume.get(), nullptr);
+    const std::vector<Row> r = rows();
+    ASSERT_EQ(r.size(), 2u);
+    EXPECT_EQ(r[0].texts.back(), "Working out the size...") << "the live row of the Top up";
+    EXPECT_EQ(r[1].buttons, (Texts{"Resume", "More..."}));
+    EXPECT_FALSE(r[1].enabled[0]);
+    jobs_->stop();
+    ASSERT_TRUE(waitIdle(10000));
+}
+
+// A Resume click delivered to the real button starts the job (busy) inside the handler: the button lives
+// until the handler returned (checked from the busy hook, which runs inside it), the rebuild follows from
+// the loop, and the other rows' buttons come back disabled.
+TEST_F(ChartsTest, P0297AResumeClickLeavesItsButtonAliveUntilTheHandlerReturned) {
+    auto half = save("20261014-080000", "Half", cg::ChartState::Interrupted);
+    save("20261016-080000", "Other", cg::ChartState::Interrupted);
+    scenario(half.id, 1, "", 0, "wait");
+    makeDialog();
+    std::vector<Row> r = rows();
+    ASSERT_EQ(r.size(), 2u);
+    ASSERT_EQ(r[1].buttons, (Texts{"Resume", "More..."}));
+    wxButton* resume = r[1].widgets[0];
+    wxWeakRef<wxWindow> ref(resume);
+    wxWeakRef<wxWindow> otherRef(r[0].widgets[0]);
+    RebuildCounter counter(*panel());
+    bool busyHookRan = false, aliveInHook = false;
+    auto prev = jobs_->onBusyChanged;
+    jobs_->onBusyChanged = [&, prev](bool b) {
+        if (b) {
+            busyHookRan = true;
+            aliveInHook = ref.get() != nullptr;
+        }
+        prev(b);
+    };
+    click(resume);
+    EXPECT_TRUE(busyHookRan);
+    EXPECT_TRUE(aliveInHook);
+    EXPECT_NE(ref.get(), nullptr) << "the button was deleted under its own handler";
+    EXPECT_TRUE(jobs_->busy());
+    EXPECT_EQ(counter.n, 0);
+
+    ASSERT_TRUE(runUntil([&] { return counter.n > 0; }));
+    drain();
+    EXPECT_EQ(counter.n, 1);
+    EXPECT_EQ(ref.get(), nullptr);
+    EXPECT_EQ(otherRef.get(), nullptr);
+    r = rows();
+    ASSERT_EQ(r.size(), 2u);
+    EXPECT_EQ(r[0].buttons, (Texts{"Resume", "More..."})) << "the other chart";
+    EXPECT_FALSE(r[0].enabled[0]);
+    EXPECT_EQ(r[1].texts.back(), "Working out the size...") << "the live row of the resumed chart";
+    EXPECT_EQ(r[1].buttons, (Texts{"Stop", "More..."}));
+    jobs_->stop();
+    ASSERT_TRUE(waitIdle(10000));
+}
+
+// Outside any handler a refresh is synchronous: chartsChanged() from a timer and act() called directly
+// rebuild before they return.
+TEST_F(ChartsTest, P0297ARefreshOutsideAHandlerRebuildsAtOnce) {
+    save("20261014-080000", "Half", cg::ChartState::Interrupted);
+    auto run = save("20261015-080000", "Runner", cg::ChartState::Interrupted);
+    scenario(run.id, 1, "", 0, "wait");
+    makeDialog();
+    wxWeakRef<wxWindow> old(rows()[0].widgets[0]);
+    RebuildCounter counter(*panel());
+    save("20261016-080000", "New", cg::ChartState::Complete);
+    dialog_->chartsChanged();
+    EXPECT_EQ(counter.n, 1);
+    EXPECT_EQ(old.get(), nullptr);
+    EXPECT_EQ(rows().size(), 3u);
+
+    wxWeakRef<wxWindow> old2(rows()[1].widgets[0]);
+    panel()->act(MyChartsPanel::Action::Resume, run.id);
+    ASSERT_TRUE(jobs_->busy());
+    EXPECT_GE(counter.n, 2);
+    EXPECT_EQ(old2.get(), nullptr);
+    EXPECT_EQ(rows()[1].texts.back(), "Working out the size...") << "the live row of the Runner";
+    jobs_->stop();
+    ASSERT_TRUE(waitIdle(10000));
+}
+
+// A hidden dialog rebuilds nothing on chartsChanged() or busyChanged() (the New chart page still follows
+// busy); each way of showing it rebuilds once and the page button shows the new count.
+TEST_F(ChartsTest, P0297AHiddenDialogRebuildsNothingUntilItIsShown) {
+    save("20261014-080000", "One", cg::ChartState::Complete);
+    makeDialog(false);
+    ASSERT_FALSE(dialog_->IsShown());
+    ASSERT_EQ(rows().size(), 1u);
+    wxWeakRef<wxWindow> row(rows()[0].widgets[0]);
+    RebuildCounter counter(*panel());
+    wxButton* download = dynamic_cast<wxButton*>(wxWindow::FindWindowByLabel("Download", dialog_));
+    ASSERT_NE(download, nullptr);
+    EXPECT_TRUE(download->IsShown());
+
+    save("20261015-080000", "Two", cg::ChartState::Complete);
+    dialog_->chartsChanged();
+    dialog_->busyChanged(true);
+    EXPECT_EQ(counter.n, 0);
+    EXPECT_NE(row.get(), nullptr);
+    EXPECT_FALSE(download->IsShown()) << "setBusy still reaches the New chart page";
+    EXPECT_EQ(pageButton(), "My charts (1)");
+    dialog_->busyChanged(false);
+    EXPECT_EQ(counter.n, 0);
+    EXPECT_TRUE(download->IsShown());
+
+    dialog_->showMyCharts(); // the page switch and the call both rebuild; what matters is that it happens
+    EXPECT_GE(counter.n, 1);
+    EXPECT_EQ(row.get(), nullptr);
+    EXPECT_EQ(rows().size(), 2u);
+    EXPECT_EQ(pageButton(), "My charts (2)");
+
+    for (int way = 0; way < 2; ++way) { // showNewChart, present
+        SCOPED_TRACE(way);
+        const int before = counter.n;
+        dialog_->Hide();
+        save("2026102" + std::to_string(way) + "-080000", "More", cg::ChartState::Complete);
+        dialog_->chartsChanged();
+        EXPECT_EQ(counter.n, before);
+        if (way == 0)
+            dialog_->showNewChart(cg::AreaKind::View, std::nullopt);
+        else
+            dialog_->present();
+        EXPECT_EQ(counter.n, before + 1) << "one rebuild at the show";
+        EXPECT_EQ(rows().size(), 3u + way);
+        EXPECT_EQ(pageButton(), "My charts (" + std::to_string(3 + way) + ")");
+        dialog_->chartsChanged(); // shown now: synchronous again
+        EXPECT_EQ(counter.n, before + 2);
+    }
+}
+
+// A job that ends while the dialog is hidden stops the 1 s live timer at its next tick.
+TEST_F(BarsTest, P0297AJobEndedWhileHiddenStopsTheLiveTimer) {
+    save("20261016-080000", "Whole", cg::ChartState::Complete);
+    makeDialog();
+    dialog_->showMyCharts();
+    startRunning("20261016-080100", 0, progressLine(10), "feed");
+    ASSERT_TRUE(runUntil([&] { return jobs_->live()->donePermille == 100; }));
+    ASSERT_TRUE(panel()->liveTimerRunning());
+    dialog_->Hide();
+    jobs_->stop();
+    ASSERT_TRUE(waitIdle(10000));
+    panel()->onLiveTick();
+    EXPECT_FALSE(panel()->liveTimerRunning());
+}
+
+// A rebuild made between the end of the handler and the queued call satisfies the request: the queued call
+// does not rebuild a second time.
+TEST_F(ChartsTest, P0297AQueuedRebuildIsSkippedWhenARebuildCameFirst) {
+    save("20261014-080000", "Done", cg::ChartState::Complete);
+    makeDialog();
+    RebuildCounter counter(*panel());
+    panel()->popupMenu = [&](wxWindow*, wxMenu&) {
+        dialog_->chartsChanged();
+        return static_cast<int>(wxID_NONE);
+    };
+    click(rows()[0].widgets[1]);
+    ASSERT_EQ(counter.n, 0);
+    dialog_->chartsChanged(); // outside the handler: rebuilds at once
+    ASSERT_EQ(counter.n, 1);
+    drain();
+    EXPECT_EQ(counter.n, 1);
+}
+
+// The panel destroyed with a rebuild queued: the queued call runs nothing (ASan: no use after free).
+TEST_F(ChartsTest, P0297APanelDestroyedWithARebuildQueuedRunsNothingAfterwards) {
+    save("20261014-080000", "Done", cg::ChartState::Complete);
+    makeDialog();
+    int rebuilds = 0;
+    panel()->onRefreshed = [&] { ++rebuilds; };
+    panel()->popupMenu = [&](wxWindow*, wxMenu&) {
+        dialog_->chartsChanged();
+        return static_cast<int>(wxID_NONE);
+    };
+    click(rows()[0].widgets[1]);
+    ASSERT_EQ(rebuilds, 0) << "the rebuild is queued";
+    jobs_->onBusyChanged = nullptr;
+    jobs_->onChartsChanged = nullptr;
+    delete dialog_;
+    dialog_ = nullptr;
+    drain();
+    EXPECT_EQ(rebuilds, 0);
 }
 
 } // namespace

@@ -13,6 +13,7 @@
 #include <wx/string.h>
 #include <wx/timer.h>
 #include <wx/weakref.h>
+#include <wx/window.h>
 
 #include <cstddef>
 #include <functional>
@@ -53,6 +54,7 @@ public:
     ~MyChartsPanel() override;
 
     // Re-reads loadCharts() + unreadableChartIds() and rebuilds the rows; buttons follow jobs.busy().
+    // While a row handler or the More... menu runs, the rebuild is postponed to the event loop after it.
     void refresh();
     std::size_t rows() const { return charts_.size() + unreadable_.size(); }
 
@@ -79,11 +81,23 @@ public:
     // The 1 s timer's handler (public for the tests): nothing while closing or not on screen, else
     // updateLiveRow().
     void onLiveTick();
+    bool liveTimerRunning() const { return live_.IsRunning(); }
+
+    // The popup of the More... menu: the item id chosen or wxID_NONE (default: a popup under the anchor).
+    std::function<int(wxWindow* anchor, wxMenu& menu)> popupMenu = [](wxWindow* anchor, wxMenu& menu) {
+        return anchor->GetPopupMenuSelectionFromUser(menu, 0, anchor->GetSize().y);
+    };
+
+    // Called after every rebuild of the rows (also a postponed one).
+    std::function<void()> onRefreshed;
 
     // Called after a Delete removed a row, so the owner can update the page button count.
     std::function<void()> onDeleted;
 
 private:
+    // Runs a row handler: a refresh requested meanwhile is made once afterwards, from the event loop.
+    void runHandler(const std::function<void()>& body);
+    void endHandler();
     void addRow(const cg::ChartRecord* chart, const std::string& id);
     void showMenu(wxWindow* anchor, const cg::ChartRecord& chart);
     void showFile(const cg::ChartRecord& chart);
@@ -108,6 +122,9 @@ private:
     JobController& jobs_;
     int lookToken_ = 0;
     bool closing_ = false;
+    int handlerDepth_ = 0;
+    bool refreshPending_ = false;
+    bool refreshQueued_ = false;
     wxWeakRef<Question> question_;
     wxTimer live_;
     wxGauge* liveGauge_ = nullptr; // the live row's widgets; nullptr before every rebuild
