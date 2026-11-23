@@ -29,7 +29,7 @@ OpenCPN 5.10.2 or newer, on one of these systems:
 - Debian 13: 64-bit PC and ARM 64-bit
 - Raspberry Pi OS 64-bit (bookworm and trixie, which are Debian 12 and 13): ARM 64-bit
 - Ubuntu 24.04 and 26.04: 64-bit PC and ARM 64-bit
-- Arch and CachyOS: 64-bit PC
+- CachyOS: 64-bit PC
 - Raspberry Pi OS 32-bit (Trixie) and Debian 12 / 13 armhf: 32-bit ARM, Pi 2 and newer (not the Pi Zero, Zero W or Pi 1)
 - Windows 10/11: 64-bit PC
 - macOS 12 or newer: Apple and Intel Macs
@@ -45,9 +45,9 @@ Debian 12 gets OpenCPN from bookworm-backports.
 
 The [Chart Grabber CLI](https://github.com/Sea-For-Friends/chart-grabber-cli) 2026.11.3, the program that does the download, is inside the plugin file on every system: there is nothing else to install.
 It is kept in the plugin folder of OpenCPN. A CLI you choose yourself in the plugin's Settings is used instead.
-The Linux file needs the graphics libraries `libopengl0`, `libglx0` and `libegl1`; OpenCPN's own package from Debian 12, Debian 13 or Ubuntu 24.04 installs them, a hand-built OpenCPN may not (Arch and CachyOS: `libglvnd`).
+The Linux file needs the graphics libraries `libopengl0`, `libglx0` and `libegl1`; OpenCPN's own package from Debian 12, Debian 13 or Ubuntu 24.04 installs them, a hand-built OpenCPN may not (CachyOS: `libglvnd`).
 
-Chart Grabber is in OpenCPN's **Beta** plugin catalog for every system above except Arch and CachyOS; the [user guide](docs/user-guide.md#install-from-the-opencpn-beta-catalog) shows how to switch to it. Installed from the catalog, the plugin is offered as **Update** in the Plugin Manager when a new version comes out. On Arch and CachyOS use **Import plugin...** as above.
+Chart Grabber is in OpenCPN's **Beta** plugin catalog for every system above except CachyOS; the [user guide](docs/user-guide.md#install-from-the-opencpn-beta-catalog) shows how to switch to it. Installed from the catalog, the plugin is offered as **Update** in the Plugin Manager when a new version comes out. On CachyOS use **Import plugin...** as above.
 
 With OpenCPN from Debian trixie-backports, OpenCPN refuses Import of the Debian 13 file, and a refused Import also removes an installed Chart Grabber. Install from the catalog instead.
 

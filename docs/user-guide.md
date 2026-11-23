@@ -39,7 +39,7 @@ You need OpenCPN 5.10.2 or newer. The Chart Grabber CLI 2026.11.3 is inside the 
 
 - Debian 12: `sudo apt install -t bookworm-backports opencpn`.
 - Ubuntu 24.04: its own OpenCPN (5.8.4) is too old; install OpenCPN from the OpenCPN PPA (`ppa:opencpn/opencpn`).
-- Linux: the plugin needs the graphics libraries `libopengl0`, `libglx0` and `libegl1`. OpenCPN's own package on Debian 12, Debian 13 and Ubuntu 24.04 installs them; a hand-built OpenCPN may not (on Arch and CachyOS they come with `libglvnd`).
+- Linux: the plugin needs the graphics libraries `libopengl0`, `libglx0` and `libegl1`. OpenCPN's own package on Debian 12, Debian 13 and Ubuntu 24.04 installs them; a hand-built OpenCPN may not (on CachyOS they come with `libglvnd`).
 
 There are two ways to install: from OpenCPN's Beta catalog, or by importing the plugin file. With either, OpenCPN 5.10.2 (the Debian 12 and 13 packages) may show no Chart Grabber toolbar button until you press **OK** to close Options or restart OpenCPN; until then, right-click the chart and choose **Chart Grabber: new chart of this view...**.
 
@@ -57,7 +57,7 @@ OpenCPN shows the master catalog by default; choosing another one is an expert s
 
    | System | OpenCPN's config file |
    |---|---|
-   | Linux (Debian, Ubuntu, Arch, CachyOS) | `~/.opencpn/opencpn.conf` |
+   | Linux (Debian, Ubuntu, CachyOS) | `~/.opencpn/opencpn.conf` |
    | Flatpak OpenCPN | `~/.var/app/org.opencpn.OpenCPN/config/opencpn/opencpn.conf` |
    | macOS | `~/Library/Preferences/opencpn/opencpn.ini` |
    | Windows | `C:\ProgramData\opencpn\opencpn.ini` |
@@ -361,7 +361,7 @@ macOS test). Deleting it frees the space, but the next download then fetches all
 
 | Your system | Plugin data folder to delete |
 |---|---|
-| Linux (Debian, Ubuntu, Arch, CachyOS) | `~/.opencpn/plugins/chartgrabber/` |
+| Linux (Debian, Ubuntu, CachyOS) | `~/.opencpn/plugins/chartgrabber/` |
 | Flatpak OpenCPN | `~/.var/app/org.opencpn.OpenCPN/config/opencpn/plugins/chartgrabber/` |
 | macOS | `~/Library/Preferences/opencpn/plugins/chartgrabber/` |
 | Windows | `C:\ProgramData\opencpn\plugins\chartgrabber\` |
