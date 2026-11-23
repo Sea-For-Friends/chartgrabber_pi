@@ -121,7 +121,7 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 
 ## Bundled charts
 
-90 sources come with the plugin, in seven groups (the menus under **Chart**).
+96 sources come with the plugin, in seven groups (the menus under **Chart**).
 
 | Group | Source | What it is for | Area |
 |---|---|---|---|
@@ -176,6 +176,12 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 | Satellite | Beeldmateriaal aerial photo 2023-24 (Saba) | Sharp aerial photo of Saba: Fort Bay harbour and the moorings; flown 2023-24 | Saba |
 | Satellite | Beeldmateriaal aerial photo 2023-24 (Sint Eustatius) | Sharp aerial photo of Sint Eustatius: the Oranjestad roadstead and piers; flown 2023-24 | Sint Eustatius |
 | Satellite | Esri World Imagery | Sharp satellite picture worldwide: anchorages, reefs and passes; use within Esri's terms | Worldwide |
+| Satellite | DGT OrtoSat satellite photo 2023 (mainland Portugal) | 30 cm satellite photo of the whole mainland coast: Ria Formosa, the Algarve, Lisbon and the west-coast harbours; 2023 | Mainland Portugal |
+| Satellite | Regione Emilia-Romagna orthophoto 2023-24 (Rimini coast) | Sharp 20 cm photo of the Rimini coast and harbour; flown 2023-24; partial coverage, black where not flown | Emilia-Romagna (part) |
+| Satellite | Regione Emilia-Romagna orthophoto 2022-23 (Ferrara coast) | Sharp 20 cm photo of the Ferrara coast and Porto Garibaldi; flown January 2023; black where not flown | Ferrara coast |
+| Satellite | Regione Abruzzo orthophoto 2018-19 (Abruzzo) | 20 cm photo of Giulianova, Pescara, Ortona and Vasto harbours; flown 2018-19; non-commercial use only | Abruzzo |
+| Satellite | ASIG orthophoto 2015 (Albania) | Photo of Sarandë, Ksamil, Vlorë and Durrës; flown 2015, the coast has changed since; white offshore | Albania |
+| Satellite | Regione Siciliana orthophoto 2012-13 (Sicily and islands) | 25 cm photo of Sicily and the Aeolian, Egadi and Pelagie islands and Pantelleria; flown 2012-13, the coast has changed since | Sicily and islands |
 | Coast and land | OpenTopoMap | Land relief along the shore: what gives shelter, where squalls come down; light use at the server's request | Worldwide |
 | Coast and land | IDEIB Posidonia and protected seabed (Balearics) | Posidonia meadows and the Decree 25/2018 zones where anchoring is regulated; informative | Balearics |
 | Coast and land | EMODnet seagrass and Caribbean seabed | Seagrass meadows to avoid when anchoring; a hint, not a no-anchor line | European seas, Caribbean |
@@ -273,7 +279,7 @@ NOAA NCCOS seabed habitat map (Saipan) colours: pale yellow bare sand, olive san
 
 ## Your own sources
 
-- The 90 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
+- The 96 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
 - Add your own `.zmp` source folders to `Charts/Chart sources` in your home folder (Settings, **Chart sources**, **Open folder** creates it), or pick another folder with **Change...**. They are read after the bundled ones.
 - Sources that need a key are not bundled: put the source folder there and enter your key where its file says `KEY`.
 

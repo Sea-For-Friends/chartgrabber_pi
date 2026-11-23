@@ -7,6 +7,7 @@ The folder was renamed from `cli-2026.11.1` for the CLI 2026.11.3 (core tag `v20
 - NOTHING else differs in the offline cases; the kept network cases are not rewritten. `run-refused-busy` was re-captured and differs only by live numbers (one cache-hit estimate line, the lock folder name, the process id), so the 2026.11.1 files stay.
 - (2026-11-20): `sources-bundled-all.stdout` re-captured with the same CLI after the Gulf of Morbihan lidar source was added: one more row (87 rows), nothing else differs.
 - (2026-11-23): `sources-bundled-all.stdout` re-captured with the same CLI after the three Caribbean Netherlands orthophoto sources were added: three more rows (90 rows), nothing else differs.
+- (2026-11-23): `sources-bundled-all.stdout` re-captured with the same CLI after six Mediterranean and Atlantic orthophoto sources were added: six more rows (96 rows), nothing else differs.
 The history of the earlier pins follows.
 
 

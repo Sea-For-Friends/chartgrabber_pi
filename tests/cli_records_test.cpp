@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <regex>
 #include <set>
 #include <sstream>
 #include <string>
@@ -134,14 +135,14 @@ TEST(CliRecordsStdout, SourceEmptyGroupAndExtraFields) {
 // layers and the IH Portugal chart, eight more Weather now sources, four more Ocean
 // currents and waves, one of those Satellite layers removed, four more sources, the
 // INEGI row removed, four more Satellite sources (Japan, Africa, Hong Kong, Madeira) and one Coast and land
-// overlay (Saipan), the Gulf of Morbihan lidar layer and the three Caribbean Netherlands orthophotos), the
-// flag is 1 for exactly the forty-two sources of the groups `Nautical charts` (Norway, Finland, NOAA chart,
-// CHS chart, IH Portugal chart) and `Depth` (EMODnet Europe and World, GEBCO, BlueTopo, CHS NONNA-10, the
-// nine SHOM layers, the seven more layers) and of the three overlays IDEIB Posidonia, EMODnet seagrass and
-// NOAA NCCOS Saipan, nine more SHOM layers (buoyage, wrecks, navigation rules, tidal ranges, tidal stream, 3D
-// currents, tide zones), the two STOFS layers (surge water level, peak water level) and the NOAA OFS
-// currents, and 0 for the other 48. A sailor-folder definition with NavigationWarning=1 gets the flag too;
-// the plain bundled one does not.
+// overlay (Saipan), the Gulf of Morbihan lidar layer and the three Caribbean Netherlands orthophotos and the
+// six Mediterranean and Atlantic orthophotos), the flag is 1 for exactly the forty-two sources of the groups
+// `Nautical charts` (Norway, Finland, NOAA chart, CHS chart, IH Portugal chart) and `Depth` (EMODnet Europe
+// and World, GEBCO, BlueTopo, CHS NONNA-10, the nine SHOM layers, the seven more layers) and of the three
+// overlays IDEIB Posidonia, EMODnet seagrass and NOAA NCCOS Saipan, nine more SHOM layers (buoyage, wrecks,
+// navigation rules, tidal ranges, tidal stream, 3D currents, tide zones), the two STOFS layers (surge water
+// level, peak water level) and the NOAA OFS currents, and 0 for the other 54. A sailor-folder definition with
+// NavigationWarning=1 gets the flag too; the plain bundled one does not.
 TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
     const auto flags = [](const char* file) {
         std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.3/" + file, std::ios::binary);
@@ -156,7 +157,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
         return out;
     };
     const auto all = flags("sources-bundled-all.stdout");
-    ASSERT_EQ(all.size(), 90u);
+    ASSERT_EQ(all.size(), 96u);
     const std::set<std::string> flagged = {
         "{25DBA489-D484-4A13-B65D-ABA8967FF3DA}", // Norway sea chart
         "{8A9C3A53-0512-4401-A6D3-050E08934949}", // Finland sea chart
@@ -241,9 +242,9 @@ TEST(Records, BundledSetGroupsAndSnapshots) {
         }
     }
     const std::map<std::string, int> expected = {
-        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 22}, {"Satellite", 18},
+        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 22}, {"Satellite", 24},
         {"Coast and land", 7},  {"Weather now", 18},         {"Ocean", 14}};
-    EXPECT_EQ(rows, 90);
+    EXPECT_EQ(rows, 96);
     EXPECT_EQ(groups, expected);
     EXPECT_EQ(snapshots, 26);
 }
@@ -434,7 +435,53 @@ TEST(Records, AfricaMosaicOfThePinnedRelease) {
         "Contains modified Copernicus Sentinel data 2025, processed by Digital Earth Africa. CC BY 4.0");
 }
 
-// the shipped folder holds the 90 bundled definitions; the removed INEGI file is gone.
+// The six Mediterranean and Atlantic orthophotos as the pinned CLI lists them: verdict ok, EPSG 3857, a
+// static base map of Satellite, max zoom 19, no navigation flag, and the licence line of each definition byte
+// for byte.
+TEST(Records, MediterraneanAtlanticOrthophotosOfThePinnedRelease) {
+    struct Row {
+        const char* guid;
+        const char* name;
+        const char* license;
+    };
+    const Row rows[] = {
+        {"{E70897C7-B9A6-4AA0-9E14-79102C5A66EA}", "DGT OrtoSat satellite photo 2023 (mainland Portugal)",
+         "© Direção-Geral do Território — OrtoSat2023, CC BY 4.0"},
+        {"{E2F995F8-02EB-4F3F-9AAA-7FFA0B7D1410}", "Regione Emilia-Romagna orthophoto 2023-24 (Rimini coast)",
+         "Regione Emilia-Romagna — Ortofoto RER 2023–24, CC BY 4.0"},
+        {"{C29D7414-801D-40C9-8909-77B3A2CCAA84}",
+         "Regione Emilia-Romagna orthophoto 2022-23 (Ferrara coast)",
+         "Regione Emilia-Romagna — Ortofoto RER 2022, CC BY 4.0"},
+        {"{1378C96F-6D91-45F6-9A5F-6267C32CBE8E}", "Regione Abruzzo orthophoto 2018-19 (Abruzzo)",
+         "Regione Abruzzo — Ortofoto 2018–2019, CC BY-NC 3.0"},
+        {"{B4088F26-9BD5-42DE-8F12-271097547A77}", "ASIG orthophoto 2015 (Albania)",
+         "ASIG — Ortofoto 2015, CC BY 4.0"},
+        {"{837FADA3-FFA3-4C60-B272-97A8D4E55AC0}",
+         "Regione Siciliana orthophoto 2012-13 (Sicily and islands)",
+         "Regione Siciliana — S.I.T.R., Ortofoto ATA 2012–2013, CC BY 4.0"},
+    };
+    std::map<std::string, SourceRecord> byGuid;
+    for (const auto& line : fixtureLines("sources-bundled-all.stdout")) {
+        const SourceRecord s = std::get<SourceRecord>(*parseStdoutLine(line));
+        byGuid.emplace(s.guid, s);
+    }
+    for (const Row& r : rows) {
+        const auto it = byGuid.find(r.guid);
+        ASSERT_NE(it, byGuid.end()) << r.guid;
+        const SourceRecord& s = it->second;
+        EXPECT_EQ(s.name, r.name);
+        EXPECT_EQ(s.verdict, "ok") << s.name;
+        EXPECT_EQ(s.epsg, 3857) << s.name;
+        EXPECT_EQ(s.kind, "map") << s.name;
+        EXPECT_EQ(s.group, "Satellite") << s.name;
+        EXPECT_EQ(s.refresh, "static") << s.name;
+        EXPECT_EQ(s.maxZoom, 19) << s.name;
+        EXPECT_FALSE(s.navigationWarning) << s.name;
+        EXPECT_EQ(s.license, r.license) << s.name;
+    }
+}
+
+// the shipped folder holds the 96 bundled definitions; the removed INEGI file is gone.
 TEST(Records, ShippedSourceFiles) {
     int shipped = 0;
     bool inegi = false;
@@ -446,8 +493,36 @@ TEST(Records, ShippedSourceFiles) {
         }
         inegi = inegi || name == "Mexico-INEGI-Ortho.source.json";
     }
-    EXPECT_EQ(shipped, 90);
+    EXPECT_EQ(shipped, 96);
     EXPECT_FALSE(inegi);
+}
+
+// A repeated GUID would merge two sources in the menus and a repeated cache name would let two sources write
+// into one tile cache, so every shipped definition has its own of both.
+TEST(Records, ShippedSourceGuidsAndCacheNamesAreUnique) {
+    const std::regex guidLine("\"guid\"\\s*:\\s*\"([^\"]+)\"");
+    const std::regex cacheLine("\"nameInCache\"\\s*:\\s*\"([^\"]+)\"");
+    std::set<std::string> guids;
+    std::set<std::string> cacheNames;
+    int files = 0;
+    for (const auto& e :
+         std::filesystem::recursive_directory_iterator(std::string(CG_SOURCE_DIR) + "/data/sources")) {
+        const std::string name = e.path().filename().string();
+        if (name.size() <= 12 || name.compare(name.size() - 12, 12, ".source.json") != 0) {
+            continue;
+        }
+        ++files;
+        std::ifstream in(e.path());
+        std::ostringstream buffer;
+        buffer << in.rdbuf();
+        const std::string text = buffer.str();
+        std::smatch m;
+        ASSERT_TRUE(std::regex_search(text, m, guidLine)) << name;
+        EXPECT_TRUE(guids.insert(m[1].str()).second) << name;
+        ASSERT_TRUE(std::regex_search(text, m, cacheLine)) << name;
+        EXPECT_TRUE(cacheNames.insert(m[1].str()).second) << name;
+    }
+    EXPECT_GT(files, 0);
 }
 
 // the eight Weather now rows as the pinned CLI lists them: verdict ok, EPSG 3857, the

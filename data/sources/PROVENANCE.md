@@ -270,3 +270,14 @@ capabilities (read 2026-11-23), in the same `.source.json` format as the others.
     ef218f32df17ed9cc0e2620bc98795d74e9ecad242ba48354041ca1f45ab7dec  Satellite/Beeldmateriaal-Bonaire-Ortho-2024.source.json
     19cd8400e44d60d94d56c5ceebd0e87192d88098e3774b812f5e808b698c197e  Satellite/Beeldmateriaal-Saba-Ortho-2023-24.source.json
     a6e0649afdffc30792bfb12a17d647520ceaedeba8b247cb5b5955cda03174af  Satellite/Beeldmateriaal-Sint-Eustatius-Ortho-2023-24.source.json
+
+## 2026-11-23: Mediterranean and Atlantic orthophotos
+
+Six new files, written by this repository from the service pages and their metadata (read 2026-11-23), in the same `.source.json` format as the others. Downloaded once each with the CLI 2026.11.3 (two connections, zooms 14, 17 and 19 of a small box per source). sha256:
+
+    db7ef90fa9e57ea40b8adb77b141c49cbef2f48d08321e486e5258ba89af01eb  Satellite/DGT-OrtoSat-2023.source.json
+    b84736a4b59aa1892811a79e10f186f1265f550004ab3a5529055e633d144d1b  Satellite/RER-Ortho-2023-24.source.json
+    9f4a952b222fb2712081bd213bfa1cc9dbd41d937bc5aa73f0389876844a2355  Satellite/RER-Ortho-2022.source.json
+    cc468741a4e829b2e5e4a8fd5edb6900ba6857a3b0353d6050d903768c9eb55d  Satellite/Abruzzo-Ortho-2018-19.source.json
+    7383fb9af87eb7f9fe500c3f957e37364b1e8210ae1bd8d929b165f18b4fbaae  Satellite/ASIG-Albania-Ortho-2015.source.json
+    ec9a3a7aa3126cf79709255ae6c5a056105a89c2e9d99677029d0d07e41b3919  Satellite/SITR-Sicily-Ortho-2012-13.source.json

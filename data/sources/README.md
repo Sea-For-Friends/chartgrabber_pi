@@ -1,6 +1,6 @@
 # Shipped chart-source definitions
 
-Ninety JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
+Ninety-six JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
 copied from the SAS.Planet map catalogue; the GUID and `NameInCache` are reused only for the three services the
 catalogue also has (OpenSeaMap seamarks, Esri World Imagery, OpenTopoMap), so an existing tile cache stays valid.
 The folder name is the menu group (the `group` value of the definitions); seven groups, below. The definition
@@ -299,8 +299,8 @@ SHOM serves each survey as its own WMTS layer and its WMS refuses layer lists, s
 
 ## Satellite
 
-Imagery of all eighteen below. Google, Bing and Esri high-resolution imagery cannot be shipped (see "Not shipped"):
-Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not single coral heads; the national orthophotos (France, Spain, the Netherlands, Uruguay, Argentina, Japan, Hong Kong, Madeira, the Caribbean Netherlands) are far sharper but cover only their own waters.
+Imagery of all twenty-four below. Google, Bing and Esri high-resolution imagery cannot be shipped (see "Not shipped"):
+Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not single coral heads; the national orthophotos (France, Spain, the Netherlands, Uruguay, Argentina, Japan, Hong Kong, Madeira, the Caribbean Netherlands, Portugal, Emilia-Romagna, Abruzzo, Albania, Sicily) are far sharper but cover only their own waters.
 
 ### Sentinel-2 Cloudless 2025 (EOX)
 - GUID `{92122135-6B15-4800-AA9E-3E48C556DA17}`
@@ -431,6 +431,48 @@ Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not singl
 - Terms: Beeldmateriaal dataroom page (https://www.beeldmateriaal.nl/dataroom-caribisch-nederland): "De data is beschikbaar onder de Creative Commons Naamsvermelding 4.0 licentie" (CC BY 4.0). Hosted on Ellipsis Drive: no key; use is metered on the publisher's account, so the definition keeps two connections and max zoom 20. Read 2026-11-23.
 - Attribution: Beeldmateriaal Nederland — Orthofotomozaïek Caribisch Nederland 2023–2024, CC BY 4.0. Max zoom 20 (the service goes to 22; 20 is about 15 cm per pixel).
 - Coverage: Sint Eustatius (-63.01 to -62.94 E, 17.46 to 17.53 N). Outside the island the tiles are transparent. Notes: flown around the turn of 2023-24.
+
+### DGT OrtoSat satellite photo 2023 (mainland Portugal)
+- GUID `{E70897C7-B9A6-4AA0-9E14-79102C5A66EA}` (base chart)
+- Service: WMS 1.3.0 `https://ortos.dgterritorio.gov.pt/wms/ortosat2023`, layer `ortoSat2023-CorVerdadeira`, EPSG:3857, JPEG, two connections
+- Terms: DGT "Dados abertos": "A informação geográfica descarregada do Centro de Dados está sujeita a uma licença de utilização CC-BY 4.0 … tendo apenas como obrigação a menção de que a entidade proprietária da informação é a Direção-Geral do Território"; the page lists "OrtoSat 30 cm - Portugal Continental – 2023". Read 2026-11-23.
+- Attribution: © Direção-Geral do Território — OrtoSat2023, CC BY 4.0. Max zoom 19.
+- Coverage: Mainland Portugal (-10.19 to -5.71 E, 36.76 to 42.28 N); not the Azores or Madeira. Notes: 30 cm satellite imagery, 2023.
+
+### Regione Emilia-Romagna orthophoto 2023-24 (Rimini coast)
+- GUID `{E2F995F8-02EB-4F3F-9AAA-7FFA0B7D1410}` (base chart)
+- Service: WMS 1.3.0 `https://servizigis.regione.emilia-romagna.it/wms/rer2023_24_rgb`, layer `RER2023_24_RGB`, EPSG:3857, JPEG, two connections
+- Terms: metadata "Ortofoto RER 2023-24 RGB (WMS)" (Regione Emilia-Romagna CSW, r_emiro:2024-02-14T095114): "CC BY 4.0 (Creative Commons - Attribuzione)", "Nessuna limitazione all'accesso pubblico". Read 2026-11-23.
+- Attribution: Regione Emilia-Romagna — Ortofoto RER 2023–24, CC BY 4.0. Max zoom 19.
+- Coverage: Parts of Emilia-Romagna flown in 2023-24, Rimini included; black where not flown (Porto Garibaldi is). Notes: 20 cm.
+
+### Regione Emilia-Romagna orthophoto 2022-23 (Ferrara coast)
+- GUID `{C29D7414-801D-40C9-8909-77B3A2CCAA84}` (base chart)
+- Service: WMS 1.3.0 `https://servizigis.regione.emilia-romagna.it/wms/rer2022_rgb`, layer `RER2022_RGB`, EPSG:3857, JPEG, two connections
+- Terms: metadata "Ortofoto RER 2022 RGB (WMS)" (r_emiro:2023-01-12T104521): "CC BY 4.0 (Creative Commons - Attribuzione)", "Nessuna limitazione all'accesso pubblico", classification "Non Classificato". Read 2026-11-23.
+- Attribution: Regione Emilia-Romagna — Ortofoto RER 2022, CC BY 4.0. Max zoom 19.
+- Coverage: The 2022 pilot areas, among them the Ferrara coast flown in January 2023 (Porto Garibaldi seen); black where not flown. Notes: 20 cm.
+
+### Regione Abruzzo orthophoto 2018-19 (Abruzzo)
+- GUID `{1378C96F-6D91-45F6-9A5F-6267C32CBE8E}` (base chart)
+- Service: WMS 1.3.0 `http://geocatalogo.regione.abruzzo.it/erdas-iws/ogc/wms/` (plain HTTP; the server has no HTTPS), layer `Mosaici_UTM-WGS84_2018_2019_Regione_Abruzzo.ecw`, EPSG:3857, JPEG, two connections
+- Terms: the region's "Licenza regionale": CC BY-NC 3.0 ("Non puoi utilizzare il materiale per scopi commerciali"). Read 2026-11-23. Non-commercial use only.
+- Attribution: Regione Abruzzo — Ortofoto 2018–2019, CC BY-NC 3.0. Max zoom 19.
+- Coverage: The whole region (12.97 to 14.79 E, 41.66 to 42.91 N), coast from Giulianova to San Salvo. Notes: 20 cm, flown 2018-2019.
+
+### ASIG orthophoto 2015 (Albania)
+- GUID `{B4088F26-9BD5-42DE-8F12-271097547A77}` (base chart)
+- Service: WMS 1.3.0 `https://geoportal.asig.gov.al/service/orthophoto_2015/wms`, layer `OrthoImagery_20cm`, CRS `EPSG:900913` (the same Web Mercator; the service lists no EPSG:3857), JPEG, two connections
+- Terms: ASIG terms of use: "The data is licensed under the Creative Commons Attribution 4.0 International (CC BY 4.0)". Read 2026-11-23.
+- Attribution: ASIG — Ortofoto 2015, CC BY 4.0. Max zoom 19.
+- Coverage: Albania (19.23 to 21.10 E, 39.63 to 42.73 N); the sea outside the mosaic is white. Notes: flown 2015; old imagery.
+
+### Regione Siciliana orthophoto 2012-13 (Sicily and islands)
+- GUID `{837FADA3-FFA3-4C60-B272-97A8D4E55AC0}` (base chart)
+- Service: ArcGIS tile cache `https://map.sitr.regione.sicilia.it/gis/rest/services/ortofoto/ortofoto_2013_25cm_sicilia/MapServer/tile/{z}/{y}/{x}` (Web Mercator, levels to 19), JPEG or PNG (MIXED), two connections
+- Terms: SITR "Licenza d'uso": portal data "non sottoposti a costi di cessione, sono rilasciati con licenza Attribuzione 4.0 Internazionale (CC BY 4.0)"; the service credit is "Regione Siciliana". Read 2026-11-23. Not the 2019 or 2022 layers of the same portal (AGEA imagery).
+- Attribution: Regione Siciliana — S.I.T.R., Ortofoto ATA 2012–2013, CC BY 4.0. Max zoom 19.
+- Coverage: Sicily and the minor islands (11.82 to 15.67 E, 35.47 to 38.82 N). Notes: 25 cm, regional flight A.T.A. 2012-2013; old imagery.
 
 ### Grey source: Esri World Imagery
 
