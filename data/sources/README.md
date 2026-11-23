@@ -1,6 +1,6 @@
 # Shipped chart-source definitions
 
-Eighty-seven JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
+Ninety JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
 copied from the SAS.Planet map catalogue; the GUID and `NameInCache` are reused only for the three services the
 catalogue also has (OpenSeaMap seamarks, Esri World Imagery, OpenTopoMap), so an existing tile cache stays valid.
 The folder name is the menu group (the `group` value of the definitions); seven groups, below. The definition
@@ -299,8 +299,8 @@ SHOM serves each survey as its own WMTS layer and its WMS refuses layer lists, s
 
 ## Satellite
 
-Imagery of all fifteen below. Google, Bing and Esri high-resolution imagery cannot be shipped (see "Not shipped"):
-Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not single coral heads; the national orthophotos (France, Spain, the Netherlands, Uruguay, Argentina, Japan, Hong Kong, Madeira) are far sharper but cover only their own waters.
+Imagery of all eighteen below. Google, Bing and Esri high-resolution imagery cannot be shipped (see "Not shipped"):
+Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not single coral heads; the national orthophotos (France, Spain, the Netherlands, Uruguay, Argentina, Japan, Hong Kong, Madeira, the Caribbean Netherlands) are far sharper but cover only their own waters.
 
 ### Sentinel-2 Cloudless 2025 (EOX)
 - GUID `{92122135-6B15-4800-AA9E-3E48C556DA17}`
@@ -410,6 +410,27 @@ Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not singl
 - Terms: iRIG catalogue record "Ortofotomapas à escala 1:2000 da Região Autónoma da Madeira - 2018/2019" (id 4387e6ca-0962-4872-b558-6203ae24eace, https://geoportal-irig.madeira.gov.pt/geonetwork): "Acesso público sem restrições"; "Licença Creative Commons – Atribuição (CC-BY-4.0). Deverá atribuir créditos com inclusão de texto “Informação geográfica cedida pela Direção Regional do Ordenamento do Território” ou “© DROTe” ou “Fonte: DROTe”." WMS capabilities `Fees`/`AccessConstraints` "none". Read 2026-11-06. The 2023 layer of the same service is not used: no licence record was found for it.
 - Attribution: © DROTe — Informação geográfica cedida pela Direção Regional do Ordenamento do Território; Ortofotomapas 1:2000 2018/2019, CC BY 4.0. Max zoom 19.
 - Coverage: Madeira, Porto Santo, Desertas and Selvagens (record); Funchal and Porto Santo marinas seen. Notes: 10 cm, flown 3 October 2018 to 19 June 2019.
+
+### Beeldmateriaal aerial photo 2024 (Bonaire)
+- GUID `{69A6470E-6B6E-40AF-8366-D16C81079B60}` (base chart)
+- Service: WMTS (KVP GetTile) `https://api.ellipsis-drive.com/v3/ogc/wmts/07a0f368-478f-4377-a753-c66d7b0c3f6f`, layer `f462790a-88ab-404c-9e6c-83fca88ccfb3_e0ed4080-c898-43e0-965c-a4310de2da31`, style `default`, matrix set `EPSG:3857` (ids `0`..`22`, the Web Mercator grid, a reprojection of the island's own `EPSG:10759` set), PNG, two connections
+- Terms: Beeldmateriaal dataroom page (https://www.beeldmateriaal.nl/dataroom-caribisch-nederland): "De data is beschikbaar onder de Creative Commons Naamsvermelding 4.0 licentie" (CC BY 4.0). Hosted on Ellipsis Drive: no key; use is metered on the publisher's account, so the definition keeps two connections and max zoom 20. Read 2026-11-23.
+- Attribution: Beeldmateriaal Nederland — Orthofotomozaïek Caribisch Nederland 2023–2024, CC BY 4.0. Max zoom 20 (the service goes to 22; 20 is about 15 cm per pixel).
+- Coverage: Bonaire (-68.43 to -68.18 E, 12.02 to 12.32 N). Outside the island the tiles are transparent. Notes: flown autumn 2024 (the dataroom page).
+
+### Beeldmateriaal aerial photo 2023-24 (Saba)
+- GUID `{D7D1A3F3-8EE7-4091-9E97-A55EB20248AE}` (base chart)
+- Service: WMTS (KVP GetTile) `https://api.ellipsis-drive.com/v3/ogc/wmts/37a9029d-7578-4471-826d-3b40d721b83b`, layer `007963d5-7a71-4d40-b6ce-b4440306244f_786eb116-19ff-4406-bd3e-3d03bf8b89af`, style `default`, matrix set `EPSG:3857` (ids `0`..`22`, the Web Mercator grid, a reprojection of the island's own `EPSG:10641` set), PNG, two connections
+- Terms: Beeldmateriaal dataroom page (https://www.beeldmateriaal.nl/dataroom-caribisch-nederland): "De data is beschikbaar onder de Creative Commons Naamsvermelding 4.0 licentie" (CC BY 4.0). Hosted on Ellipsis Drive: no key; use is metered on the publisher's account, so the definition keeps two connections and max zoom 20. Read 2026-11-23.
+- Attribution: Beeldmateriaal Nederland — Orthofotomozaïek Caribisch Nederland 2023–2024, CC BY 4.0. Max zoom 20 (the service goes to 22; 20 is about 15 cm per pixel).
+- Coverage: Saba (-63.26 to -63.21 E, 17.61 to 17.65 N). Outside the island the tiles are transparent. Notes: flown around the turn of 2023-24.
+
+### Beeldmateriaal aerial photo 2023-24 (Sint Eustatius)
+- GUID `{8BC940C1-16FD-4739-B47D-E5A0425FD173}` (base chart)
+- Service: WMTS (KVP GetTile) `https://api.ellipsis-drive.com/v3/ogc/wmts/cc50d13b-33cf-4d6e-ab41-9e5fb4651478`, layer `e4db515f-ac3e-4bee-aaae-bfa27f7d1dae_4d242928-ebbf-4ddd-9e65-77a4f1058aaf`, style `default`, matrix set `EPSG:3857` (ids `0`..`22`, the Web Mercator grid, a reprojection of the island's own `EPSG:10745` set), PNG, two connections
+- Terms: Beeldmateriaal dataroom page (https://www.beeldmateriaal.nl/dataroom-caribisch-nederland): "De data is beschikbaar onder de Creative Commons Naamsvermelding 4.0 licentie" (CC BY 4.0). Hosted on Ellipsis Drive: no key; use is metered on the publisher's account, so the definition keeps two connections and max zoom 20. Read 2026-11-23.
+- Attribution: Beeldmateriaal Nederland — Orthofotomozaïek Caribisch Nederland 2023–2024, CC BY 4.0. Max zoom 20 (the service goes to 22; 20 is about 15 cm per pixel).
+- Coverage: Sint Eustatius (-63.01 to -62.94 E, 17.46 to 17.53 N). Outside the island the tiles are transparent. Notes: flown around the turn of 2023-24.
 
 ### Grey source: Esri World Imagery
 
