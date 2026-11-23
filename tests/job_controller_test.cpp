@@ -1477,7 +1477,8 @@ TEST_F(JobTest, ExtraArgumentsAreAppendedInDebugBuilds) {
 #endif
 }
 
-// ---------------------------------------------------------------------------------------- shutdown, 8.6
+// ---------------------------------------------------------------------------------------- shutdown (OpenCPN
+// closes or the plugin is disabled)
 
 // Quit during a download: the destructor sends the stop line, waits at most 2 s WITHOUT running events (a
 // timer due during the wait has not fired when it returns), kills a child that ignores the line, saves the
@@ -1534,7 +1535,8 @@ TEST_F(JobTest, DestroyedWhileRunningWaitsWithoutEventsKillsAndSavesInterrupted)
     }
 }
 
-// 8.6: no exit arrived (here: a retry wait, the child is gone) -> the destructor saves Interrupted itself.
+// Shutdown: no exit arrived (here: a retry wait, the child is gone) -> the destructor saves Interrupted
+// itself.
 TEST_F(JobTest, DestroyedInARetryWaitSavesInterrupted) {
     auto r = makeRecord("20261015-115000");
     scenario(r.id, 1, "", kStall, 4);
