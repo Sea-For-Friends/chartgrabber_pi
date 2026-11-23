@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{AF0FBD2A-5DA4-4F10-939B-900D51734D6D}",
+  "name": "DGU orthophoto 2023 (Croatia, Primošten to Dubrovnik)",
+  "group": "Satellite",
+  "url": "https://geoportal.dgu.hr/services/inspire/orthophoto_2023/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=OI.OrthoimageCoverage&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_DGU_DOF5_2023",
+  "license": "Izvor: Državna geodetska uprava, https://geoportal.dgu.hr — DOF5 2023, last changed 2024-04-22; Otvorena dozvola, https://data.gov.hr/otvorena-dozvola",
+  "maxConnections": 2,
+  "maxZoom": 18
+}

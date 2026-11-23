@@ -1,6 +1,6 @@
 # Shipped chart-source definitions
 
-One hundred and eleven JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
+One hundred and thirteen JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
 copied from the SAS.Planet map catalogue; the GUID and `NameInCache` are reused only for the three services the
 catalogue also has (OpenSeaMap seamarks, Esri World Imagery, OpenTopoMap), so an existing tile cache stays valid.
 The folder name is the menu group (the `group` value of the definitions); seven groups, below. The definition
@@ -341,8 +341,8 @@ SHOM serves each survey as its own WMTS layer and its WMS refuses layer lists, s
 
 ## Satellite
 
-Imagery of all thirty-three below. Google, Bing and Esri high-resolution imagery cannot be shipped (see "Not shipped"):
-Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not single coral heads; the national orthophotos (France, Spain, the Netherlands, Germany, Flanders, Estonia, Gothenburg, Helsinki, Turku, Uruguay, Argentina, Japan, Hong Kong, Madeira, the Caribbean Netherlands, Portugal, Emilia-Romagna, Abruzzo, Albania, Sicily) are far sharper but cover only their own waters.
+Imagery of all thirty-five below. Google, Bing and Esri high-resolution imagery cannot be shipped (see "Not shipped"):
+Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not single coral heads; the national orthophotos (France, Spain, the Netherlands, Germany, Flanders, Estonia, Gothenburg, Helsinki, Turku, Uruguay, Argentina, Japan, Hong Kong, Madeira, the Caribbean Netherlands, Portugal, Emilia-Romagna, Abruzzo, Albania, Sicily, Croatia) are far sharper but cover only their own waters.
 
 ### Sentinel-2 Cloudless 2025 (EOX)
 - GUID `{92122135-6B15-4800-AA9E-3E48C556DA17}`
@@ -578,6 +578,20 @@ Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not singl
 - Terms: SITR "Licenza d'uso": portal data "non sottoposti a costi di cessione, sono rilasciati con licenza Attribuzione 4.0 Internazionale (CC BY 4.0)"; the service credit is "Regione Siciliana". Read 2026-11-23. Not the 2019 or 2022 layers of the same portal (AGEA imagery).
 - Attribution: Regione Siciliana — S.I.T.R., Ortofoto ATA 2012–2013, CC BY 4.0. Max zoom 19.
 - Coverage: Sicily and the minor islands (11.82 to 15.67 E, 35.47 to 38.82 N). Notes: 25 cm, regional flight A.T.A. 2012-2013; old imagery.
+
+### DGU orthophoto 2023 (Croatia, Primošten to Dubrovnik)
+- GUID `{AF0FBD2A-5DA4-4F10-939B-900D51734D6D}` (base chart)
+- Service: WMS 1.3.0 `https://geoportal.dgu.hr/services/inspire/orthophoto_2023/wms`, layer `OI.OrthoimageCoverage`, CRS `EPSG:3857` (accepted; the service lists only EPSG:3765, 4326, 3035, 4258 and CRS:84), JPEG, two connections
+- Terms: capabilities `Fees`: "Na mrežnu uslugu i podatke primjenjuju se uvjeti korištenja navedeni pod otvorenom dozvolom dostupnom na poveznici https://data.gov.hr/otvorena-dozvola."; the Otvorena dozvola (NN 67/2017, čl. 5) allows reproduction and distribution, also in products and applications, and asks for the source statement and the date of last change; the date is the dataset's "Revidirano" date in the DGU metadata. Read 2026-11-23. The GEOPORTAL logo is part of every tile the service sends and is kept.
+- Attribution: Izvor: Državna geodetska uprava, https://geoportal.dgu.hr — DOF5 2023, last changed 2024-04-22; Otvorena dozvola, https://data.gov.hr/otvorena-dozvola Max zoom 18.
+- Coverage: The east and south half of Croatia (15.37 to 19.20 E, 42.34 to 46.51 N): the coast from Primošten to Dubrovnik and the islands. The sea is imaged only a few hundred metres off the coast; beyond it, and outside the mosaic, tiles are white. Notes: DOF5 (1:5000), flown 2023.
+
+### DGU orthophoto 2024 (Croatia, Istria to Šibenik)
+- GUID `{DC68C194-D140-4A88-8EC1-5EC3D459886D}` (base chart)
+- Service: WMS 1.3.0 `https://geoportal.dgu.hr/services/inspire/orthophoto_2024/wms`, layer `OI.OrthoimageCoverage`, CRS `EPSG:3857` (accepted; the service lists only EPSG:3765, 4326, 3035, 4258 and CRS:84), JPEG, two connections
+- Terms: capabilities `Fees`: "Na mrežnu uslugu i podatke primjenjuju se uvjeti korištenja navedeni pod otvorenom dozvolom dostupnom na poveznici https://data.gov.hr/otvorena-dozvola."; the Otvorena dozvola (NN 67/2017, čl. 5) allows reproduction and distribution, also in products and applications, and asks for the source statement and the date of last change; the date is the dataset's "Stvoreno" (created) date in the DGU metadata, which gives no later date. Read 2026-11-23. The GEOPORTAL logo is part of every tile the service sends and is kept.
+- Attribution: Izvor: Državna geodetska uprava, https://geoportal.dgu.hr — DOF5 2024, last changed 2024-06-06; Otvorena dozvola, https://data.gov.hr/otvorena-dozvola Max zoom 18.
+- Coverage: The west half of Croatia (13.42 to 16.50 E, 43.57 to 46.42 N): Istria, Kvarner, Zadar, the Kornati and Šibenik. The sea is imaged only a few hundred metres off the coast; beyond it, and outside the mosaic, tiles are white. Notes: DOF5 (1:5000), 0.5 m pixel.
 
 ### Grey source: Esri World Imagery
 

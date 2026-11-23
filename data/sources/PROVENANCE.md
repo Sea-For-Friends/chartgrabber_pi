@@ -321,3 +321,10 @@ each with the CLI 2026.11.3 (two connections, zooms 13 to 15 of a small anchorag
     8a72a559bb4f78809b850234129867a23a0c4effa574bacda3a66ddd646f1451  Depth/EMODnet-Geology-Seabed-Type.source.json
     80f33c2b7e0f172027d7735f8d03c403bb43d193ad113bd19554c75b92893ed7  Depth/Ireland-GSI-Seabed-Type.source.json
     77acdeed9090fc5a11ec29be6575985264515dc6577232bd24038494d3efcc7c  Depth/Norway-NGU-Seabed-Type.source.json
+
+## 2026-11-23: Croatia DGU orthophoto
+
+Two new files, written by this repository from the service pages and their metadata (read 2026-11-23), in the same `.source.json` format as the others. Downloaded each with the CLI 2026.11.3 (two connections, zooms 14, 16 and 18 of a small box per source). sha256:
+
+    348de1ca61954e3f50b3734254356854db81de675071a607d791c9bff6c449ee  Satellite/DGU-Ortho-2023-Croatia-South-East.source.json
+    36e395fb54d96eee0273d76384d66b1ace739d55a1d19fc8ed3ab52691ec8e80  Satellite/DGU-Ortho-2024-Croatia-West.source.json

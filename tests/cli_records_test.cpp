@@ -147,7 +147,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
         return out;
     };
     const auto all = flags("sources-bundled-all.stdout");
-    ASSERT_EQ(all.size(), 111u);
+    ASSERT_EQ(all.size(), 113u);
     const std::set<std::string> flagged = {
         "{25DBA489-D484-4A13-B65D-ABA8967FF3DA}", // Norway sea chart
         "{8A9C3A53-0512-4401-A6D3-050E08934949}", // Finland sea chart
@@ -207,7 +207,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
 }
 
 // the regrouped bundled set as the pinned CLI lists it. Seven groups with these counts
-// (Nautical charts 5, Seamarks and traffic 6, Depth 28, Satellite 33,
+// (Nautical charts 5, Seamarks and traffic 6, Depth 28, Satellite 35,
 // Coast and land 7, Weather now 18, Ocean 14 with eight
 // snapshots (NASA sea surface temperature and sea ice, NOAA RTOFS east and west, NOAA OFS, three Copernicus)
 // and the six static SHOM layers, and every snapshot is in Weather now or Ocean (twenty-six); the six static
@@ -238,9 +238,9 @@ TEST(Records, BundledSetGroupsAndSnapshots) {
         }
     }
     const std::map<std::string, int> expected = {
-        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 28}, {"Satellite", 33},
+        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 28}, {"Satellite", 35},
         {"Coast and land", 7},  {"Weather now", 18},         {"Ocean", 14}};
-    EXPECT_EQ(rows, 111);
+    EXPECT_EQ(rows, 113);
     EXPECT_EQ(groups, expected);
     EXPECT_EQ(snapshots, 26);
 }
@@ -598,7 +598,7 @@ TEST(Records, NorthSeaAndBalticOrthophotosOfThePinnedRelease) {
     }
 }
 
-// the shipped folder holds the 111 bundled definitions; the removed INEGI file is gone. Each definition has
+// the shipped folder holds the 113 bundled definitions; the removed INEGI file is gone. Each definition has
 // its own GUID and cache folder name: a repeated one would make two sources share a menu entry or a tile
 // cache.
 TEST(Records, ShippedSourceFiles) {
@@ -622,9 +622,9 @@ TEST(Records, ShippedSourceFiles) {
         }
         inegi = inegi || name == "Mexico-INEGI-Ortho.source.json";
     }
-    EXPECT_EQ(shipped, 111);
+    EXPECT_EQ(shipped, 113);
     EXPECT_FALSE(inegi);
-    EXPECT_EQ(guids.size(), 111u);
+    EXPECT_EQ(guids.size(), 113u);
     for (const auto& kv : guids)
         EXPECT_EQ(kv.second, 1) << "GUID " << kv.first;
     for (const auto& kv : caches)
