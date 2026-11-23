@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{4FADA575-C44D-4F86-B572-E83812CB4E17}",
+  "name": "AGEA orthophoto 2022 (Liguria)",
+  "group": "Satellite",
+  "url": "https://geoservizi.regione.liguria.it/geoserver/M2555/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=L10401&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_AGEA_Ortofoto_2022_Liguria",
+  "license": "AGEA – Ortofoto 2022 (via Regione Liguria), CC BY 4.0; https://creativecommons.org/licenses/by/4.0/",
+  "maxConnections": 2,
+  "maxZoom": 19
+}

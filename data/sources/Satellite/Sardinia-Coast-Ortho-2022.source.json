@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{2B1C68F5-26E5-498B-AD10-673CF7D86F80}",
+  "name": "Regione Sardegna coastal orthophoto 2022 (Sardinia coast strip)",
+  "group": "Satellite",
+  "url": "https://webgis.regione.sardegna.it/geoserverraster/ows?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=raster:Mosaico_ortofoto_costa_2022&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_Sardegna_Ortofoto_Costa_2022",
+  "license": "Regione Autonoma della Sardegna – Ortofoto costa 2022, CC BY 4.0; https://creativecommons.org/licenses/by/4.0/",
+  "maxConnections": 2,
+  "maxZoom": 20
+}

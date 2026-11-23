@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{09268A85-9297-4249-B9B0-797DE47D6B01}",
+  "name": "AGEA orthophoto 2022 (Puglia and Tremiti)",
+  "group": "Satellite",
+  "url": "https://webapps.sit.puglia.it/arcgis/rest/services/BaseMaps/Ortofoto2022/ImageServer/exportImage?bbox={bbox}&bboxSR=3857&imageSR=3857&size=256,256&format=jpg&f=image",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_AGEA_Ortofoto_2022_Puglia",
+  "license": "AGEA – Ortofoto 2022 (via Regione Puglia SIT), CC BY 4.0; https://creativecommons.org/licenses/by/4.0/",
+  "maxConnections": 2,
+  "maxZoom": 19
+}

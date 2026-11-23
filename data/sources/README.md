@@ -1,6 +1,6 @@
 # Shipped chart-source definitions
 
-One hundred and thirteen JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
+One hundred and sixteen JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
 copied from the SAS.Planet map catalogue; the GUID and `NameInCache` are reused only for the three services the
 catalogue also has (OpenSeaMap seamarks, Esri World Imagery, OpenTopoMap), so an existing tile cache stays valid.
 The folder name is the menu group (the `group` value of the definitions); seven groups, below. The definition
@@ -341,8 +341,8 @@ SHOM serves each survey as its own WMTS layer and its WMS refuses layer lists, s
 
 ## Satellite
 
-Imagery of all thirty-five below. Google, Bing and Esri high-resolution imagery cannot be shipped (see "Not shipped"):
-Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not single coral heads; the national orthophotos (France, Spain, the Netherlands, Germany, Flanders, Estonia, Gothenburg, Helsinki, Turku, Uruguay, Argentina, Japan, Hong Kong, Madeira, the Caribbean Netherlands, Portugal, Emilia-Romagna, Abruzzo, Albania, Sicily, Croatia) are far sharper but cover only their own waters.
+Imagery of all thirty-eight below. Google, Bing and Esri high-resolution imagery cannot be shipped (see "Not shipped"):
+Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not single coral heads; the national orthophotos (France, Spain, the Netherlands, Germany, Flanders, Estonia, Gothenburg, Helsinki, Turku, Uruguay, Argentina, Japan, Hong Kong, Madeira, the Caribbean Netherlands, Portugal, Emilia-Romagna, Abruzzo, Albania, Sicily, Croatia, Liguria, Sardinia, Puglia) are far sharper but cover only their own waters.
 
 ### Sentinel-2 Cloudless 2025 (EOX)
 - GUID `{92122135-6B15-4800-AA9E-3E48C556DA17}`
@@ -558,12 +558,12 @@ Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not singl
 - Attribution: Regione Emilia-Romagna — Ortofoto RER 2022, CC BY 4.0. Max zoom 19.
 - Coverage: The 2022 pilot areas, among them the Ferrara coast flown in January 2023 (Porto Garibaldi seen); black where not flown. Notes: 20 cm.
 
-### Regione Abruzzo orthophoto 2018-19 (Abruzzo)
-- GUID `{1378C96F-6D91-45F6-9A5F-6267C32CBE8E}` (base chart)
-- Service: WMS 1.3.0 `http://geocatalogo.regione.abruzzo.it/erdas-iws/ogc/wms/` (plain HTTP; the server has no HTTPS), layer `Mosaici_UTM-WGS84_2018_2019_Regione_Abruzzo.ecw`, EPSG:3857, JPEG, two connections
-- Terms: the region's "Licenza regionale": CC BY-NC 3.0 ("Non puoi utilizzare il materiale per scopi commerciali"). Read 2026-11-23. Non-commercial use only.
-- Attribution: Regione Abruzzo — Ortofoto 2018–2019, CC BY-NC 3.0. Max zoom 19.
-- Coverage: The whole region (12.97 to 14.79 E, 41.66 to 42.91 N), coast from Giulianova to San Salvo. Notes: 20 cm, flown 2018-2019.
+### AGEA orthophoto 2022 (Abruzzo)
+- GUID `{43CF8BAE-98F3-48C6-BBF9-F3DD428559A0}` (base chart)
+- Service: WMS 1.3.0 `https://geocatalogo.regione.abruzzo.it/erdas-iws/ogc/wms/`, layer `Mosaici_UTM-WGS84_Ortofoto_2022_AGEA_RGB.ecw`, EPSG:3857, JPEG, two connections (the server answers on HTTPS with a valid certificate, checked 2026-11-23)
+- Terms: AGEA legal notes: "Le ortofoto RGB, in formato GeoTiff, scaricabili dal GeoPortale AgEA sono messe a disposizione per il riutilizzo alle condizioni della licenza Creative Commons BY 4.0." That the AGEA licence also covers the Region's service copy is our reading. Capabilities `Fees` and `AccessConstraints` "None". The Region's catalogue has no record for this layer; its other orthophoto layers carry the "Licenza regionale" (CC BY-NC 3.0); the use here is non-commercial in either case. Read 2026-11-23.
+- Attribution: AGEA – Ortofoto 2022 (via Regione Abruzzo), CC BY 4.0; https://creativecommons.org/licenses/by/4.0/ Max zoom 19.
+- Coverage: Abruzzo (12.97 to 14.79 E, 41.66 to 42.91 N); sampled at Giulianova, Pescara, Ortona, San Vito and Vasto. The sea beyond the coast is white. Notes: AGEA flight 2022, 20 cm.
 
 ### ASIG orthophoto 2015 (Albania)
 - GUID `{B4088F26-9BD5-42DE-8F12-271097547A77}` (base chart)
@@ -572,12 +572,12 @@ Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not singl
 - Attribution: ASIG — Ortofoto 2015, CC BY 4.0. Max zoom 19.
 - Coverage: Albania (19.23 to 21.10 E, 39.63 to 42.73 N); the sea outside the mosaic is white. Notes: flown 2015; old imagery.
 
-### Regione Siciliana orthophoto 2012-13 (Sicily and islands)
-- GUID `{837FADA3-FFA3-4C60-B272-97A8D4E55AC0}` (base chart)
-- Service: ArcGIS tile cache `https://map.sitr.regione.sicilia.it/gis/rest/services/ortofoto/ortofoto_2013_25cm_sicilia/MapServer/tile/{z}/{y}/{x}` (Web Mercator, levels to 19), JPEG or PNG (MIXED), two connections
-- Terms: SITR "Licenza d'uso": portal data "non sottoposti a costi di cessione, sono rilasciati con licenza Attribuzione 4.0 Internazionale (CC BY 4.0)"; the service credit is "Regione Siciliana". Read 2026-11-23. Not the 2019 or 2022 layers of the same portal (AGEA imagery).
-- Attribution: Regione Siciliana — S.I.T.R., Ortofoto ATA 2012–2013, CC BY 4.0. Max zoom 19.
-- Coverage: Sicily and the minor islands (11.82 to 15.67 E, 35.47 to 38.82 N). Notes: 25 cm, regional flight A.T.A. 2012-2013; old imagery.
+### AGEA orthophoto 2022 (Sicily and islands)
+- GUID `{B938AE47-231A-45FC-B077-7CA7B1B95B0E}` (base chart)
+- Service: ArcGIS tile cache `https://map.sitr.regione.sicilia.it/gis/rest/services/ortofoto/ortofoto_2022_20cm_sicilia/ImageServer/tile/{z}/{y}/{x}` (Web Mercator, levels to 20), JPEG or PNG (MIXED), two connections
+- Terms: AGEA legal notes (the sentence quoted under Abruzzo). SITR "Licenza d'uso": portal data "non sottoposti a costi di cessione, sono rilasciati con licenza Attribuzione 4.0 Internazionale (CC BY 4.0)"; the portal lists this service as "Ortofoto AGEA 2022". Read 2026-11-23.
+- Attribution: AGEA – Ortofoto 2022 (via Regione Siciliana S.I.T.R.), CC BY 4.0; https://creativecommons.org/licenses/by/4.0/ Max zoom 19.
+- Coverage: Sicily and the minor islands (11.82 to 15.67 E, 35.47 to 38.82 N); sampled at the Aeolian islands, Favignana, Ustica, Pantelleria, Lampedusa, Palermo and Syracuse. Outside the cache the server answers "not found". Notes: AGEA flight 2022, 20 cm.
 
 ### DGU orthophoto 2023 (Croatia, Primošten to Dubrovnik)
 - GUID `{AF0FBD2A-5DA4-4F10-939B-900D51734D6D}` (base chart)
@@ -592,6 +592,27 @@ Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not singl
 - Terms: capabilities `Fees`: "Na mrežnu uslugu i podatke primjenjuju se uvjeti korištenja navedeni pod otvorenom dozvolom dostupnom na poveznici https://data.gov.hr/otvorena-dozvola."; the Otvorena dozvola (NN 67/2017, čl. 5) allows reproduction and distribution, also in products and applications, and asks for the source statement and the date of last change; the date is the dataset's "Stvoreno" (created) date in the DGU metadata, which gives no later date. Read 2026-11-23. The GEOPORTAL logo is part of every tile the service sends and is kept.
 - Attribution: Izvor: Državna geodetska uprava, https://geoportal.dgu.hr — DOF5 2024, last changed 2024-06-06; Otvorena dozvola, https://data.gov.hr/otvorena-dozvola Max zoom 18.
 - Coverage: The west half of Croatia (13.42 to 16.50 E, 43.57 to 46.42 N): Istria, Kvarner, Zadar, the Kornati and Šibenik. The sea is imaged only a few hundred metres off the coast; beyond it, and outside the mosaic, tiles are white. Notes: DOF5 (1:5000), 0.5 m pixel.
+
+### AGEA orthophoto 2022 (Liguria)
+- GUID `{4FADA575-C44D-4F86-B572-E83812CB4E17}` (base chart)
+- Service: WMS 1.3.0 `https://geoservizi.regione.liguria.it/geoserver/M2555/wms`, layer `L10401`, CRS `EPSG:3857`, JPEG, two connections
+- Terms: AGEA legal notes (the sentence quoted under Abruzzo). The Region's metadata record (owner AGEA): "Nessuna limitazione al pubblico accesso", "Nessuna condizione applicabile"; capabilities `Fees` and `AccessConstraints` "NONE". The Region's website note (regione.liguria.it, "Note legali") allows personal non-commercial use of the site's texts, graphics and software and names no orthophoto or service. Read 2026-11-23.
+- Attribution: AGEA – Ortofoto 2022 (via Regione Liguria), CC BY 4.0; https://creativecommons.org/licenses/by/4.0/ Max zoom 19.
+- Coverage: Liguria (7.43 to 10.10 E, 43.77 to 44.70 N); sampled at Portofino, the Cinque Terre, Palmaria, San Remo and Genoa. The sea beyond the mosaic is white. A thin bright line shows on the edge of a few tiles. Notes: AGEA 1:5000 orthophoto, 20 cm, 2022.
+
+### Regione Sardegna coastal orthophoto 2022 (Sardinia coast strip)
+- GUID `{2B1C68F5-26E5-498B-AD10-673CF7D86F80}` (base chart)
+- Service: WMS 1.3.0 `https://webgis.regione.sardegna.it/geoserverraster/ows`, layer `raster:Mosaico_ortofoto_costa_2022`, CRS `EPSG:3857`, JPEG, two connections
+- Terms: the Region's metadata record: licence https://creativecommons.org/licenses/by/4.0, "no limitations to public access"; the legal notes of the Sardinian geoportal: data owned by the Region are published "con licenza Creative Commons CC BY 4.0", for orthophotos the licence of the dataset applies. Capabilities `Fees` and `AccessConstraints` "NONE". Read 2026-11-23. The Region's own flight, not an AGEA product.
+- Attribution: Regione Autonoma della Sardegna – Ortofoto costa 2022, CC BY 4.0; https://creativecommons.org/licenses/by/4.0/ Max zoom 20.
+- Coverage: The Sardinian coast (8.12 to 9.84 E, 38.86 to 41.32 N): a strip of 1000 m of land and 200 m of sea; beyond it the tiles are white. A thin bright line shows on the edge of some tiles. Notes: flown summer 2022, mean 8 cm.
+
+### AGEA orthophoto 2022 (Puglia and Tremiti)
+- GUID `{09268A85-9297-4249-B9B0-797DE47D6B01}` (base chart)
+- Service: ArcGIS ImageServer `https://webapps.sit.puglia.it/arcgis/rest/services/BaseMaps/Ortofoto2022/ImageServer/exportImage` with `bboxSR=3857&imageSR=3857`, 256 px, JPEG (the service's own grid is EPSG:32633 and its WMS lists no EPSG:3857), two connections
+- Terms: the service description: "Ortofoto 2022 concessa in riuso da AGEA alla Regione Puglia attraverso specifica convenzione"; AGEA legal notes (the sentence quoted under Abruzzo). We found no terms published by the Region for the service, and the convention is not public. Read 2026-11-23.
+- Attribution: AGEA – Ortofoto 2022 (via Regione Puglia SIT), CC BY 4.0; https://creativecommons.org/licenses/by/4.0/ Max zoom 19.
+- Coverage: Puglia and the Tremiti islands; sampled at the Tremiti, Vieste, Manfredonia, Bari, Brindisi, Gallipoli, Otranto and Leuca. Outside the mosaic the tiles are black. Notes: AGEA flight 2022, 20 cm.
 
 ### Grey source: Esri World Imagery
 

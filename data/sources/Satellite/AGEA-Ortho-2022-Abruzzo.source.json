@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{43CF8BAE-98F3-48C6-BBF9-F3DD428559A0}",
+  "name": "AGEA orthophoto 2022 (Abruzzo)",
+  "group": "Satellite",
+  "url": "https://geocatalogo.regione.abruzzo.it/erdas-iws/ogc/wms/?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=Mosaici_UTM-WGS84_Ortofoto_2022_AGEA_RGB.ecw&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_AGEA_Ortofoto_2022_Abruzzo",
+  "license": "AGEA – Ortofoto 2022 (via Regione Abruzzo), CC BY 4.0; https://creativecommons.org/licenses/by/4.0/",
+  "maxConnections": 2,
+  "maxZoom": 19
+}
