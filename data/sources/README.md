@@ -1,6 +1,6 @@
 # Shipped chart-source definitions
 
-Ninety JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
+Ninety-three JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
 copied from the SAS.Planet map catalogue; the GUID and `NameInCache` are reused only for the three services the
 catalogue also has (OpenSeaMap seamarks, Esri World Imagery, OpenTopoMap), so an existing tile cache stays valid.
 The folder name is the menu group (the `group` value of the definitions); seven groups, below. The definition
@@ -288,6 +288,27 @@ SHOM serves each survey as its own WMTS layer and its WMS refuses layer lists, s
 - Terms: datasets under Licence Ouverte 2.0; the `/INSPIRE/` capabilities say `Fees` "Soumis à abonnement" and the WMS/r "sauf pour les thématiques INSPIRE qui sont en accès libre"; the data.shom.fr CGU was not found.
 - Attribution: © Shom — Licence Ouverte 2.0. Non certifié pour la navigation. Max zoom 13.
 - Coverage: mainland France ("Nature des fonds métropole", 1:50 000).
+
+### EMODnet seabed type (European seas)
+- GUID `{A6633591-1547-41BF-A6C3-6F8B74112EBE}` (overlay layer), `"navigationWarning": true`
+- Service: WMS 1.3.0 `https://drive.emodnet-geology.eu/geoserver/gtk/wms`, the 14 `seabed_substrate_*` layers in one request, coarse first (`1m`, `250k`, `100k`, then the `*_multiscale` layers from `70k` down to `1k5`), so a finer layer covers a coarser one where it has data; default style (Folk 5 classes: mud to sandy mud, sand, coarse sediment, mixed sediment, rock and boulders), EPSG:3857, PNG, two connections
+- Terms: EMODnet terms of use (https://emodnet.ec.europa.eu/en/terms-use-emodnet-online-services-data-and-data-products): "Unless indicated otherwise, data products created by EMODnet are owned by the EU and therefore licensed under Creative Commons CC-BY 4.0." Capabilities `Fees` "NONE". Read 2026-11-23.
+- Attribution: Licensed under CC BY 4.0 from EMODnet Geology. Not for navigation. Max zoom 15.
+- Coverage: European seas. The 1:1 000 000 and 1:250 000 layers are general; the fine layers (1:70 000 to 1:1 500) cover only some areas. Polygons are opaque.
+
+### Geological Survey Ireland seabed type (Irish waters)
+- GUID `{32A5CE5D-0FE1-4AD0-A14C-E0B147B3E392}` (overlay layer), `"navigationWarning": true`
+- Service: WMS 1.3.0 (ArcGIS) `https://gsi.geodata.gov.ie/server/services/Marine/IE_GSI_MI_Seabed_Sediment_Classification_IE_Waters_WGS84/MapServer/WMSServer`, layer `IE_GSI_MI_Seabed_Sediment_Classification_IE_Waters_WGS84`, EPSG:3857, PNG, two connections
+- Terms: capabilities `AccessConstraints`: "Data that is produced directly by the Geological Survey Ireland (GSI) is free for use under the conditions of Creative Commons Attribution 4.0 International license ... users must acknowledge the source of the Information in their product or application." `Fees` "none". Read 2026-11-23.
+- Attribution: Contains Irish Public Sector Data (Geological Survey Ireland & Marine Institute), CC BY 4.0. Not for navigation. Max zoom 15.
+- Coverage: Irish waters (-25.0 to -5.5 E, 46.8 to 57.4 N). Classified from multibeam backscatter and grab samples (INFOMAR); grey polygons are "No data at this level of Folk". Polygons are partly see-through.
+
+### NGU seabed type (Norway)
+- GUID `{F85B7E2A-801F-464A-B064-8F6A418489EC}` (overlay layer), `"navigationWarning": true`
+- Service: WMS 1.3.0 `https://geo.ngu.no/mapserver/MarinBunnsedimenterWMS/`, layers `Kornstorrelse_Reg` (grain size, 1:100 000), `Kornstorrelse_Det` (grain size, 1:20 000 to 1:150 000, drawn from about zoom 8) and `Bunntype` (bottom-type points from hydrographic surveys), in that order; EPSG:3857, PNG, two connections
+- Terms: Norwegian Licence for Open Government Data (NLOD) 1.0 (data.norge.no record "Bunnsedimenter, kornstørrelse, detaljert", which lists this WMS); capabilities `Fees` "no conditions apply", `AccessConstraints` "Copyright The Geological Survey of Norway (NGU) 2024". Read 2026-11-23.
+- Attribution: © NGU, NLOD. Not for navigation. Max zoom 15.
+- Coverage: Norwegian fjords and coastal waters where NGU has mapped; patchy (no data at the Lofoten and Bergen points checked). Polygons and symbols are opaque.
 
 ### Satellite-derived depth (Pacific islands, DEP)
 - GUID `{F12728E1-8C83-4B3C-9763-E0651ED9371C}` (overlay layer), `"navigationWarning": true`

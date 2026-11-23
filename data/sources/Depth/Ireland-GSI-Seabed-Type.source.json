@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{32A5CE5D-0FE1-4AD0-A14C-E0B147B3E392}",
+  "name": "Geological Survey Ireland seabed type (Irish waters)",
+  "group": "Depth",
+  "layer": true,
+  "url": "https://gsi.geodata.gov.ie/server/services/Marine/IE_GSI_MI_Seabed_Sediment_Classification_IE_Waters_WGS84/MapServer/WMSServer?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=IE_GSI_MI_Seabed_Sediment_Classification_IE_Waters_WGS84&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Depth_Ireland_GSI_Seabed_Type",
+  "license": "Contains Irish Public Sector Data (Geological Survey Ireland & Marine Institute), CC BY 4.0. Not for navigation",
+  "maxConnections": 2,
+  "maxZoom": 15,
+  "navigationWarning": true
+}

@@ -128,16 +128,18 @@ TEST(CliRecordsStdout, SourceEmptyGroupAndExtraFields) {
 }
 
 // the captured `sources` answers of the pinned CLI. Bundled
-// data/sources after 90 rows (four weather sources more, CHS chart,
+// data/sources after 93 rows (four weather sources more, CHS chart,
 // CHS NONNA-10, IGN, PNOA, PDOK, four Coast and land overlays, nine SHOM
 // depth layers, seven more depth layers, nine SHOM layers, four more Satellite
 // layers and the IH Portugal chart, eight more Weather now sources, four more Ocean
 // currents and waves, one of those Satellite layers removed, four more sources, the
 // INEGI row removed, four more Satellite sources (Japan, Africa, Hong Kong, Madeira) and one Coast and land
-// overlay (Saipan), the Gulf of Morbihan lidar layer and the three Caribbean Netherlands orthophotos), the
-// flag is 1 for exactly the forty-two sources of the groups `Nautical charts` (Norway, Finland, NOAA chart,
+// overlay (Saipan), the Gulf of Morbihan lidar layer and the three Caribbean Netherlands orthophotos and the
+// three seabed type layers (EMODnet Geology, Geological Survey Ireland, NGU), the
+// flag is 1 for exactly the forty-five sources of the groups `Nautical charts` (Norway, Finland, NOAA chart,
 // CHS chart, IH Portugal chart) and `Depth` (EMODnet Europe and World, GEBCO, BlueTopo, CHS NONNA-10, the
-// nine SHOM layers, the seven more layers) and of the three overlays IDEIB Posidonia, EMODnet seagrass and
+// nine SHOM layers, the seven more layers, the three seabed type layers) and of the three overlays IDEIB
+// Posidonia, EMODnet seagrass and
 // NOAA NCCOS Saipan, nine more SHOM layers (buoyage, wrecks, navigation rules, tidal ranges, tidal stream, 3D
 // currents, tide zones), the two STOFS layers (surge water level, peak water level) and the NOAA OFS
 // currents, and 0 for the other 48. A sailor-folder definition with NavigationWarning=1 gets the flag too;
@@ -156,7 +158,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
         return out;
     };
     const auto all = flags("sources-bundled-all.stdout");
-    ASSERT_EQ(all.size(), 90u);
+    ASSERT_EQ(all.size(), 93u);
     const std::set<std::string> flagged = {
         "{25DBA489-D484-4A13-B65D-ABA8967FF3DA}", // Norway sea chart
         "{8A9C3A53-0512-4401-A6D3-050E08934949}", // Finland sea chart
@@ -187,6 +189,9 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
         "{75AD4560-CDA0-4C4B-B185-CBB90795FAB1}", // SHOM 100 m depth, Tahiti and Moorea
         "{9441ED23-4236-4D96-BF7D-FDFB4C8BCF4C}", // SHOM 100 m depth, New Caledonia
         "{8BC59B43-9257-40CA-B59C-807A2652EAE5}", // SHOM seabed type (France)
+        "{A6633591-1547-41BF-A6C3-6F8B74112EBE}", // EMODnet seabed type (European seas)
+        "{32A5CE5D-0FE1-4AD0-A14C-E0B147B3E392}", // Geological Survey Ireland seabed type (Irish waters)
+        "{F85B7E2A-801F-464A-B064-8F6A418489EC}", // NGU seabed type (Norway)
         "{F12728E1-8C83-4B3C-9763-E0651ED9371C}", // Satellite-derived depth (Pacific islands, DEP)
         "{F8736AA0-56B2-49E8-9D55-9EF7263BD128}", // SHOM buoyage (France)
         "{B3F0F721-11B0-4806-AC4C-2A7219913F06}", // SHOM wrecks and obstructions (France)
@@ -210,7 +215,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
 }
 
 // the regrouped bundled set as the pinned CLI lists it. Seven groups with these counts
-// (Nautical charts 5, Seamarks and traffic 6, Depth 22, Satellite 18,
+// (Nautical charts 5, Seamarks and traffic 6, Depth 25, Satellite 18,
 // Coast and land 7, Weather now 18, Ocean 14 with eight
 // snapshots (NASA sea surface temperature and sea ice, NOAA RTOFS east and west, NOAA OFS, three Copernicus)
 // and the six static SHOM layers, and every snapshot is in Weather now or Ocean (twenty-six); the six static
@@ -241,9 +246,9 @@ TEST(Records, BundledSetGroupsAndSnapshots) {
         }
     }
     const std::map<std::string, int> expected = {
-        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 22}, {"Satellite", 18},
+        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 25}, {"Satellite", 18},
         {"Coast and land", 7},  {"Weather now", 18},         {"Ocean", 14}};
-    EXPECT_EQ(rows, 90);
+    EXPECT_EQ(rows, 93);
     EXPECT_EQ(groups, expected);
     EXPECT_EQ(snapshots, 26);
 }
@@ -434,7 +439,7 @@ TEST(Records, AfricaMosaicOfThePinnedRelease) {
         "Contains modified Copernicus Sentinel data 2025, processed by Digital Earth Africa. CC BY 4.0");
 }
 
-// the shipped folder holds the 90 bundled definitions; the removed INEGI file is gone.
+// the shipped folder holds the 93 bundled definitions; the removed INEGI file is gone.
 TEST(Records, ShippedSourceFiles) {
     int shipped = 0;
     bool inegi = false;
@@ -446,7 +451,7 @@ TEST(Records, ShippedSourceFiles) {
         }
         inegi = inegi || name == "Mexico-INEGI-Ortho.source.json";
     }
-    EXPECT_EQ(shipped, 90);
+    EXPECT_EQ(shipped, 93);
     EXPECT_FALSE(inegi);
 }
 
