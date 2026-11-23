@@ -121,7 +121,7 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 
 ## Bundled charts
 
-96 sources come with the plugin, in seven groups (the menus under **Chart**).
+108 sources come with the plugin, in seven groups (the menus under **Chart**).
 
 | Group | Source | What it is for | Area |
 |---|---|---|---|
@@ -145,6 +145,9 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 | Depth | SHOM Litto3D lidar depth, Guadeloupe 2016 | Lidar depths of shallows, reefs and anchorages; not for navigation | Guadeloupe |
 | Depth | SHOM Litto3D lidar depth, Saint-Martin 2019 | Lidar depths of shallows, reefs and anchorages; not for navigation | Saint-Martin |
 | Depth | SHOM Litto3D lidar depth, Saint-Barthélemy 2019 | Lidar depths of shallows, reefs and anchorages; not for navigation | Saint-Barthélemy |
+| Depth | SHOM Litto3D lidar depth, Mayotte 2012 | Lidar depths of the lagoon, passes and anchorages; survey 2012; not for navigation | Mayotte |
+| Depth | SHOM Litto3D lidar depth, Réunion 2016 | Lidar depths of the coast and harbour approaches; survey 2016; not for navigation | Réunion |
+| Depth | SHOM Litto3D lidar depth, Îles Éparses 2012 | Lidar depths of the reefs and lagoons of the scattered islands; survey 2012; not for navigation | Îles Éparses (Europa, Juan de Nova, Glorieuses) |
 | Depth | SHOM lidar depth, Corsica 2017-2018 | Lidar depths of coves and anchorages; not for navigation | Corsica |
 | Depth | SHOM lidar depth, Gulf of Morbihan 2015 | Lidar depths of shallows, channels and anchorages; not for navigation | Gulf of Morbihan |
 | Depth | SHOM 100 m depth, Guadeloupe and Martinique | Offshore depth model on a 100 m grid; not for navigation | Guadeloupe, Martinique |
@@ -175,6 +178,15 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 | Satellite | Beeldmateriaal aerial photo 2024 (Bonaire) | Sharp aerial photo of Bonaire: Kralendijk harbour, the moorings and the reef edge; flown 2024 | Bonaire |
 | Satellite | Beeldmateriaal aerial photo 2023-24 (Saba) | Sharp aerial photo of Saba: Fort Bay harbour and the moorings; flown 2023-24 | Saba |
 | Satellite | Beeldmateriaal aerial photo 2023-24 (Sint Eustatius) | Sharp aerial photo of Sint Eustatius: the Oranjestad roadstead and piers; flown 2023-24 | Sint Eustatius |
+| Satellite | LVermGeo SH orthophoto (Schleswig-Holstein) | Sharp 20 cm photo of Kiel fjord, the Schlei, Fehmarn and the North Frisian islands; flight year varies by area | Schleswig-Holstein |
+| Satellite | LGLN orthophoto (Lower Saxony, East Frisian Islands) | Sharp 20 cm photo of the Wadden coast: East Frisian islands, gullies, drying banks and the Ems, Jade and Weser; flight year varies by area | Lower Saxony, East Frisian Islands |
+| Satellite | GeoInformation Bremen orthophoto 2025 (Bremen, Bremerhaven) | Sharp 10 cm photo of the Bremerhaven harbours and the Weser in Bremen; flown 2025 | Bremerhaven, Bremen |
+| Satellite | LGV orthophoto 2026 (Hamburg, the Elbe) | Sharp 20 cm photo of the port of Hamburg and the Elbe through the city; spring flight 2026 | Hamburg |
+| Satellite | Digitaal Vlaanderen orthophoto 2025 (Belgian coast, Flanders) | Sharp 15 cm winter photo of Nieuwpoort, Oostende, Blankenberge and Zeebrugge and the drying beaches; flown 2025; large tiles | Belgian coast, Flanders |
+| Satellite | Maa- ja Ruumiamet orthophoto (Estonia) | Current photo of all Estonia: Tallinn, Saaremaa, Hiiumaa and the Väinameri shoals; flight year varies by area | Estonia |
+| Satellite | Göteborgs Stad orthophoto 2025 (Gothenburg) | 25 cm photo of Gothenburg, the Göta älv mouth and the southern archipelago skerries; flown 2025 | Gothenburg |
+| Satellite | HSY orthophoto 2023 (Helsinki region) | 25 cm photo of Helsinki, Suomenlinna, the Espoo archipelago and Porkkala; flown June 2023 | Helsinki, Espoo, Kirkkonummi |
+| Satellite | Turku region orthophoto 2023 (Turku, Naantali) | Sharp 15 cm photo of Turku harbour, Ruissalo and Naantali; flown August 2023; not the Parainen archipelago | Turku, Naantali, Raisio, Kaarina |
 | Satellite | Esri World Imagery | Sharp satellite picture worldwide: anchorages, reefs and passes; use within Esri's terms | Worldwide |
 | Satellite | DGT OrtoSat satellite photo 2023 (mainland Portugal) | 30 cm satellite photo of the whole mainland coast: Ria Formosa, the Algarve, Lisbon and the west-coast harbours; 2023 | Mainland Portugal |
 | Satellite | Regione Emilia-Romagna orthophoto 2023-24 (Rimini coast) | Sharp 20 cm photo of the Rimini coast and harbour; flown 2023-24; partial coverage, black where not flown | Emilia-Romagna (part) |
@@ -279,7 +291,7 @@ NOAA NCCOS seabed habitat map (Saipan) colours: pale yellow bare sand, olive san
 
 ## Your own sources
 
-- The 96 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
+- The 108 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
 - Add your own `.zmp` source folders to `Charts/Chart sources` in your home folder (Settings, **Chart sources**, **Open folder** creates it), or pick another folder with **Change...**. They are read after the bundled ones.
 - Sources that need a key are not bundled: put the source folder there and enter your key where its file says `KEY`.
 

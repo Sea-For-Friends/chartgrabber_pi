@@ -1,6 +1,6 @@
 # Shipped chart-source definitions
 
-Ninety-six JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
+One hundred and eight JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
 copied from the SAS.Planet map catalogue; the GUID and `NameInCache` are reused only for the three services the
 catalogue also has (OpenSeaMap seamarks, Esri World Imagery, OpenTopoMap), so an existing tile cache stays valid.
 The folder name is the menu group (the `group` value of the definitions); seven groups, below. The definition
@@ -205,6 +205,27 @@ SHOM serves each survey as its own WMTS layer and its WMS refuses layer lists, s
 - Attribution: © Shom / IGN — Litto3D® / HOMONIM, Licence Ouverte 2.0. Non certifié pour la navigation. Max zoom 17.
 - Coverage: Saint-Barthélemy coast (survey 2019).
 
+### SHOM Litto3D lidar depth, Mayotte 2012
+- GUID `{BACDAA84-2A28-48A1-8AD3-DAE910A37367}` (overlay layer), `"navigationWarning": true`
+- Service: WMTS `https://services.data.shom.fr/INSPIRE/wmts`, layer `LITTO3D_MAYOT_2012_PYR_3857_WMTS`, style `normal`, matrix set `3857` (ids `0`..`21`, XYZ grid), PNG
+- Terms: datasets under Licence Ouverte 2.0; the `/INSPIRE/` capabilities say `Fees` "Soumis à abonnement" and the WMS/r "sauf pour les thématiques INSPIRE qui sont en accès libre"; the data.shom.fr CGU was not found. Dataset "Litto3D Mayotte 2012" on data.gouv.fr: Licence Ouverte 2.0 (read 2026-11-23).
+- Attribution: © Shom / IGN — Litto3D®, Licence Ouverte 2.0. Non certifié pour la navigation. Max zoom 17.
+- Coverage: Mayotte lagoon and coast (survey 2012).
+
+### SHOM Litto3D lidar depth, Réunion 2016
+- GUID `{E57F0098-371E-4477-A23E-A6330FF9075D}` (overlay layer), `"navigationWarning": true`
+- Service: WMTS `https://services.data.shom.fr/INSPIRE/wmts`, layer `LITTO3D_REUNION_2016_PYR_3857_WMTS`, style `normal`, matrix set `3857` (ids `0`..`21`, XYZ grid), PNG
+- Terms: datasets under Licence Ouverte 2.0; the `/INSPIRE/` capabilities say `Fees` "Soumis à abonnement" and the WMS/r "sauf pour les thématiques INSPIRE qui sont en accès libre"; the data.shom.fr CGU was not found. Dataset "Litto3D Réunion 2016" on data.gouv.fr: Licence Ouverte 2.0 (read 2026-11-23).
+- Attribution: © Shom / IGN — Litto3D®, Licence Ouverte 2.0. Non certifié pour la navigation. Max zoom 16.
+- Coverage: Réunion coast (survey 2016).
+
+### SHOM Litto3D lidar depth, Îles Éparses 2012
+- GUID `{A24D9447-118F-4C65-B649-84F3DC66D88C}` (overlay layer), `"navigationWarning": true`
+- Service: WMTS `https://services.data.shom.fr/INSPIRE/wmts`, layer `LITTO3D_EPARSES_2012_PYR_3857_WMTS`, style `normal`, matrix set `3857` (ids `0`..`21`, XYZ grid), PNG
+- Terms: datasets under Licence Ouverte 2.0; the `/INSPIRE/` capabilities say `Fees` "Soumis à abonnement" and the WMS/r "sauf pour les thématiques INSPIRE qui sont en accès libre"; the data.shom.fr CGU was not found. Dataset "Litto3D Iles Eparses 2012" on data.gouv.fr: Licence Ouverte 2.0 (read 2026-11-23).
+- Attribution: © Shom / IGN — Litto3D®, Licence Ouverte 2.0. Non certifié pour la navigation. Max zoom 17.
+- Coverage: Îles Éparses: Europa, Bassas da India, Juan de Nova, Glorieuses (survey 2012); transparent between the islands.
+
 ### SHOM lidar depth, Corsica 2017-2018
 - GUID `{49DBB292-F25F-4FF3-AF2C-D2CFB2D56775}` (overlay layer), `"navigationWarning": true`
 - Service: WMTS `https://services.data.shom.fr/INSPIRE/wmts`, layer `L3D_LIDAR_CORSE_2017_2018_PYR_3857_WMTS`, style `normal`, matrix set `3857` (ids `0`..`21`, XYZ grid), PNG
@@ -216,7 +237,7 @@ SHOM serves each survey as its own WMTS layer and its WMS refuses layer lists, s
 - GUID `{935B45A2-1B70-4F02-8C6E-11878F5CADCB}` (overlay layer), `"navigationWarning": true`
 - Service: WMTS `https://services.data.shom.fr/INSPIRE/wmts`, layer `L3D_MAR_MORBIHAN_2015_PYR_3857_WMTS`, style `normal`, matrix set `3857` (ids `0`..`21`, XYZ grid), PNG
 - Terms: datasets under Licence Ouverte 2.0; the `/INSPIRE/` capabilities say `Fees` "Soumis à abonnement" and the WMS/r "sauf pour les thématiques INSPIRE qui sont en accès libre"; the data.shom.fr CGU was not found.
-- Attribution: © Shom / IGN — Litto3D® Licence Ouverte 2.0. Non certifié pour la navigation. Max zoom 17.
+- Attribution: © Shom / IGN — Litto3D®, Licence Ouverte 2.0. Non certifié pour la navigation. Max zoom 17.
 - Coverage: Gulf of Morbihan (product dated 2015; the lidar itself was flown in 2005, with echo-sounder data of 2003 and 2013).
 
 ### SHOM 100 m depth, Guadeloupe and Martinique
@@ -299,8 +320,8 @@ SHOM serves each survey as its own WMTS layer and its WMS refuses layer lists, s
 
 ## Satellite
 
-Imagery of all twenty-four below. Google, Bing and Esri high-resolution imagery cannot be shipped (see "Not shipped"):
-Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not single coral heads; the national orthophotos (France, Spain, the Netherlands, Uruguay, Argentina, Japan, Hong Kong, Madeira, the Caribbean Netherlands, Portugal, Emilia-Romagna, Abruzzo, Albania, Sicily) are far sharper but cover only their own waters.
+Imagery of all thirty-three below. Google, Bing and Esri high-resolution imagery cannot be shipped (see "Not shipped"):
+Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not single coral heads; the national orthophotos (France, Spain, the Netherlands, Germany, Flanders, Estonia, Gothenburg, Helsinki, Turku, Uruguay, Argentina, Japan, Hong Kong, Madeira, the Caribbean Netherlands, Portugal, Emilia-Romagna, Abruzzo, Albania, Sicily) are far sharper but cover only their own waters.
 
 ### Sentinel-2 Cloudless 2025 (EOX)
 - GUID `{92122135-6B15-4800-AA9E-3E48C556DA17}`
@@ -431,6 +452,69 @@ Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not singl
 - Terms: Beeldmateriaal dataroom page (https://www.beeldmateriaal.nl/dataroom-caribisch-nederland): "De data is beschikbaar onder de Creative Commons Naamsvermelding 4.0 licentie" (CC BY 4.0). Hosted on Ellipsis Drive: no key; use is metered on the publisher's account, so the definition keeps two connections and max zoom 20. Read 2026-11-23.
 - Attribution: Beeldmateriaal Nederland — Orthofotomozaïek Caribisch Nederland 2023–2024, CC BY 4.0. Max zoom 20 (the service goes to 22; 20 is about 15 cm per pixel).
 - Coverage: Sint Eustatius (-63.01 to -62.94 E, 17.46 to 17.53 N). Outside the island the tiles are transparent. Notes: flown around the turn of 2023-24.
+
+### LVermGeo SH orthophoto (Schleswig-Holstein)
+- GUID `{B7950BF1-42A5-4DBD-9277-317E8173B40E}` (base chart)
+- Service: WMS 1.3.0 `https://dienste.gdi-sh.de/WMS_SH_DOP20col_OpenGBD`, layer `sh_dop20_rgb`, EPSG:3857, JPEG, two connections
+- Terms: capabilities `Fees`: "Für die Nutzung der Daten ist die Creative Commons (CC BY 4.0) – Namensnennung 4.0 International anzuwenden … Der Quellenvermerk lautet "© GeoBasis-DE/LVermGeo SH/CC BY 4.0""; `AccessConstraints` "NONE". Read 2026-11-23.
+- Attribution: © GeoBasis-DE/LVermGeo SH/CC BY 4.0. Max zoom 19.
+- Coverage: Schleswig-Holstein, Baltic and North Sea coast with the islands (7.82 to 11.42 E, 53.30 to 55.15 N). Notes: 20 cm; the capabilities give no flight year.
+
+### LGLN orthophoto (Lower Saxony, East Frisian Islands)
+- GUID `{C5486F37-67D7-4306-8412-9261B62EDF71}` (base chart)
+- Service: WMS 1.3.0 `https://opendata.lgln.niedersachsen.de/doorman/noauth/dop_wms`, layer `ni_dop20`, EPSG:3857, JPEG, two connections
+- Terms: capabilities `AccessConstraints`: CC BY 4.0; "Als Rechteinhaber und Bereitsteller ist "LGLN", sowie das Jahr des Datenbezugs in Klammern anzugeben". Read 2026-11-23; the year in the attribution is the year this definition was written.
+- Attribution: LGLN (2026) Creative Commons Namensnennung – 4.0 International (CC BY 4.0). Max zoom 19.
+- Coverage: Lower Saxony with the Wadden Sea and the East Frisian islands (6.51 to 11.75 E, 51.15 to 54.15 N). Notes: 20 cm.
+
+### GeoInformation Bremen orthophoto 2025 (Bremen, Bremerhaven)
+- GUID `{CE3EB174-5386-46B5-932B-B36FA0125CD7}` (base chart)
+- Service: WMS 1.3.0 `https://geodienste.bremen.de/wms_dop_lb`, layers `dop10_2025_HB,dop10_2025_BHV` in one request, EPSG:3857, JPEG, two connections
+- Terms: capabilities `Fees`: "Creative Commons Namensnennung (CC-BY), Quellenvermerk: Landesamt GeoInformation Bremen"; `AccessConstraints`: "Es gelten keine Zugriffsbeschränkungen". Read 2026-11-23.
+- Attribution: Landesamt GeoInformation Bremen — DOP10 2025, CC BY. Max zoom 20.
+- Coverage: Bremerhaven (8.46 to 8.68 E, 53.45 to 53.63 N) and Bremen (8.46 to 9.01 E, 53.01 to 53.23 N). Notes: 10 cm, 2025.
+
+### LGV orthophoto 2026 (Hamburg, the Elbe)
+- GUID `{82DF084C-7FCB-4451-9AFA-E5D71309D0AD}` (base chart)
+- Service: WMS 1.3.0 `https://geodienste.hamburg.de/wms_dop_zeitreihe_unbelaubt`, layer `dop_zeitreihe_unbelaubt`, `TIME=2026`, EPSG:3857, JPEG, two connections
+- Terms: capabilities `Fees`: "Datenlizenz Deutschland Namensnennung 2.0, Quellenvermerk: Freie und Hansestadt Hamburg, Landesbetrieb Geoinformation und Vermessung (LGV)"; the same field names a Maxar picture under a closed licence in the time series, so the definition always asks for the LGV year 2026. Read 2026-11-23.
+- Attribution: Freie und Hansestadt Hamburg, Landesbetrieb Geoinformation und Vermessung (LGV) — DOP 2026, dl-de/by-2-0. Max zoom 19.
+- Coverage: Hamburg: the port and the Elbe through the city (9.72 to 10.35 E, 53.39 to 53.75 N); not the Elbe mouth. Notes: 20 cm, spring flight 2026.
+
+### Digitaal Vlaanderen orthophoto 2025 (Belgian coast, Flanders)
+- GUID `{7FD25993-764A-4180-9A2B-B7DA68958C69}` (base chart)
+- Service: WMTS (KVP GetTile) `https://geo.api.vlaanderen.be/OMW/wmts`, layer `omwrgb25vl`, empty style, matrix set `GoogleMapsVL` (ids `0`..`21`, the Web Mercator grid), PNG only, two connections. The path is upper case: the lower-case `/omw/` answers "layer not known".
+- Terms: dataset record "Orthofotomozaïek, middenschalig, winteropnamen, kleur, 2025, Vlaanderen" (metadata.vlaanderen.be 088a9e65-83c7-4154-8078-ac2309bf41a2): "Geen beperkingen op de publieke toegang", "Modellicentie voor gratis hergebruik", "Bron: Luchtopnamen Digitaal Vlaanderen"; service: "De service kan door iedereen gebruikt worden." Read 2026-11-23.
+- Attribution: Bron: Luchtopnamen Digitaal Vlaanderen — Orthofotomozaïek winteropnamen 2025, Modellicentie Gratis Hergebruik v1.0. Max zoom 19.
+- Coverage: Flemish Region with the whole Belgian coast (2.53 to 5.92 E, 50.69 to 51.52 N). Notes: 15 cm winter flight 2025; PNG tiles of 100-200 KB; a new year is a new layer id.
+
+### Maa- ja Ruumiamet orthophoto (Estonia)
+- GUID `{255566CA-0E01-4439-B9CA-24592B36F8BC}` (base chart)
+- Service: WMTS (REST) `https://tiles.maaamet.ee/tm/wmts/1.0.0/foto/default/GMC/{z}/{y}/{x}.jpg`, layer `foto`, matrix set `GMC` (EPSG:3857, ids `0`..`18`), JPEG, two connections
+- Terms: "Maa- ja Ruumiameti avaandmete litsents, 01.01.2025": free use, derivatives and redistribution, commercial or not; credit the licensor, the dataset and the data age or extract date, and link the licence. Read 2026-11-23; the year in the attribution is the year this definition was written.
+- Attribution: Ortofoto, Maa- ja Ruumiamet 2026; licence https://geoportaal.maaruum.ee/opendata-licence. Max zoom 18.
+- Coverage: All Estonia with the islands ("Kogu Eestit kattev ajakohane ortofoto kiht"). Notes: the flight year varies by area.
+
+### Göteborgs Stad orthophoto 2025 (Gothenburg)
+- GUID `{5F1C343C-5AE6-4B14-9C56-285AA0542819}` (base chart)
+- Service: WMS 1.3.0 `https://opengeodata.goteborg.se/services/ortofoto/wms/v1`, layer `orto_2025`, EPSG:3857, JPEG, two connections
+- Terms: capabilities: `Fees` "Kostnadsfri", `AccessConstraints` "Inga begränsningar (CC0)". Read 2026-11-23.
+- Attribution: Göteborgs Stad — Ortofoto 2025, CC0. Max zoom 18.
+- Coverage: Gothenburg municipality (11.68 to 12.25 E, 57.53 to 57.87 N) with the southern archipelago; some outer skerries may be missing (the service says so). Notes: 25 cm, 2025.
+
+### HSY orthophoto 2023 (Helsinki region)
+- GUID `{360DC957-DFB1-421B-B01D-DC561EC7059A}` (base chart)
+- Service: WMS 1.3.0 `https://kartta.hsy.fi/geoserver/taustakartat_ja_aluejaot/wms`, layer `Ortoilmakuva_2023`, EPSG:3857, JPEG, two connections
+- Terms: HSY dataset "Helsingin seudun ortoilmakuvat" (hri.fi): CC BY 4.0; credit all procurement parties and the year: "Ortokuva (c) Alueen kunnat, HSY, HSL ja Puolustusvoimat 2023". Read 2026-11-23.
+- Attribution: Ortokuva (c) Alueen kunnat, HSY, HSL ja Puolustusvoimat 2023, CC BY 4.0. Max zoom 18.
+- Coverage: Helsinki, Espoo, Kauniainen, Vantaa, Kirkkonummi and inland towns (24.25 to 25.37 E, 59.90 to 60.61 N). Notes: open-data resolution 25 cm, flown June 2023.
+
+### Turku region orthophoto 2023 (Turku, Naantali)
+- GUID `{500EAC92-A190-489E-A856-69EFDC80E432}` (base chart)
+- Service: WMS 1.3.0 `https://turku.asiointi.fi/TeklaOGCWeb/WMS.ashx`, layer `Ilmakuva 2023` (URL-encoded), EPSG:3857, PNG (the server answers PNG only), two connections
+- Terms: avoindata.fi dataset "Turun seudun ilmakuva 2023" (City of Turku): CC BY 4.0; flown 7 August 2023, 15 cm. Read 2026-11-23. The 2025 layer of the same service is not used: no licence record was found for it.
+- Attribution: © Turun kaupunki — Turun seudun ilmakuva 2023, CC BY 4.0. Max zoom 19.
+- Coverage: Turku, Raisio, Naantali, Kaarina and neighbours; NOT the Parainen archipelago (white tiles at Nagu). Notes: PNG tiles of 50-120 KB.
 
 ### DGT OrtoSat satellite photo 2023 (mainland Portugal)
 - GUID `{E70897C7-B9A6-4AA0-9E14-79102C5A66EA}` (base chart)

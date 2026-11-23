@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "guid": "{BACDAA84-2A28-48A1-8AD3-DAE910A37367}",
+  "name": "SHOM Litto3D lidar depth, Mayotte 2012",
+  "group": "Depth",
+  "layer": true,
+  "url": "https://services.data.shom.fr/INSPIRE/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=LITTO3D_MAYOT_2012_PYR_3857_WMTS&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Depth_SHOM_Litto3D_Mayotte",
+  "license": "© Shom / IGN — Litto3D®, Licence Ouverte 2.0. Non certifié pour la navigation",
+  "maxConnections": 2,
+  "maxZoom": 17,
+  "navigationWarning": true
+}

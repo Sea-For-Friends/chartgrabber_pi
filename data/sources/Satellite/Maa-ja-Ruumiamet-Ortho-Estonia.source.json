@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{255566CA-0E01-4439-B9CA-24592B36F8BC}",
+  "name": "Maa- ja Ruumiamet orthophoto (Estonia)",
+  "group": "Satellite",
+  "url": "https://tiles.maaamet.ee/tm/wmts/1.0.0/foto/default/GMC/{z}/{y}/{x}.jpg",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_Maa_ja_Ruumiamet_Ortofoto",
+  "license": "Ortofoto, Maa- ja Ruumiamet 2026; licence https://geoportaal.maaruum.ee/opendata-licence",
+  "maxConnections": 2,
+  "maxZoom": 18
+}

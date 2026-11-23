@@ -325,7 +325,7 @@ std::map<std::string, SourceRecord> fixtureRecords() {
 
 TEST(FavouriteSources, TheShippedFileParsesCleanlyAndEveryGuidIsAFittingBundledRecord) {
     const auto records = fixtureRecords();
-    ASSERT_EQ(records.size(), 96u);
+    ASSERT_EQ(records.size(), 108u);
     const ConfFile conf =
         readConf((std::filesystem::path(CG_SOURCE_DIR) / "data" / "favourite-sources.conf").string());
     ASSERT_TRUE(conf.found);
@@ -374,7 +374,7 @@ TEST(FavouriteSources, EverySatelliteSourceFileAndFixtureRecordHasTheGroupSatell
             ++rows;
             EXPECT_EQ(kv.second.group, "Satellite") << kv.second.name;
         }
-    EXPECT_EQ(rows, 24u);
+    EXPECT_EQ(rows, 33u);
 }
 
 } // namespace

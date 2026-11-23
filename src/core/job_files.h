@@ -119,8 +119,8 @@ std::optional<std::string> alternateWeatherFile(const std::string& current,
 // ---- job.ini ----
 // `text` with the value of the line starting "Out=" replaced by `out` and, when `overlayOut` is not empty,
 // the value of the line starting "OverlayOut=" replaced by it; every other byte unchanged; CR/LF in a value
-// become a space (8.1). nullopt when there is no "Out=" line, or `overlayOut` is not empty and there is no
-// "OverlayOut=" line.
+// become a space (a job.ini value is one line). nullopt when there is no "Out=" line, or `overlayOut` is not
+// empty and there is no "OverlayOut=" line.
 std::optional<std::string> rewriteJobOutputs(std::string_view text, std::string_view out,
                                              std::string_view overlayOut);
 // Tries remove(p) for each path in order; returns the paths that remain (remove(p) false), in order.

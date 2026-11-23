@@ -271,9 +271,39 @@ capabilities (read 2026-11-23), in the same `.source.json` format as the others.
     19cd8400e44d60d94d56c5ceebd0e87192d88098e3774b812f5e808b698c197e  Satellite/Beeldmateriaal-Saba-Ortho-2023-24.source.json
     a6e0649afdffc30792bfb12a17d647520ceaedeba8b247cb5b5955cda03174af  Satellite/Beeldmateriaal-Sint-Eustatius-Ortho-2023-24.source.json
 
+## 2026-11-23: SHOM Litto3D lidar, Indian Ocean
+
+Three new files, written by this repository from the SHOM WMTS `/INSPIRE/` layer list (read 2026-11-23), in the same
+`.source.json` format as the others. sha256:
+
+    45118512ffd825b09affa83381d537c56737bf79b27075d86c4049dff65f6950  Depth/SHOM-Litto3D-Mayotte.source.json
+    bcb3c41a5b57d95dea80e951b94a05523593907c92e6f60207da84dfc4761dcb  Depth/SHOM-Litto3D-Reunion.source.json
+    c7c10d4acb4b39ba8f2699ad492d2700f5e0ac0c750efd68a4e2356b4d786b7a  Depth/SHOM-Litto3D-Iles-Eparses.source.json
+
+`Depth/SHOM-Lidar-Morbihan.source.json`: licence text punctuation changed (a comma after Litto3D®); new sha256 06fcfaeb3d55e7007a817a3a5f90c45a7052dd4610a72a9db34eac7627c52e5c.
+
+## 2026-11-23: German coast orthophotos
+
+Four new files, written by this repository from the services' capabilities (read 2026-11-23), in the same `.source.json` format as the others. Downloaded each with the CLI 2026.11.3 (two connections, three zooms of a small box per source). sha256:
+
+    bd123e398baf7d648ad14a7616e4483f0d479e8ff103475c56ff5512e97aebdf  Satellite/LVermGeo-SH-DOP20.source.json
+    4f60669d351a710610d5aae14e8e21749b06aed67bd3b194515ebe031aba303c  Satellite/LGLN-NI-DOP20.source.json
+    7a6ebfc052ad413d2e2c76fcb1776caaa9931430565cb4b9cfc0e23534a0b007  Satellite/GeoInformation-Bremen-DOP10-2025.source.json
+    455b3a65c66425594da25af6832f1fc3c63e1b82a72f0d53f5ad5093634aea5d  Satellite/LGV-Hamburg-DOP-2026.source.json
+
+## 2026-11-23: North Sea and Baltic orthophotos
+
+Five new files, written by this repository from the providers' public service documentation and capabilities (read 2026-11-23), in the same `.source.json` format as the others. sha256:
+
+    a65b73e036b36fa4cb0394e0c7814fd83ca3fa073e4ddbf99bddc968cc9df4b8  Satellite/Digitaal-Vlaanderen-Ortho-2025.source.json
+    8e80d1fb2413cd39c34b1cf4f185ed72853ca4173a9dab41d34648ae89bada8c  Satellite/Maa-ja-Ruumiamet-Ortho-Estonia.source.json
+    54c0ef1b4b1bfaa19a98efa9564e0374cc3e966661d39f85ac6a5a43e70195e4  Satellite/Goteborg-Ortho-2025.source.json
+    6c2726b649814280eb48b89cc13b021d5cbf74ca2c1b2c3d2d1ea50d94147c17  Satellite/HSY-Helsinki-Ortho-2023.source.json
+    ca70e35857d8e1b728bdd33a28db79d8ef2669fdf73bc7f5d3184c9f00d45968  Satellite/Turku-Region-Ortho-2023.source.json
+
 ## 2026-11-23: Mediterranean and Atlantic orthophotos
 
-Six new files, written by this repository from the service pages and their metadata (read 2026-11-23), in the same `.source.json` format as the others. Downloaded once each with the CLI 2026.11.3 (two connections, zooms 14, 17 and 19 of a small box per source). sha256:
+Six new files, written by this repository from the service pages and their metadata (read 2026-11-23), in the same `.source.json` format as the others. Downloaded each with the CLI 2026.11.3 (two connections, zooms 14, 17 and 19 of a small box per source). sha256:
 
     db7ef90fa9e57ea40b8adb77b141c49cbef2f48d08321e486e5258ba89af01eb  Satellite/DGT-OrtoSat-2023.source.json
     b84736a4b59aa1892811a79e10f186f1265f550004ab3a5529055e633d144d1b  Satellite/RER-Ortho-2023-24.source.json

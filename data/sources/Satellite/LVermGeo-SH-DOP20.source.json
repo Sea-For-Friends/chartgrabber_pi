@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{B7950BF1-42A5-4DBD-9277-317E8173B40E}",
+  "name": "LVermGeo SH orthophoto (Schleswig-Holstein)",
+  "group": "Satellite",
+  "url": "https://dienste.gdi-sh.de/WMS_SH_DOP20col_OpenGBD?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=sh_dop20_rgb&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_LVermGeo_SH_DOP20",
+  "license": "© GeoBasis-DE/LVermGeo SH/CC BY 4.0",
+  "maxConnections": 2,
+  "maxZoom": 19
+}

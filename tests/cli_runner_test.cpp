@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <chrono>
 #include <csignal>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -1599,12 +1600,19 @@ namespace {
 // is still alive at the end of the test is killed, so a failed test leaks no process into the next.
 struct TreePids {
     long child = 0, grand = 0;
+    pid_t group = 0; // the grandchild's process group, read while it was known to run
     bool ready = false;
+    // Signals only what is still provably ours: the child while this process has not reaped it (its pid
+    // cannot be reused before), the grandchild while it still reports its recorded group.
     ~TreePids() {
-        for (const long p : {child, grand}) {
-            if (p > 1)
-                ::kill(static_cast<pid_t>(p), SIGKILL);
+        if (child > 1) {
+            siginfo_t i{};
+            if (::waitid(P_PID, static_cast<id_t>(child), &i, WEXITED | WNOHANG | WNOWAIT) == 0 ||
+                errno != ECHILD)
+                ::kill(static_cast<pid_t>(child), SIGKILL);
         }
+        if (grand > 1 && group > 1 && ::getpgid(static_cast<pid_t>(grand)) == group)
+            ::kill(static_cast<pid_t>(grand), SIGKILL);
     }
     CliRunner::Callbacks watch(CliRunner::Callbacks cb) {
         int seen = 0;
@@ -1617,8 +1625,10 @@ struct TreePids {
                 ready = true;
             else if (seen++ == 0)
                 child = std::atol(m->text.c_str());
-            else
+            else {
                 grand = std::atol(m->text.c_str());
+                group = ::getpgid(static_cast<pid_t>(grand));
+            }
         };
         return cb;
     }
@@ -1701,6 +1711,7 @@ TEST_F(CliRunnerTest, AbandonSendsNothingWhenTheLeaderWasReapedByAnother_P0283) 
     }
     ASSERT_GT(pids.child, 1);
     ASSERT_GT(pids.grand, 1);
+    pids.group = ::getpgid(static_cast<pid_t>(pids.grand));
     siginfo_t info{};
     for (int i = 0; i < 300 && info.si_pid != pids.child; ++i) {
         ::waitid(P_PID, static_cast<id_t>(pids.child), &info, WEXITED | WNOHANG | WNOWAIT);
@@ -1712,7 +1723,6 @@ TEST_F(CliRunnerTest, AbandonSendsNothingWhenTheLeaderWasReapedByAnother_P0283) 
     runner.abandon(2000);
     runFor(300);
     EXPECT_FALSE(isGone(pids.grand)) << "the group was killed although its leader was reaped";
-    pids.child = 0; // reaped: its pid is not ours to signal
 }
 
 TEST_F(CliRunnerTest, TheGraceKillAlsoEndsTheGrandchild_P0283) {
@@ -1745,7 +1755,50 @@ TEST_F(CliProbeTest, ANoAnswerAlsoEndsTheGrandchild_P0283) {
     ASSERT_TRUE(runUntil([&] { return fs::exists(tmp.dir() / "g"); }, 10000));
     std::ifstream(tmp.dir() / "g") >> pids.grand;
     ASSERT_GT(pids.grand, 1);
+    pids.group = ::getpgid(static_cast<pid_t>(pids.grand));
     ASSERT_TRUE(runUntil([&] { return !results.empty(); }, 10000));
     EXPECT_EQ(results, std::vector<ProbeResult>{ProbeResult::NoAnswer});
     EXPECT_TRUE(runUntil([&] { return isGone(pids.grand); }, 3000));
+}
+
+// The destructor signals nothing it no longer owns: a pid that is neither this process's unreaped child
+// nor in the recorded group belongs to somebody else.
+TEST_F(CliRunnerTest, TheTreeCleanupSignalsNoForeignProcess_P0285) {
+    FILE* p = ::popen("sh -c 'setsid sh -c \"echo \\$\\$; exec sleep 30 >/dev/null 2>&1\" &'", "r");
+    ASSERT_NE(p, nullptr);
+    long pid = 0;
+    const int got = std::fscanf(p, "%ld", &pid);
+    ::pclose(p);
+    ASSERT_EQ(got, 1);
+    ASSERT_GT(pid, 1);
+    ASSERT_EQ(::getpgid(static_cast<pid_t>(pid)), static_cast<pid_t>(pid));
+    ASSERT_NE(::getpgid(static_cast<pid_t>(pid)), ::getpgrp());
+    {
+        TreePids pids;
+        pids.child = pid;
+        pids.grand = pid;
+        pids.group = ::getpgrp();
+    }
+    runFor(200); // a signal sent by mistake has acted by now
+    EXPECT_EQ(::kill(static_cast<pid_t>(pid), 0), 0);
+    EXPECT_FALSE(isGone(pid));
+    ::kill(static_cast<pid_t>(pid), SIGKILL);
+}
+
+// A destructor that ends while the runner still runs cleans up the tree it owns.
+TEST_F(CliRunnerTest, TheTreeCleanupEndsTheGrandchildItOwns_P0285) {
+    Capture run;
+    CliRunner runner;
+    std::string error;
+    long grand = 0;
+    {
+        TreePids pids;
+        ASSERT_TRUE(runner.start(sh(kTreeIgnoringStop), pids.watch(run.callbacks()), &error)) << error;
+        ASSERT_TRUE(runUntil([&] { return pids.ready; }, 20000));
+        ASSERT_GT(pids.grand, 1);
+        ASSERT_GT(pids.group, 1);
+        grand = pids.grand;
+    }
+    EXPECT_TRUE(runUntil([&] { return isGone(grand); }, 3000));
+    runner.abandon(0);
 }
