@@ -138,24 +138,34 @@ wxString existingAncestor(wxString dir) {
     return dir;
 }
 
-// Free bytes on the file system of `dir`; nullopt = unknown (the folder's check is skipped).
-std::optional<std::uint64_t> freeBytes(const wxString& dir) {
+// Everything the page asks of a folder, measured in one go (the cache of the page reuses it for a few
+// seconds).
+cg::FolderFacts measureFolder(const std::string& utf8Dir) {
+    const wxString dir = cg::fromUtf8(utf8Dir);
+    cg::FolderFacts f;
     const wxString at = existingAncestor(dir);
+    f.ancestor = cg::toUtf8(at);
+    f.exists = !at.empty() && at == dir; // the walk returns `dir` itself when it exists
+    f.writable = f.exists && wxFileName::IsDirWritable(dir);
+    if (at.empty())
+        return f;
     wxDiskspaceSize_t free = 0;
-    if (at.empty() || !wxGetDiskSpace(at, nullptr, &free))
-        return std::nullopt;
-    return static_cast<std::uint64_t>(free.GetValue());
+    if (wxGetDiskSpace(at, nullptr, &free))
+        f.freeBytes = static_cast<std::uint64_t>(free.GetValue());
+#ifndef __WINDOWS__
+    struct stat st{};
+    if (::stat(at.fn_str(), &st) == 0)
+        f.device = static_cast<std::uint64_t>(st.st_dev);
+#endif
+    return f;
 }
 
-// Equal st_dev of the two nearest existing ancestors.
-bool sameFileSystem(const wxString& a, const wxString& b) {
-    const wxString pa = existingAncestor(a), pb = existingAncestor(b);
+// The two folders are on one file system (the nearest existing ancestors share a device / volume).
+bool sameFileSystem(const cg::FolderFacts& a, const cg::FolderFacts& b) {
 #ifdef __WINDOWS__
-    return !pa.empty() && !pb.empty() && cg::sameVolume(cg::toUtf8(pa), cg::toUtf8(pb));
+    return !a.ancestor.empty() && !b.ancestor.empty() && cg::sameVolume(a.ancestor, b.ancestor);
 #else
-    struct stat sa{}, sb{};
-    return !pa.empty() && !pb.empty() && ::stat(pa.fn_str(), &sa) == 0 && ::stat(pb.fn_str(), &sb) == 0 &&
-           sa.st_dev == sb.st_dev;
+    return a.device && b.device && *a.device == *b.device;
 #endif
 }
 
@@ -172,7 +182,8 @@ wxString joinPath(const wxString& dir, const wxString& name) {
 
 NewChartPanel::NewChartPanel(wxWindow* parent, ConfigStore& config, const Look& look, AreaTool& area,
                              JobController& jobs)
-    : wxPanel(parent), look_(look), area_(area), jobs_(jobs), config_(config), estimateTimer_(this) {
+    : wxPanel(parent), look_(look), area_(area), jobs_(jobs), config_(config), folders_(measureFolder),
+      estimateTimer_(this) {
     const ConfigStore::LastChoice last = config.loadLastChoice();
     routeGuid_ = cg::fromUtf8(last.routeGuid);
     lastSource_ = last.sourceGuid;
@@ -736,6 +747,7 @@ void NewChartPanel::setArea(cg::AreaKind kind, std::optional<cg::BBox> box, bool
 }
 
 void NewChartPanel::refreshArea() {
+    folders_.clear(); // the dialog is shown again: the folders are measured anew
     setArea(kind_, rectangle_, true);
 }
 
@@ -1223,8 +1235,10 @@ void NewChartPanel::openPreferences() {
         if (closing_)
             return;
         Enable(true);
-        if (saved)
+        if (saved) {
+            folders_.clear(); // the chart folder or the saved-tiles folder may have changed
             reloadSources();
+        }
     };
     settingsDialog_ = dlg;
     dlg->Show();
@@ -1416,7 +1430,7 @@ void NewChartPanel::showEstimate() {
     if (estimateState_ == EstimateState::Waiting || estimateState_ == EstimateState::Running) {
         text = estimatingText();
     } else if (estimateState_ == EstimateState::Ok) {
-        const auto free = freeBytes(outputFolder());
+        const auto free = folderFacts(outputFolder()).freeBytes;
         const wxString freeText = free ? wxString::Format(_("%s free"), formatBytes(std::int64_t(*free)))
                                        : wxString(_("free unknown"));
         text = wxString::Format(_("About %s tiles, %s to download, %s on disk (%s)"),
@@ -1484,14 +1498,20 @@ void NewChartPanel::updateDefaultName() {
     name_->ChangeValue(cg::fromUtf8(cg::defaultChartName(place, base->name)));
 }
 
+cg::FolderFacts NewChartPanel::folderFacts(const wxString& folder) const {
+    return folders_.get(cg::toUtf8(folder));
+}
+
 cg::Preflight NewChartPanel::preflight(const cg::Settings& settings, cg::PreflightInput* in) const {
     const wxString chart = outputFolder(), cache = cg::fromUtf8(config_.cliCacheRoot(settings));
     constexpr std::uint64_t kUnknown =
         std::numeric_limits<std::uint64_t>::max(); // the folder's check is skipped
     in->totals = totals_;
-    in->freeChartBytes = freeBytes(chart).value_or(kUnknown);
-    in->freeCacheBytes = freeBytes(cache).value_or(kUnknown);
-    in->sameFileSystem = sameFileSystem(chart, cache);
+    const cg::FolderFacts chartFacts = folderFacts(chart);
+    in->freeChartBytes = chartFacts.freeBytes.value_or(kUnknown);
+    const cg::FolderFacts cacheFacts = folderFacts(cache);
+    in->freeCacheBytes = cacheFacts.freeBytes.value_or(kUnknown);
+    in->sameFileSystem = sameFileSystem(chartFacts, cacheFacts);
     in->settings = &settings;
     return cg::checkPreflight(*in);
 }
@@ -1510,7 +1530,8 @@ void NewChartPanel::updateDownloadState() {
         const cg::Preflight p = preflight(settings, &in);
         reason = preflightText(p, in, outputFolder(), cg::fromUtf8(config_.cliCacheRoot(settings)));
         if (reason.empty()) // last: a folder of unknown free space is judged by the disk rule first
-            reason = chartFolderRefusal(outputFolder(), outputDir_.empty() && settings.chartDir.empty());
+            reason = chartFolderRefusal(outputFolder(), outputDir_.empty() && settings.chartDir.empty(),
+                                        folderFacts(outputFolder()));
     }
     bool changed = showWindow(preferences_, sourceFailure_ && !reason.empty() && reason == sourceReason_);
     // the empty entry says what to do itself: Download stays off, the status line stays empty.
@@ -1536,6 +1557,7 @@ void NewChartPanel::chooseOutputFolder() {
         closing_)
         return;
     outputDir_ = dir; // for this chart only, never saved
+    folders_.clear();
     showEstimate();
     updateDownloadState();
 }
@@ -1558,7 +1580,9 @@ void NewChartPanel::startDownload() {
         question_->Raise();
         return;
     }
-    if (!download_->IsEnabled()) // unreachable otherwise: bound to the Download button only
+    folders_.clear(); // measure fresh once: a disk that filled up since the last keystroke refuses here
+    updateDownloadState();
+    if (!download_->IsEnabled())
         return;
     continueDownload(1);
 }
@@ -1600,6 +1624,7 @@ void NewChartPanel::askDownload(Question::Buttons buttons, const wxString& text,
                                       return;
                                   if (ticked) // only the notice has a check box
                                       config_.setDisclaimerShown();
+                                  folders_.clear(); // the question may have waited a long time
                                   updateDownloadState();
                                   if (download_->IsEnabled()) // a job may have started from My charts
                                       continueDownload(next);

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "cli_records.h"
+#include "folder_facts.h"
 #include "geo_math.h"
 #include "job_files.h"
 #include "job_progress.h"
@@ -64,6 +65,8 @@ wxString preflightText(cg::Preflight p, const cg::PreflightInput& in, const wxSt
 // folder, which may be missing. Facts (exists, writable) come from the disk, the sandbox from
 // cg::sandboxProbe().
 wxString chartFolderRefusal(const wxString& folder, bool isDefault);
+// The same with the folder's facts already measured by the caller (no file-system access here).
+wxString chartFolderRefusal(const wxString& folder, bool isDefault, const cg::FolderFacts& facts);
 wxString areaErrorText(cg::AreaError e);
 wxString sourceRefusalText(const cg::SourceRefusal& r);
 wxString imageryWarningText();

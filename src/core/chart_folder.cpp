@@ -5,6 +5,8 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <optional>
+#include <utility>
 
 namespace cg {
 namespace {
@@ -84,8 +86,16 @@ Sandbox detectSandbox(const std::string& infoPath) {
     return s;
 }
 
+std::function<Sandbox()> memoizedProbe(std::function<Sandbox()> read) {
+    return [read = std::move(read), result = std::optional<Sandbox>()]() mutable {
+        if (!result)
+            result = read();
+        return *result;
+    };
+}
+
 std::function<Sandbox()>& sandboxProbe() {
-    static std::function<Sandbox()> probe = [] { return detectSandbox(); };
+    static std::function<Sandbox()> probe = memoizedProbe([] { return detectSandbox(); });
     return probe;
 }
 

@@ -27,6 +27,7 @@ set(CG_TEST_SOURCES
     stall_meter_test.cpp
     rescan_throttle_test.cpp
     frame_timer_watch_test.cpp
+    folder_facts_test.cpp
 )
 
 # Window tests (see the rule in wx_env.h): a second binary with a GUI wxApp, ctest label "gui".
