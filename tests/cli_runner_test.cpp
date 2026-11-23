@@ -1638,7 +1638,10 @@ struct TreePids {
 bool isGone(long pid) {
     if (::kill(static_cast<pid_t>(pid), 0) != 0 && errno == ESRCH)
         return true;
-    std::ifstream in("/proc/" + std::to_string(pid) + "/stat");
+    std::string statPath = "/proc/";
+    statPath += std::to_string(pid);
+    statPath += "/stat";
+    std::ifstream in(statPath);
     std::string all;
     std::getline(in, all);
     const size_t close = all.rfind(')');
@@ -1809,10 +1812,15 @@ namespace {
 // Ends the `yes` writers g1..gN a stand-in recorded next to itself, if they are still there.
 void killWriters(const TempDir& tmp, int count) {
     for (int n = 1; n <= count; ++n) {
-        std::ifstream in(tmp.dir() / ("g" + std::to_string(n)));
+        std::string name = "g";
+        name += std::to_string(n);
+        std::ifstream in(tmp.dir() / name);
         long pid = 0;
         in >> pid;
-        std::ifstream comm("/proc/" + std::to_string(pid) + "/comm");
+        std::string commPath = "/proc/";
+        commPath += std::to_string(pid);
+        commPath += "/comm";
+        std::ifstream comm(commPath);
         std::string what;
         comm >> what;
         if (pid > 1 && what == "yes")
