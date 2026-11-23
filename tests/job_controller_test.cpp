@@ -35,6 +35,10 @@
 #include <wx/gauge.h>
 #include <wx/log.h>
 #include <wx/panel.h>
+// clang-format off
+#include <wx/progdlg.h> // first: generic/progdlgg.h needs its style flags
+#include <wx/generic/progdlgg.h>
+// clang-format on
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
 #include <wx/timer.h>
@@ -3980,6 +3984,283 @@ TEST_F(RescanTest, P0277OnTenAndTwelveEveryRequestCallsAtOnceButNotWhileOptionsI
     options.hide();
     fireRescanTimer();
     EXPECT_EQ(ocpn_fake::updates.size(), 3u);
+}
+
+// ---- the chart list is called only when OpenCPN is idle: not inside a yield, not while a progress dialog
+// is shown, not inside the plugin's own call; a request made then is not lost.
+// Runs `fn` from inside a real yield of the test's active loop (wx runs timers and pending events there).
+static void runInYield(const std::function<void()>& fn) {
+    wxTheApp->CallAfter([fn] {
+        const wxEventLoopBase* l = wxEventLoopBase::GetActive();
+        EXPECT_TRUE(l && l->IsYielding()) << "the handler must run inside the yield";
+        fn();
+    });
+    ASSERT_TRUE(wxEventLoopBase::GetActive() != nullptr);
+    wxEventLoopBase::GetActive()->Yield();
+}
+
+// While the active loop is yielding a request makes no call; the poll after the yield makes it (5.10 mode:
+// the gap does not hide the call).
+TEST_F(RescanTest, P0296ARequestInsideAYieldMakesNoCallAndTheNextPollDoesAfterIt) {
+    staleDropAllowed() = true;
+    LogCollector log;
+    std::size_t during = 99;
+    runInYield([&] {
+        jc().requestRescan({"/n"});
+        during = ocpn_fake::updates.size();
+        jc().requestRescan({"/m"}); // same hold
+    });
+    EXPECT_EQ(during, 0u);
+    EXPECT_TRUE(ocpn_fake::updates.empty());
+    EXPECT_EQ(count(log, "chart list update held (OpenCPN busy)"), 1) << "logged once per hold";
+    EXPECT_EQ(count(log, "chart list update held (Options open)"), 0);
+    ASSERT_TRUE(jc().rescanTimer_.IsRunning());
+    EXPECT_EQ(jc().rescanTimer_.GetInterval(), 2000);
+    fireRescanTimer();
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u);
+    EXPECT_EQ(dirs(0), (std::vector<std::string>{"/n", "/m"}));
+    EXPECT_FALSE(jc().rescanTimer_.IsRunning());
+}
+
+// A poll that fires inside a yield is held again, and a loop that is not yielding is no hold.
+TEST_F(RescanTest, P0296ThePollInsideAYieldWaitsAgain) {
+    staleDropAllowed() = true;
+    jc().requestRescan(); // no hold: at once
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u);
+    runInYield([&] {
+        jc().requestRescan();
+        fireRescanTimer();
+        EXPECT_EQ(ocpn_fake::updates.size(), 1u);
+        EXPECT_TRUE(jc().rescanTimer_.IsRunning());
+        EXPECT_EQ(jc().rescanTimer_.GetInterval(), 2000);
+    });
+    fireRescanTimer();
+    EXPECT_EQ(ocpn_fake::updates.size(), 2u);
+}
+
+// A shown progress dialog holds; hidden (or destroyed) it does not. On 5.14 the 30 s gap starts when the
+// hold is first seen ended.
+TEST_F(RescanTest, P0296AShownProgressDialogHoldsTheUpdateUntilItIsHidden) {
+    LogCollector log;
+    auto* dlg = new wxGenericProgressDialog("Update", "Updating charts", 100, canvas_);
+    ASSERT_TRUE(dlg->IsShown());
+    jc().requestRescan({"/n"});
+    EXPECT_TRUE(ocpn_fake::updates.empty());
+    EXPECT_EQ(count(log, "chart list update held (OpenCPN busy)"), 1);
+    ASSERT_TRUE(jc().rescanTimer_.IsRunning());
+    EXPECT_EQ(jc().rescanTimer_.GetInterval(), 2000);
+    clock_.advance(60000);
+    fireRescanTimer();
+    EXPECT_TRUE(ocpn_fake::updates.empty());
+    EXPECT_EQ(jc().rescanTimer_.GetInterval(), 2000);
+
+    dlg->Hide();
+    fireRescanTimer(); // first seen ended: the gap starts
+    EXPECT_TRUE(ocpn_fake::updates.empty());
+    ASSERT_TRUE(jc().rescanTimer_.IsRunning());
+    EXPECT_EQ(jc().rescanTimer_.GetInterval(), 30000);
+    clock_.advance(30000);
+    fireRescanTimer();
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u);
+    EXPECT_EQ(dirs(0), (std::vector<std::string>{"/n"}));
+    dlg->Destroy();
+}
+
+// 5.10 mode: a destroyed dialog ends the hold at the next poll with no gap.
+TEST_F(RescanTest, P0296ADestroyedProgressDialogEndsTheHoldAtTheNextPoll) {
+    staleDropAllowed() = true;
+    auto* dlg = new wxGenericProgressDialog("Update", "Updating charts", 100, canvas_);
+    jc().requestRescan();
+    EXPECT_TRUE(ocpn_fake::updates.empty());
+    dlg->Destroy();
+    wxTheApp->ProcessPendingEvents(); // the deferred destruction
+    runFor(50);
+    fireRescanTimer();
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u);
+}
+
+// A request made inside the plugin's own call makes no nested call (5.14 mode) and is made after the gap,
+// with the folders of that request.
+TEST_F(RescanTest, P0296ARequestInsideTheOwnCallIsNotLostOnFiveFourteen) {
+    LogCollector log;
+    std::size_t before = 99, after = 99;
+    bool once = true; // the hook must not reset itself: that destroys the running lambda
+    ocpn_fake::onUpdate = [&] {
+        if (!std::exchange(once, false))
+            return;
+        before = ocpn_fake::updates.size();
+        jc().requestRescan({"/n"});
+        after = ocpn_fake::updates.size();
+    };
+    jc().requestRescan({"/a"});
+    ocpn_fake::onUpdate = nullptr;
+    EXPECT_EQ(before, 0u);
+    EXPECT_EQ(after, before) << "no nested call";
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u);
+    EXPECT_EQ(dirs(0), (std::vector<std::string>{"/a"}));
+    EXPECT_EQ(count(log, "chart list update held (OpenCPN busy)"), 1);
+    ASSERT_TRUE(jc().rescanTimer_.IsRunning()) << "the nested request stays armed after the call";
+    fireRescanTimer();
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u) << "within the 30 s gap";
+    clock_.advance(30000);
+    fireRescanTimer();
+    ASSERT_EQ(ocpn_fake::updates.size(), 2u);
+    EXPECT_EQ(dirs(1), (std::vector<std::string>{"/n"})) << "the folders of the nested request";
+    EXPECT_FALSE(jc().rescanTimer_.IsRunning());
+}
+
+// 5.10 mode: the request made inside the call is made at the next poll.
+TEST_F(RescanTest, P0296ARequestInsideTheOwnCallIsMadeAtTheNextPollOnFiveTen) {
+    staleDropAllowed() = true;
+    bool once = true;
+    ocpn_fake::onUpdate = [&] {
+        if (!std::exchange(once, false))
+            return;
+        jc().requestRescan({"/n"});
+    };
+    jc().requestRescan({"/a"});
+    ocpn_fake::onUpdate = nullptr;
+    ASSERT_EQ(ocpn_fake::updates.size(), 1u);
+    ASSERT_TRUE(jc().rescanTimer_.IsRunning());
+    EXPECT_EQ(jc().rescanTimer_.GetInterval(), 2000);
+    fireRescanTimer();
+    ASSERT_EQ(ocpn_fake::updates.size(), 2u);
+    EXPECT_EQ(dirs(1), (std::vector<std::string>{"/n"})) << "the folders of the nested request";
+}
+
+// The own-call flag is reset when the call throws: the next request is not held.
+TEST_F(RescanTest, P0296AThrowingCallDoesNotLeaveTheOwnCallFlagSet) {
+    staleDropAllowed() = true;
+    bool once = true;
+    ocpn_fake::onUpdate = [&once] {
+        if (!std::exchange(once, false))
+            return;
+        throw std::runtime_error("boom");
+    };
+    jc().requestRescan();
+    ocpn_fake::onUpdate = nullptr;
+    jc().requestRescan();
+    EXPECT_EQ(ocpn_fake::updates.size(), 1u) << "the first call threw before it was recorded";
+}
+
+// Options still holds with its own line, logged once per hold; the busy line is another one.
+TEST_F(RescanTest, P0296TheTwoHoldLinesAreLoggedOncePerHold) {
+    LogCollector log;
+    {
+        OptionsDialog options(canvas_, true);
+        jc().requestRescan();
+        jc().requestRescan();
+        EXPECT_EQ(count(log, "chart list update held (Options open)"), 1);
+        EXPECT_EQ(count(log, "chart list update held (OpenCPN busy)"), 0);
+        options.hide();
+        fireRescanTimer();
+        clock_.advance(30000);
+        fireRescanTimer();
+        ASSERT_EQ(ocpn_fake::updates.size(), 1u);
+    }
+    clock_.advance(31000);
+    runInYield([&] {
+        jc().requestRescan();
+        jc().requestRescan();
+    });
+    EXPECT_EQ(count(log, "chart list update held (OpenCPN busy)"), 1);
+    EXPECT_EQ(count(log, "chart list update held (Options open)"), 1);
+    fireRescanTimer(); // first seen ended: the gap starts
+    clock_.advance(30000);
+    fireRescanTimer();
+    EXPECT_EQ(ocpn_fake::updates.size(), 2u);
+    clock_.advance(31000);
+    runInYield([&] { jc().requestRescan(); });
+    EXPECT_EQ(count(log, "chart list update held (OpenCPN busy)"), 2) << "the next hold logs again";
+}
+
+// Windows weather file OpenCPN 5.10-5.13 still lists: the drop from the chart list waits for an idle OpenCPN.
+class HoldStaleTest : public SwapTest {
+protected:
+    void SetUp() override {
+        SwapTest::SetUp();
+        staleDropAllowed() = true;
+        held_ = weatherChart("20261123-100000", "H.mbtiles");
+        spit(planned("H (2).mbtiles"), "stale");
+        held_.stale = {planned("H (2).mbtiles")};
+        store_->saveChart(held_);
+        ocpn_fake::chartDirs.Add(wxString::FromUTF8(folder().string()));
+        fs::permissions(folder(), fs::perms::owner_write, fs::perm_options::remove);
+        ocpn_fake::onRemove = [this] { makeWritable(); };
+    }
+    void TearDown() override {
+        ocpn_fake::optionsDialog = nullptr;
+        SwapTest::TearDown();
+    }
+    void tick() {
+        wxTimerEvent ev(jc().staleTimer_);
+        jc().onStaleTimer(ev);
+    }
+    // The tick is held: no remove call, the path stays in the record, the retry is armed at 2 s.
+    void expectHeld() {
+        EXPECT_TRUE(ocpn_fake::removed.empty());
+        EXPECT_EQ(chart(held_.id).stale, held_.stale);
+        EXPECT_TRUE(fs::exists(planned("H (2).mbtiles")));
+        ASSERT_TRUE(jc().staleTimer_.IsRunning());
+        EXPECT_EQ(jc().staleTimer_.GetInterval(), 2000);
+        EXPECT_TRUE(ocpn_fake::updates.empty());
+        jc().staleTimer_.Stop();
+    }
+    void expectDropped() {
+        ASSERT_EQ(ocpn_fake::removed.size(), 1u);
+        EXPECT_EQ(ocpn_fake::removed[0].ToStdString(wxConvUTF8), folder().string() + "\\H (2).mbtiles");
+        EXPECT_FALSE(fs::exists(planned("H (2).mbtiles")));
+        EXPECT_TRUE(chart(held_.id).stale.empty());
+    }
+    cg::ChartRecord held_;
+};
+
+TEST_F(HoldStaleTest, P0296TheDropWaitsWhileOptionsIsShownAndTheRetryMakesIt) {
+    wxDialog options(canvas_, wxID_ANY, "Options");
+    options.Show(true);
+    ocpn_fake::optionsDialog = &options;
+    tick();
+    expectHeld();
+    options.Hide();
+    tick();
+    expectDropped();
+}
+
+TEST_F(HoldStaleTest, P0296TheDropWaitsInsideAYieldAndTheRetryMakesIt) {
+    runInYield([&] {
+        tick();
+        expectHeld();
+    });
+    tick();
+    expectDropped();
+}
+
+TEST_F(HoldStaleTest, P0296TheDropWaitsWhileAProgressDialogIsShownAndTheRetryMakesIt) {
+    auto* dlg = new wxGenericProgressDialog("Update", "Updating charts", 100, canvas_);
+    tick();
+    expectHeld();
+    dlg->Hide();
+    tick();
+    expectDropped();
+    dlg->Destroy();
+}
+
+// A job that ends while Options is shown: the drop is held, the 120 s retry is armed, the retry drops.
+TEST_F(HoldStaleTest, P0296AJobEndingInAHoldKeepsTheStalePathAndArmsTheRetry) {
+    makeWritable();
+    fs::remove(planned("H (2).mbtiles"));
+    ocpn_fake::onRemove = nullptr;
+    auto r = weatherChart("20261123-100100", "W.mbtiles");
+    picture(r.id, 1, true);
+    wxDialog options(canvas_, wxID_ANY, "Options");
+    options.Show(true);
+    ocpn_fake::optionsDialog = &options;
+    start(r);
+    ASSERT_TRUE(waitIdle());
+    EXPECT_TRUE(ocpn_fake::removed.empty());
+    EXPECT_EQ(chart(r.id).stale, (std::vector<std::string>{planned("W.mbtiles")}));
+    ASSERT_TRUE(jc().staleTimer_.IsRunning());
+    EXPECT_EQ(jc().staleTimer_.GetInterval(), 120000);
 }
 
 } // namespace
