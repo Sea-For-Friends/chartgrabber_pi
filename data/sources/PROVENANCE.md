@@ -270,3 +270,13 @@ capabilities (read 2026-11-23), in the same `.source.json` format as the others.
     ef218f32df17ed9cc0e2620bc98795d74e9ecad242ba48354041ca1f45ab7dec  Satellite/Beeldmateriaal-Bonaire-Ortho-2024.source.json
     19cd8400e44d60d94d56c5ceebd0e87192d88098e3774b812f5e808b698c197e  Satellite/Beeldmateriaal-Saba-Ortho-2023-24.source.json
     a6e0649afdffc30792bfb12a17d647520ceaedeba8b247cb5b5955cda03174af  Satellite/Beeldmateriaal-Sint-Eustatius-Ortho-2023-24.source.json
+
+## 2026-11-23: North Sea and Baltic orthophotos
+
+Five new files, written by this repository from the providers' public service documentation and capabilities (read 2026-11-23), in the same `.source.json` format as the others. sha256:
+
+    a65b73e036b36fa4cb0394e0c7814fd83ca3fa073e4ddbf99bddc968cc9df4b8  Satellite/Digitaal-Vlaanderen-Ortho-2025.source.json
+    8e80d1fb2413cd39c34b1cf4f185ed72853ca4173a9dab41d34648ae89bada8c  Satellite/Maa-ja-Ruumiamet-Ortho-Estonia.source.json
+    54c0ef1b4b1bfaa19a98efa9564e0374cc3e966661d39f85ac6a5a43e70195e4  Satellite/Goteborg-Ortho-2025.source.json
+    6c2726b649814280eb48b89cc13b021d5cbf74ca2c1b2c3d2d1ea50d94147c17  Satellite/HSY-Helsinki-Ortho-2023.source.json
+    ca70e35857d8e1b728bdd33a28db79d8ef2669fdf73bc7f5d3184c9f00d45968  Satellite/Turku-Region-Ortho-2023.source.json

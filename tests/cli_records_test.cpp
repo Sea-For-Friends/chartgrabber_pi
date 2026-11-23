@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <regex>
 #include <set>
 #include <sstream>
 #include <string>
@@ -128,20 +129,20 @@ TEST(CliRecordsStdout, SourceEmptyGroupAndExtraFields) {
 }
 
 // the captured `sources` answers of the pinned CLI. Bundled
-// data/sources after 90 rows (four weather sources more, CHS chart,
+// data/sources after 95 rows (four weather sources more, CHS chart,
 // CHS NONNA-10, IGN, PNOA, PDOK, four Coast and land overlays, nine SHOM
 // depth layers, seven more depth layers, nine SHOM layers, four more Satellite
 // layers and the IH Portugal chart, eight more Weather now sources, four more Ocean
 // currents and waves, one of those Satellite layers removed, four more sources, the
 // INEGI row removed, four more Satellite sources (Japan, Africa, Hong Kong, Madeira) and one Coast and land
-// overlay (Saipan), the Gulf of Morbihan lidar layer and the three Caribbean Netherlands orthophotos), the
-// flag is 1 for exactly the forty-two sources of the groups `Nautical charts` (Norway, Finland, NOAA chart,
-// CHS chart, IH Portugal chart) and `Depth` (EMODnet Europe and World, GEBCO, BlueTopo, CHS NONNA-10, the
-// nine SHOM layers, the seven more layers) and of the three overlays IDEIB Posidonia, EMODnet seagrass and
-// NOAA NCCOS Saipan, nine more SHOM layers (buoyage, wrecks, navigation rules, tidal ranges, tidal stream, 3D
-// currents, tide zones), the two STOFS layers (surge water level, peak water level) and the NOAA OFS
-// currents, and 0 for the other 48. A sailor-folder definition with NavigationWarning=1 gets the flag too;
-// the plain bundled one does not.
+// overlay (Saipan), the Gulf of Morbihan lidar layer, the three Caribbean Netherlands orthophotos and the
+// five North Sea and Baltic orthophotos), the flag is 1 for exactly the forty-two sources of the groups
+// `Nautical charts` (Norway, Finland, NOAA chart, CHS chart, IH Portugal chart) and `Depth` (EMODnet Europe
+// and World, GEBCO, BlueTopo, CHS NONNA-10, the nine SHOM layers, the seven more layers) and of the three
+// overlays IDEIB Posidonia, EMODnet seagrass and NOAA NCCOS Saipan, nine more SHOM layers (buoyage, wrecks,
+// navigation rules, tidal ranges, tidal stream, 3D currents, tide zones), the two STOFS layers (surge water
+// level, peak water level) and the NOAA OFS currents, and 0 for the other 53. A sailor-folder definition with
+// NavigationWarning=1 gets the flag too; the plain bundled one does not.
 TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
     const auto flags = [](const char* file) {
         std::ifstream in(std::string(CG_FIXTURES_DIR) + "/cli-2026.11.3/" + file, std::ios::binary);
@@ -156,7 +157,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
         return out;
     };
     const auto all = flags("sources-bundled-all.stdout");
-    ASSERT_EQ(all.size(), 90u);
+    ASSERT_EQ(all.size(), 95u);
     const std::set<std::string> flagged = {
         "{25DBA489-D484-4A13-B65D-ABA8967FF3DA}", // Norway sea chart
         "{8A9C3A53-0512-4401-A6D3-050E08934949}", // Finland sea chart
@@ -210,7 +211,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
 }
 
 // the regrouped bundled set as the pinned CLI lists it. Seven groups with these counts
-// (Nautical charts 5, Seamarks and traffic 6, Depth 22, Satellite 18,
+// (Nautical charts 5, Seamarks and traffic 6, Depth 22, Satellite 23,
 // Coast and land 7, Weather now 18, Ocean 14 with eight
 // snapshots (NASA sea surface temperature and sea ice, NOAA RTOFS east and west, NOAA OFS, three Copernicus)
 // and the six static SHOM layers, and every snapshot is in Weather now or Ocean (twenty-six); the six static
@@ -241,9 +242,9 @@ TEST(Records, BundledSetGroupsAndSnapshots) {
         }
     }
     const std::map<std::string, int> expected = {
-        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 22}, {"Satellite", 18},
+        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 22}, {"Satellite", 23},
         {"Coast and land", 7},  {"Weather now", 18},         {"Ocean", 14}};
-    EXPECT_EQ(rows, 90);
+    EXPECT_EQ(rows, 95);
     EXPECT_EQ(groups, expected);
     EXPECT_EQ(snapshots, 26);
 }
@@ -434,20 +435,82 @@ TEST(Records, AfricaMosaicOfThePinnedRelease) {
         "Contains modified Copernicus Sentinel data 2025, processed by Digital Earth Africa. CC BY 4.0");
 }
 
-// the shipped folder holds the 90 bundled definitions; the removed INEGI file is gone.
+// The five North Sea and Baltic orthophotos as the pinned CLI lists them: verdict ok, EPSG 3857, the static
+// base map of Satellite, the max zoom of each definition, no navigation flag, and the licence line byte for
+// byte.
+TEST(Records, NorthSeaAndBalticOrthophotosOfThePinnedRelease) {
+    struct Row {
+        const char* guid;
+        const char* name;
+        int maxZoom;
+        const char* license;
+    };
+    const Row rows[] = {
+        {"{7FD25993-764A-4180-9A2B-B7DA68958C69}",
+         "Digitaal Vlaanderen orthophoto 2025 (Belgian coast, Flanders)", 19,
+         "Bron: Luchtopnamen Digitaal Vlaanderen — Orthofotomozaïek winteropnamen 2025, Modellicentie Gratis "
+         "Hergebruik v1.0"},
+        {"{255566CA-0E01-4439-B9CA-24592B36F8BC}", "Maa- ja Ruumiamet orthophoto (Estonia)", 18,
+         "Ortofoto, Maa- ja Ruumiamet 2026; licence https://geoportaal.maaruum.ee/opendata-licence"},
+        {"{5F1C343C-5AE6-4B14-9C56-285AA0542819}", "Göteborgs Stad orthophoto 2025 (Gothenburg)", 18,
+         "Göteborgs Stad — Ortofoto 2025, CC0"},
+        {"{360DC957-DFB1-421B-B01D-DC561EC7059A}", "HSY orthophoto 2023 (Helsinki region)", 18,
+         "Ortokuva (c) Alueen kunnat, HSY, HSL ja Puolustusvoimat 2023, CC BY 4.0"},
+        {"{500EAC92-A190-489E-A856-69EFDC80E432}", "Turku region orthophoto 2023 (Turku, Naantali)", 19,
+         "© Turun kaupunki — Turun seudun ilmakuva 2023, CC BY 4.0"},
+    };
+    std::map<std::string, SourceRecord> byGuid;
+    for (const auto& line : fixtureLines("sources-bundled-all.stdout")) {
+        const SourceRecord s = std::get<SourceRecord>(*parseStdoutLine(line));
+        byGuid.emplace(s.guid, s);
+    }
+    for (const Row& r : rows) {
+        const auto it = byGuid.find(r.guid);
+        ASSERT_NE(it, byGuid.end()) << r.name;
+        const SourceRecord& s = it->second;
+        EXPECT_EQ(s.name, r.name);
+        EXPECT_EQ(s.verdict, "ok") << r.name;
+        EXPECT_EQ(s.epsg, 3857) << r.name;
+        EXPECT_EQ(s.kind, "map") << r.name;
+        EXPECT_EQ(s.group, "Satellite") << r.name;
+        EXPECT_EQ(s.refresh, "static") << r.name;
+        EXPECT_EQ(s.maxZoom, r.maxZoom) << r.name;
+        EXPECT_FALSE(s.navigationWarning) << r.name;
+        EXPECT_EQ(s.license, r.license) << r.name;
+    }
+}
+
+// the shipped folder holds the 95 bundled definitions; the removed INEGI file is gone. Each definition has
+// its own GUID and cache folder name: a repeated one would make two sources share a menu entry or a tile
+// cache.
 TEST(Records, ShippedSourceFiles) {
     int shipped = 0;
     bool inegi = false;
+    std::map<std::string, int> guids, caches;
+    const std::regex guidRe("\"guid\"\\s*:\\s*\"([^\"]*)\""), cacheRe("\"nameInCache\"\\s*:\\s*\"([^\"]*)\"");
     for (const auto& e :
          std::filesystem::recursive_directory_iterator(std::string(CG_SOURCE_DIR) + "/data/sources")) {
         const std::string name = e.path().filename().string();
         if (name.size() > 12 && name.compare(name.size() - 12, 12, ".source.json") == 0) {
             ++shipped;
+            std::ifstream in(e.path(), std::ios::binary);
+            std::stringstream ss;
+            ss << in.rdbuf();
+            const std::string json = ss.str();
+            std::smatch g, c;
+            ASSERT_TRUE(std::regex_search(json, g, guidRe) && std::regex_search(json, c, cacheRe)) << name;
+            ++guids[g[1].str()];
+            ++caches[c[1].str()];
         }
         inegi = inegi || name == "Mexico-INEGI-Ortho.source.json";
     }
-    EXPECT_EQ(shipped, 90);
+    EXPECT_EQ(shipped, 95);
     EXPECT_FALSE(inegi);
+    EXPECT_EQ(guids.size(), 95u);
+    for (const auto& kv : guids)
+        EXPECT_EQ(kv.second, 1) << "GUID " << kv.first;
+    for (const auto& kv : caches)
+        EXPECT_EQ(kv.second, 1) << "cache folder " << kv.first;
 }
 
 // the eight Weather now rows as the pinned CLI lists them: verdict ok, EPSG 3857, the

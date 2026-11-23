@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{360DC957-DFB1-421B-B01D-DC561EC7059A}",
+  "name": "HSY orthophoto 2023 (Helsinki region)",
+  "group": "Satellite",
+  "url": "https://kartta.hsy.fi/geoserver/taustakartat_ja_aluejaot/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=Ortoilmakuva_2023&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_HSY_Ortoilmakuva_2023",
+  "license": "Ortokuva (c) Alueen kunnat, HSY, HSL ja Puolustusvoimat 2023, CC BY 4.0",
+  "maxConnections": 2,
+  "maxZoom": 18
+}

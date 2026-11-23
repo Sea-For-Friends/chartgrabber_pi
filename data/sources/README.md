@@ -1,6 +1,6 @@
 # Shipped chart-source definitions
 
-Ninety JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
+Ninety-five JSON source files (`<group>/<name>.source.json`, format 1 of the CLI's sources guide), written by us from each service's public documentation. Nothing is
 copied from the SAS.Planet map catalogue; the GUID and `NameInCache` are reused only for the three services the
 catalogue also has (OpenSeaMap seamarks, Esri World Imagery, OpenTopoMap), so an existing tile cache stays valid.
 The folder name is the menu group (the `group` value of the definitions); seven groups, below. The definition
@@ -299,8 +299,8 @@ SHOM serves each survey as its own WMTS layer and its WMS refuses layer lists, s
 
 ## Satellite
 
-Imagery of all eighteen below. Google, Bing and Esri high-resolution imagery cannot be shipped (see "Not shipped"):
-Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not single coral heads; the national orthophotos (France, Spain, the Netherlands, Uruguay, Argentina, Japan, Hong Kong, Madeira, the Caribbean Netherlands) are far sharper but cover only their own waters.
+Imagery of all twenty-three below. Google, Bing and Esri high-resolution imagery cannot be shipped (see "Not shipped"):
+Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not single coral heads; the national orthophotos (France, Spain, the Netherlands, Uruguay, Argentina, Japan, Hong Kong, Madeira, the Caribbean Netherlands, Flanders, Estonia, Gothenburg, Helsinki, Turku) are far sharper but cover only their own waters.
 
 ### Sentinel-2 Cloudless 2025 (EOX)
 - GUID `{92122135-6B15-4800-AA9E-3E48C556DA17}`
@@ -431,6 +431,41 @@ Sentinel-2 at 10 m and USGS show reef edges, banks and pass entrances, not singl
 - Terms: Beeldmateriaal dataroom page (https://www.beeldmateriaal.nl/dataroom-caribisch-nederland): "De data is beschikbaar onder de Creative Commons Naamsvermelding 4.0 licentie" (CC BY 4.0). Hosted on Ellipsis Drive: no key; use is metered on the publisher's account, so the definition keeps two connections and max zoom 20. Read 2026-11-23.
 - Attribution: Beeldmateriaal Nederland — Orthofotomozaïek Caribisch Nederland 2023–2024, CC BY 4.0. Max zoom 20 (the service goes to 22; 20 is about 15 cm per pixel).
 - Coverage: Sint Eustatius (-63.01 to -62.94 E, 17.46 to 17.53 N). Outside the island the tiles are transparent. Notes: flown around the turn of 2023-24.
+
+### Digitaal Vlaanderen orthophoto 2025 (Belgian coast, Flanders)
+- GUID `{7FD25993-764A-4180-9A2B-B7DA68958C69}` (base chart)
+- Service: WMTS (KVP GetTile) `https://geo.api.vlaanderen.be/OMW/wmts`, layer `omwrgb25vl`, empty style, matrix set `GoogleMapsVL` (ids `0`..`21`, the Web Mercator grid), PNG only, two connections. The path is upper case: the lower-case `/omw/` answers "layer not known".
+- Terms: dataset record "Orthofotomozaïek, middenschalig, winteropnamen, kleur, 2025, Vlaanderen" (metadata.vlaanderen.be 088a9e65-83c7-4154-8078-ac2309bf41a2): "Geen beperkingen op de publieke toegang", "Modellicentie voor gratis hergebruik", "Bron: Luchtopnamen Digitaal Vlaanderen"; service: "De service kan door iedereen gebruikt worden." Read 2026-11-23.
+- Attribution: Bron: Luchtopnamen Digitaal Vlaanderen — Orthofotomozaïek winteropnamen 2025, Modellicentie Gratis Hergebruik v1.0. Max zoom 19.
+- Coverage: Flemish Region with the whole Belgian coast (2.53 to 5.92 E, 50.69 to 51.52 N). Notes: 15 cm winter flight 2025; PNG tiles of 100-200 KB; a new year is a new layer id.
+
+### Maa- ja Ruumiamet orthophoto (Estonia)
+- GUID `{255566CA-0E01-4439-B9CA-24592B36F8BC}` (base chart)
+- Service: WMTS (REST) `https://tiles.maaamet.ee/tm/wmts/1.0.0/foto/default/GMC/{z}/{y}/{x}.jpg`, layer `foto`, matrix set `GMC` (EPSG:3857, ids `0`..`18`), JPEG, two connections
+- Terms: "Maa- ja Ruumiameti avaandmete litsents, 01.01.2025": free use, derivatives and redistribution, commercial or not; credit the licensor, the dataset and the data age or extract date, and link the licence. Read 2026-11-23; the year in the attribution is the year this definition was written.
+- Attribution: Ortofoto, Maa- ja Ruumiamet 2026; licence https://geoportaal.maaruum.ee/opendata-licence. Max zoom 18.
+- Coverage: All Estonia with the islands ("Kogu Eestit kattev ajakohane ortofoto kiht"). Notes: the flight year varies by area.
+
+### Göteborgs Stad orthophoto 2025 (Gothenburg)
+- GUID `{5F1C343C-5AE6-4B14-9C56-285AA0542819}` (base chart)
+- Service: WMS 1.3.0 `https://opengeodata.goteborg.se/services/ortofoto/wms/v1`, layer `orto_2025`, EPSG:3857, JPEG, two connections
+- Terms: capabilities: `Fees` "Kostnadsfri", `AccessConstraints` "Inga begränsningar (CC0)". Read 2026-11-23.
+- Attribution: Göteborgs Stad — Ortofoto 2025, CC0. Max zoom 18.
+- Coverage: Gothenburg municipality (11.68 to 12.25 E, 57.53 to 57.87 N) with the southern archipelago; some outer skerries may be missing (the service says so). Notes: 25 cm, 2025.
+
+### HSY orthophoto 2023 (Helsinki region)
+- GUID `{360DC957-DFB1-421B-B01D-DC561EC7059A}` (base chart)
+- Service: WMS 1.3.0 `https://kartta.hsy.fi/geoserver/taustakartat_ja_aluejaot/wms`, layer `Ortoilmakuva_2023`, EPSG:3857, JPEG, two connections
+- Terms: HSY dataset "Helsingin seudun ortoilmakuvat" (hri.fi): CC BY 4.0; credit all procurement parties and the year: "Ortokuva (c) Alueen kunnat, HSY, HSL ja Puolustusvoimat 2023". Read 2026-11-23.
+- Attribution: Ortokuva (c) Alueen kunnat, HSY, HSL ja Puolustusvoimat 2023, CC BY 4.0. Max zoom 18.
+- Coverage: Helsinki, Espoo, Kauniainen, Vantaa, Kirkkonummi and inland towns (24.25 to 25.37 E, 59.90 to 60.61 N). Notes: open-data resolution 25 cm, flown June 2023.
+
+### Turku region orthophoto 2023 (Turku, Naantali)
+- GUID `{500EAC92-A190-489E-A856-69EFDC80E432}` (base chart)
+- Service: WMS 1.3.0 `https://turku.asiointi.fi/TeklaOGCWeb/WMS.ashx`, layer `Ilmakuva 2023` (URL-encoded), EPSG:3857, PNG (the server answers PNG only), two connections
+- Terms: avoindata.fi dataset "Turun seudun ilmakuva 2023" (City of Turku): CC BY 4.0; flown 7 August 2023, 15 cm. Read 2026-11-23. The 2025 layer of the same service is not used: no licence record was found for it.
+- Attribution: © Turun kaupunki — Turun seudun ilmakuva 2023, CC BY 4.0. Max zoom 19.
+- Coverage: Turku, Raisio, Naantali, Kaarina and neighbours; NOT the Parainen archipelago (white tiles at Nagu). Notes: PNG tiles of 50-120 KB.
 
 ### Grey source: Esri World Imagery
 

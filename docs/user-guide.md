@@ -121,7 +121,7 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 
 ## Bundled charts
 
-90 sources come with the plugin, in seven groups (the menus under **Chart**).
+95 sources come with the plugin, in seven groups (the menus under **Chart**).
 
 | Group | Source | What it is for | Area |
 |---|---|---|---|
@@ -175,6 +175,11 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 | Satellite | Beeldmateriaal aerial photo 2024 (Bonaire) | Sharp aerial photo of Bonaire: Kralendijk harbour, the moorings and the reef edge; flown 2024 | Bonaire |
 | Satellite | Beeldmateriaal aerial photo 2023-24 (Saba) | Sharp aerial photo of Saba: Fort Bay harbour and the moorings; flown 2023-24 | Saba |
 | Satellite | Beeldmateriaal aerial photo 2023-24 (Sint Eustatius) | Sharp aerial photo of Sint Eustatius: the Oranjestad roadstead and piers; flown 2023-24 | Sint Eustatius |
+| Satellite | Digitaal Vlaanderen orthophoto 2025 (Belgian coast, Flanders) | Sharp 15 cm winter photo of Nieuwpoort, Oostende, Blankenberge and Zeebrugge and the drying beaches; flown 2025; large tiles | Belgian coast, Flanders |
+| Satellite | Maa- ja Ruumiamet orthophoto (Estonia) | Current photo of all Estonia: Tallinn, Saaremaa, Hiiumaa and the Väinameri shoals; flight year varies by area | Estonia |
+| Satellite | Göteborgs Stad orthophoto 2025 (Gothenburg) | 25 cm photo of Gothenburg, the Göta älv mouth and the southern archipelago skerries; flown 2025 | Gothenburg |
+| Satellite | HSY orthophoto 2023 (Helsinki region) | 25 cm photo of Helsinki, Suomenlinna, the Espoo archipelago and Porkkala; flown June 2023 | Helsinki, Espoo, Kirkkonummi |
+| Satellite | Turku region orthophoto 2023 (Turku, Naantali) | Sharp 15 cm photo of Turku harbour, Ruissalo and Naantali; flown August 2023; not the Parainen archipelago | Turku, Naantali, Raisio, Kaarina |
 | Satellite | Esri World Imagery | Sharp satellite picture worldwide: anchorages, reefs and passes; use within Esri's terms | Worldwide |
 | Coast and land | OpenTopoMap | Land relief along the shore: what gives shelter, where squalls come down; light use at the server's request | Worldwide |
 | Coast and land | IDEIB Posidonia and protected seabed (Balearics) | Posidonia meadows and the Decree 25/2018 zones where anchoring is regulated; informative | Balearics |
@@ -273,7 +278,7 @@ NOAA NCCOS seabed habitat map (Saipan) colours: pale yellow bare sand, olive san
 
 ## Your own sources
 
-- The 90 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
+- The 95 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
 - Add your own `.zmp` source folders to `Charts/Chart sources` in your home folder (Settings, **Chart sources**, **Open folder** creates it), or pick another folder with **Change...**. They are read after the bundled ones.
 - Sources that need a key are not bundled: put the source folder there and enter your key where its file says `KEY`.
 
