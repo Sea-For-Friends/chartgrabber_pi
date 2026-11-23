@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{8BC940C1-16FD-4739-B47D-E5A0425FD173}",
+  "name": "Beeldmateriaal aerial photo 2023-24 (Sint Eustatius)",
+  "group": "Satellite",
+  "url": "https://api.ellipsis-drive.com/v3/ogc/wmts/cc50d13b-33cf-4d6e-ab41-9e5fb4651478?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=e4db515f-ac3e-4bee-aaae-bfa27f7d1dae_4d242928-ebbf-4ddd-9e65-77a4f1058aaf&STYLE=default&FORMAT=image/png&TILEMATRIXSET=EPSG:3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Satellite_Beeldmateriaal_Sint_Eustatius_2023_24",
+  "license": "Beeldmateriaal Nederland — Orthofotomozaïek Caribisch Nederland 2023–2024, CC BY 4.0",
+  "maxConnections": 2,
+  "maxZoom": 20
+}

@@ -260,3 +260,13 @@ One new file, written by this repository from the SHOM WMTS `/INSPIRE/` layer li
 the others. Downloaded once with the CLI 2026.11.3 (two connections, 97 tiles, zooms 14 and 15 of a small bbox). sha256:
 
     a7b5dc40a43e515fc37ce246425710fc4d11445f2e716dc41251fa887d6dd273  Depth/SHOM-Lidar-Morbihan.source.json
+
+## 2026-11-23: Beeldmateriaal orthophoto, Caribbean Netherlands
+
+Three new files, written by this repository from the Beeldmateriaal dataroom page and the Ellipsis Drive WMTS
+capabilities (read 2026-11-23), in the same `.source.json` format as the others. Downloaded once each with the CLI
+2026.11.3 (two connections, zooms 19 and 20 of a small box per island). sha256:
+
+    ef218f32df17ed9cc0e2620bc98795d74e9ecad242ba48354041ca1f45ab7dec  Satellite/Beeldmateriaal-Bonaire-Ortho-2024.source.json
+    19cd8400e44d60d94d56c5ceebd0e87192d88098e3774b812f5e808b698c197e  Satellite/Beeldmateriaal-Saba-Ortho-2023-24.source.json
+    a6e0649afdffc30792bfb12a17d647520ceaedeba8b247cb5b5955cda03174af  Satellite/Beeldmateriaal-Sint-Eustatius-Ortho-2023-24.source.json

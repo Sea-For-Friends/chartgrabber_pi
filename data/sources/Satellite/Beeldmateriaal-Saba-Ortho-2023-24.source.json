@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{D7D1A3F3-8EE7-4091-9E97-A55EB20248AE}",
+  "name": "Beeldmateriaal aerial photo 2023-24 (Saba)",
+  "group": "Satellite",
+  "url": "https://api.ellipsis-drive.com/v3/ogc/wmts/37a9029d-7578-4471-826d-3b40d721b83b?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=007963d5-7a71-4d40-b6ce-b4440306244f_786eb116-19ff-4406-bd3e-3d03bf8b89af&STYLE=default&FORMAT=image/png&TILEMATRIXSET=EPSG:3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Satellite_Beeldmateriaal_Saba_2023_24",
+  "license": "Beeldmateriaal Nederland — Orthofotomozaïek Caribisch Nederland 2023–2024, CC BY 4.0",
+  "maxConnections": 2,
+  "maxZoom": 20
+}

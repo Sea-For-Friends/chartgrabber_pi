@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{69A6470E-6B6E-40AF-8366-D16C81079B60}",
+  "name": "Beeldmateriaal aerial photo 2024 (Bonaire)",
+  "group": "Satellite",
+  "url": "https://api.ellipsis-drive.com/v3/ogc/wmts/07a0f368-478f-4377-a753-c66d7b0c3f6f?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=f462790a-88ab-404c-9e6c-83fca88ccfb3_e0ed4080-c898-43e0-965c-a4310de2da31&STYLE=default&FORMAT=image/png&TILEMATRIXSET=EPSG:3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Satellite_Beeldmateriaal_Bonaire_2024",
+  "license": "Beeldmateriaal Nederland — Orthofotomozaïek Caribisch Nederland 2023–2024, CC BY 4.0",
+  "maxConnections": 2,
+  "maxZoom": 20
+}

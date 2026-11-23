@@ -121,7 +121,7 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 
 ## Bundled charts
 
-87 sources come with the plugin, in seven groups (the menus under **Chart**).
+90 sources come with the plugin, in seven groups (the menus under **Chart**).
 
 | Group | Source | What it is for | Area |
 |---|---|---|---|
@@ -172,6 +172,9 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 | Satellite | Satellite mosaic 2025 (Africa, DE Africa) | Cloud-free satellite picture of African coasts, islands and reefs, 10 m | Africa and its islands |
 | Satellite | LandsD aerial photo (Hong Kong) | Sharp aerial photo of Hong Kong anchorages, typhoon shelters and marina entrances; 2023 or newer | Hong Kong |
 | Satellite | DROTe orthophoto 2018-19 (Madeira, Porto Santo) | Sharp 10 cm photo of Madeira and Porto Santo harbours, marinas and anchorages, flown 2018-19 | Madeira, Porto Santo |
+| Satellite | Beeldmateriaal aerial photo 2024 (Bonaire) | Sharp aerial photo of Bonaire: Kralendijk harbour, the moorings and the reef edge; flown 2024 | Bonaire |
+| Satellite | Beeldmateriaal aerial photo 2023-24 (Saba) | Sharp aerial photo of Saba: Fort Bay harbour and the anchorages; flown 2023-24 | Saba |
+| Satellite | Beeldmateriaal aerial photo 2023-24 (Sint Eustatius) | Sharp aerial photo of Sint Eustatius: the Oranjestad roadstead and piers; flown 2023-24 | Sint Eustatius |
 | Satellite | Esri World Imagery | Sharp satellite picture worldwide: anchorages, reefs and passes; use within Esri's terms | Worldwide |
 | Coast and land | OpenTopoMap | Land relief along the shore: what gives shelter, where squalls come down; light use at the server's request | Worldwide |
 | Coast and land | IDEIB Posidonia and protected seabed (Balearics) | Posidonia meadows and the Decree 25/2018 zones where anchoring is regulated; informative | Balearics |
@@ -270,7 +273,7 @@ NOAA NCCOS seabed habitat map (Saipan) colours: pale yellow bare sand, olive san
 
 ## Your own sources
 
-- The 87 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
+- The 90 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
 - Add your own `.zmp` source folders to `Charts/Chart sources` in your home folder (Settings, **Chart sources**, **Open folder** creates it), or pick another folder with **Change...**. They are read after the bundled ones.
 - Sources that need a key are not bundled: put the source folder there and enter your key where its file says `KEY`.
 
