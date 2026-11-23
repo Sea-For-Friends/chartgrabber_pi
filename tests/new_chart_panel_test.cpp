@@ -2663,6 +2663,27 @@ TEST_F(DownloadTest, ARefusedChartFolderStopsDownloadWithItsReason) {
     ocpn_fake::dirSelected.clear();
 }
 
+// The folder checks are reused for 5 s while typing, and the press of Download measures fresh.
+TEST_F(DownloadTest, TypingReusesTheFolderChecksAndDownloadMeasuresFresh_P0299) {
+    sources_->estimateOut(estimate1950());
+    fs::create_directories(root_ / "charts d'x");
+    setSettings([&](cg::Settings& s) { s.chartDir = (root_ / "charts d'x").string(); });
+    store_->setDisclaimerShown();
+    ready();
+    ASSERT_TRUE(downloadButton()->IsEnabled());
+    fs::remove_all(root_ / "charts d'x"); // the folder goes away behind the page (a mount that dropped)
+    typeInto(nameField(), "Alfa d'x");
+    EXPECT_EQ(status(), "") << "within 5 s the keystroke reads the cached facts, no new file-system check";
+    EXPECT_TRUE(downloadButton()->IsEnabled());
+    Answerer answers({});
+    click(downloadButton());
+    EXPECT_TRUE(shows(kCannotWrite.c_str())) << "the press measured fresh and refused";
+    EXPECT_FALSE(downloadButton()->IsEnabled());
+    EXPECT_TRUE(jobDirs().empty());
+    EXPECT_TRUE(sources_->runArgv().empty());
+    EXPECT_FALSE(jobs_->busy());
+}
+
 TEST_F(DownloadTest, WhileTheEstimateRunsDownloadIsOffAndTheStatusSaysEstimating) {
     sources_->holdEstimate(true);
     makeDialog();
