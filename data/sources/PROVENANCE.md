@@ -281,3 +281,12 @@ Three new files, written by this repository from the SHOM WMTS `/INSPIRE/` layer
     c7c10d4acb4b39ba8f2699ad492d2700f5e0ac0c750efd68a4e2356b4d786b7a  Depth/SHOM-Litto3D-Iles-Eparses.source.json
 
 `Depth/SHOM-Lidar-Morbihan.source.json`: licence text punctuation changed (a comma after Litto3D®); new sha256 06fcfaeb3d55e7007a817a3a5f90c45a7052dd4610a72a9db34eac7627c52e5c.
+
+## 2026-11-23: German coast orthophotos
+
+Four new files, written by this repository from the services' capabilities (read 2026-11-23), in the same `.source.json` format as the others. Downloaded each with the CLI 2026.11.3 (two connections, three zooms of a small box per source). sha256:
+
+    bd123e398baf7d648ad14a7616e4483f0d479e8ff103475c56ff5512e97aebdf  Satellite/LVermGeo-SH-DOP20.source.json
+    4f60669d351a710610d5aae14e8e21749b06aed67bd3b194515ebe031aba303c  Satellite/LGLN-NI-DOP20.source.json
+    7a6ebfc052ad413d2e2c76fcb1776caaa9931430565cb4b9cfc0e23534a0b007  Satellite/GeoInformation-Bremen-DOP10-2025.source.json
+    455b3a65c66425594da25af6832f1fc3c63e1b82a72f0d53f5ad5093634aea5d  Satellite/LGV-Hamburg-DOP-2026.source.json

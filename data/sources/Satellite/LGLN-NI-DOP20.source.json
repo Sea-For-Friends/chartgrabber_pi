@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{C5486F37-67D7-4306-8412-9261B62EDF71}",
+  "name": "LGLN orthophoto (Lower Saxony, East Frisian Islands)",
+  "group": "Satellite",
+  "url": "https://opendata.lgln.niedersachsen.de/doorman/noauth/dop_wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=ni_dop20&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_LGLN_NI_DOP20",
+  "license": "LGLN (2026) Creative Commons Namensnennung – 4.0 International (CC BY 4.0)",
+  "maxConnections": 2,
+  "maxZoom": 19
+}
