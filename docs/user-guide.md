@@ -121,7 +121,7 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 
 ## Bundled charts
 
-90 sources come with the plugin, in seven groups (the menus under **Chart**).
+93 sources come with the plugin, in seven groups (the menus under **Chart**).
 
 | Group | Source | What it is for | Area |
 |---|---|---|---|
@@ -145,6 +145,9 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 | Depth | SHOM Litto3D lidar depth, Guadeloupe 2016 | Lidar depths of shallows, reefs and anchorages; not for navigation | Guadeloupe |
 | Depth | SHOM Litto3D lidar depth, Saint-Martin 2019 | Lidar depths of shallows, reefs and anchorages; not for navigation | Saint-Martin |
 | Depth | SHOM Litto3D lidar depth, Saint-Barthélemy 2019 | Lidar depths of shallows, reefs and anchorages; not for navigation | Saint-Barthélemy |
+| Depth | SHOM Litto3D lidar depth, Mayotte 2012 | Lidar depths of the lagoon, passes and anchorages; survey 2012; not for navigation | Mayotte |
+| Depth | SHOM Litto3D lidar depth, Réunion 2016 | Lidar depths of the coast and harbour approaches; survey 2016; not for navigation | Réunion |
+| Depth | SHOM Litto3D lidar depth, Îles Éparses 2012 | Lidar depths of the reefs and lagoons of the scattered islands; survey 2012; not for navigation | Îles Éparses (Europa, Juan de Nova, Glorieuses) |
 | Depth | SHOM lidar depth, Corsica 2017-2018 | Lidar depths of coves and anchorages; not for navigation | Corsica |
 | Depth | SHOM lidar depth, Gulf of Morbihan 2015 | Lidar depths of shallows, channels and anchorages; not for navigation | Gulf of Morbihan |
 | Depth | SHOM 100 m depth, Guadeloupe and Martinique | Offshore depth model on a 100 m grid; not for navigation | Guadeloupe, Martinique |
@@ -273,7 +276,7 @@ NOAA NCCOS seabed habitat map (Saipan) colours: pale yellow bare sand, olive san
 
 ## Your own sources
 
-- The 90 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
+- The 93 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
 - Add your own `.zmp` source folders to `Charts/Chart sources` in your home folder (Settings, **Chart sources**, **Open folder** creates it), or pick another folder with **Change...**. They are read after the bundled ones.
 - Sources that need a key are not bundled: put the source folder there and enter your key where its file says `KEY`.
 
