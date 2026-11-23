@@ -128,20 +128,10 @@ TEST(CliRecordsStdout, SourceEmptyGroupAndExtraFields) {
     EXPECT_EQ(std::get<SourceRecord>(*e).group, "G");
 }
 
-// the captured `sources` answers of the pinned CLI. Bundled
-// data/sources after 95 rows (four weather sources more, CHS chart,
-// CHS NONNA-10, IGN, PNOA, PDOK, four Coast and land overlays, nine SHOM
-// depth layers, seven more depth layers, nine SHOM layers, four more Satellite
-// layers and the IH Portugal chart, eight more Weather now sources, four more Ocean
-// currents and waves, one of those Satellite layers removed, four more sources, the
-// INEGI row removed, four more Satellite sources (Japan, Africa, Hong Kong, Madeira) and one Coast and land
-// overlay (Saipan), the Gulf of Morbihan lidar layer, the three Caribbean Netherlands orthophotos and the
-// five North Sea and Baltic orthophotos), the flag is 1 for exactly the forty-two sources of the groups
-// `Nautical charts` (Norway, Finland, NOAA chart, CHS chart, IH Portugal chart) and `Depth` (EMODnet Europe
-// and World, GEBCO, BlueTopo, CHS NONNA-10, the nine SHOM layers, the seven more layers) and of the three
-// overlays IDEIB Posidonia, EMODnet seagrass and NOAA NCCOS Saipan, nine more SHOM layers (buoyage, wrecks,
-// navigation rules, tidal ranges, tidal stream, 3D currents, tide zones), the two STOFS layers (surge water
-// level, peak water level) and the NOAA OFS currents, and 0 for the other 53. A sailor-folder definition with
+// the captured `sources` answers of the pinned CLI for the bundled data/sources. The flag is 1 for exactly
+// the sources of the groups `Nautical charts` and `Depth`, the Coast and land overlays IDEIB Posidonia,
+// EMODnet seagrass and NOAA NCCOS Saipan, the SHOM layers of the groups `Seamarks and traffic` and `Ocean`,
+// the STOFS layers and the NOAA OFS currents, and 0 for all others. A sailor-folder definition with
 // NavigationWarning=1 gets the flag too; the plain bundled one does not.
 TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
     const auto flags = [](const char* file) {
@@ -157,7 +147,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
         return out;
     };
     const auto all = flags("sources-bundled-all.stdout");
-    ASSERT_EQ(all.size(), 95u);
+    ASSERT_EQ(all.size(), 102u);
     const std::set<std::string> flagged = {
         "{25DBA489-D484-4A13-B65D-ABA8967FF3DA}", // Norway sea chart
         "{8A9C3A53-0512-4401-A6D3-050E08934949}", // Finland sea chart
@@ -178,6 +168,9 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
         "{A60F19C2-D083-4272-8EE8-46D248B6D9F3}", // SHOM Litto3D lidar depth, Saint-Barthelemy 2019
         "{49DBB292-F25F-4FF3-AF2C-D2CFB2D56775}", // SHOM lidar depth, Corsica 2017-2018
         "{935B45A2-1B70-4F02-8C6E-11878F5CADCB}", // SHOM lidar depth, Gulf of Morbihan 2015
+        "{BACDAA84-2A28-48A1-8AD3-DAE910A37367}", // SHOM Litto3D lidar depth, Mayotte 2012
+        "{E57F0098-371E-4477-A23E-A6330FF9075D}", // SHOM Litto3D lidar depth, Reunion 2016
+        "{A24D9447-118F-4C65-B649-84F3DC66D88C}", // SHOM Litto3D lidar depth, Iles Eparses 2012
         "{02109A1A-0782-4E8D-AFC6-E26EFDF7411E}", // SHOM 100 m depth, Guadeloupe and Martinique
         "{F8D0CFB0-4844-4A0D-A87E-3D9FBA78FFB8}", // SHOM 100 m depth, Saint-Martin, Saint-Barthelemy
         "{04C99FA6-041B-4E56-A154-0464F26F3620}", // SHOM 100 m depth, Corsica
@@ -211,7 +204,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
 }
 
 // the regrouped bundled set as the pinned CLI lists it. Seven groups with these counts
-// (Nautical charts 5, Seamarks and traffic 6, Depth 22, Satellite 23,
+// (Nautical charts 5, Seamarks and traffic 6, Depth 25, Satellite 27,
 // Coast and land 7, Weather now 18, Ocean 14 with eight
 // snapshots (NASA sea surface temperature and sea ice, NOAA RTOFS east and west, NOAA OFS, three Copernicus)
 // and the six static SHOM layers, and every snapshot is in Weather now or Ocean (twenty-six); the six static
@@ -242,9 +235,9 @@ TEST(Records, BundledSetGroupsAndSnapshots) {
         }
     }
     const std::map<std::string, int> expected = {
-        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 22}, {"Satellite", 23},
+        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 25}, {"Satellite", 27},
         {"Coast and land", 7},  {"Weather now", 18},         {"Ocean", 14}};
-    EXPECT_EQ(rows, 95);
+    EXPECT_EQ(rows, 102);
     EXPECT_EQ(groups, expected);
     EXPECT_EQ(snapshots, 26);
 }
@@ -291,6 +284,43 @@ TEST(Records, R0014SourcesOfThePinnedRelease) {
     }
 }
 
+// The four German coast orthophotos as the pinned CLI lists them: verdict ok, EPSG 3857, a static base map
+// of the Satellite group, the max zoom, the navigation flag and the licence line of its definition.
+TEST(Records, GermanCoastOrthophotosOfThePinnedRelease) {
+    struct Row {
+        const char* guid;
+        int maxZoom;
+        const char* license;
+    };
+    const Row rows[] = {
+        {"{B7950BF1-42A5-4DBD-9277-317E8173B40E}", 19, "© GeoBasis-DE/LVermGeo SH/CC BY 4.0"},
+        {"{C5486F37-67D7-4306-8412-9261B62EDF71}", 19,
+         "LGLN (2026) Creative Commons Namensnennung – 4.0 International (CC BY 4.0)"},
+        {"{CE3EB174-5386-46B5-932B-B36FA0125CD7}", 20, "Landesamt GeoInformation Bremen — DOP10 2025, CC BY"},
+        {"{82DF084C-7FCB-4451-9AFA-E5D71309D0AD}", 19,
+         "Freie und Hansestadt Hamburg, Landesbetrieb Geoinformation und Vermessung (LGV) — DOP 2026, "
+         "dl-de/by-2-0"},
+    };
+    std::map<std::string, SourceRecord> byGuid;
+    for (const auto& line : fixtureLines("sources-bundled-all.stdout")) {
+        const SourceRecord s = std::get<SourceRecord>(*parseStdoutLine(line));
+        byGuid.emplace(s.guid, s);
+    }
+    for (const Row& r : rows) {
+        const auto it = byGuid.find(r.guid);
+        ASSERT_NE(it, byGuid.end()) << r.guid;
+        const SourceRecord& s = it->second;
+        EXPECT_EQ(s.verdict, "ok") << s.name;
+        EXPECT_EQ(s.epsg, 3857) << s.name;
+        EXPECT_EQ(s.kind, "map") << s.name;
+        EXPECT_EQ(s.group, "Satellite") << s.name;
+        EXPECT_EQ(s.refresh, "static") << s.name;
+        EXPECT_EQ(s.maxZoom, r.maxZoom) << s.name;
+        EXPECT_FALSE(s.navigationWarning) << s.name;
+        EXPECT_EQ(s.license, r.license) << s.name;
+    }
+}
+
 // The three remaining rows as the
 // pinned CLI lists them: verdict ok, EPSG 3857, a static base map of its group (the IGN protected areas: a
 // layer of Coast and land), the max zoom, the navigation flag and the licence line of its definition (byte
@@ -332,6 +362,45 @@ TEST(Records, R0017SourcesOfThePinnedRelease) {
         EXPECT_EQ(s.license, r.license) << s.name;
     }
     EXPECT_EQ(byGuid.count("{1615753E-78C3-4D38-8305-005C4B00CC7D}"), 0u) << "INEGI Mexico, removed";
+}
+
+// The four SHOM Litto3D lidar layers of the Indian Ocean and Morbihan as the pinned CLI lists them: verdict
+// ok, EPSG 3857, a static layer of group Depth, the max zoom, the navigation flag and the licence line of its
+// definition (byte for byte).
+TEST(Records, SHOMLidarLayersOfTheIndianOceanAndMorbihanAsListed) {
+    struct Row {
+        const char* guid;
+        int maxZoom;
+        const char* license;
+    };
+    const Row rows[] = {
+        {"{BACDAA84-2A28-48A1-8AD3-DAE910A37367}", 17,
+         "© Shom / IGN — Litto3D®, Licence Ouverte 2.0. Non certifié pour la navigation"},
+        {"{E57F0098-371E-4477-A23E-A6330FF9075D}", 16,
+         "© Shom / IGN — Litto3D®, Licence Ouverte 2.0. Non certifié pour la navigation"},
+        {"{A24D9447-118F-4C65-B649-84F3DC66D88C}", 17,
+         "© Shom / IGN — Litto3D®, Licence Ouverte 2.0. Non certifié pour la navigation"},
+        {"{935B45A2-1B70-4F02-8C6E-11878F5CADCB}", 17,
+         "© Shom / IGN — Litto3D®, Licence Ouverte 2.0. Non certifié pour la navigation"},
+    };
+    std::map<std::string, SourceRecord> byGuid;
+    for (const auto& line : fixtureLines("sources-bundled-all.stdout")) {
+        const SourceRecord s = std::get<SourceRecord>(*parseStdoutLine(line));
+        byGuid.emplace(s.guid, s);
+    }
+    for (const Row& r : rows) {
+        const auto it = byGuid.find(r.guid);
+        ASSERT_NE(it, byGuid.end()) << r.guid;
+        const SourceRecord& s = it->second;
+        EXPECT_EQ(s.verdict, "ok") << s.name;
+        EXPECT_EQ(s.epsg, 3857) << s.name;
+        EXPECT_EQ(s.kind, "layer") << s.name;
+        EXPECT_EQ(s.group, "Depth") << s.name;
+        EXPECT_EQ(s.refresh, "static") << s.name;
+        EXPECT_EQ(s.maxZoom, r.maxZoom) << s.name;
+        EXPECT_TRUE(s.navigationWarning) << s.name;
+        EXPECT_EQ(s.license, r.license) << s.name;
+    }
 }
 
 // The Hong Kong and Madeira photos and the Saipan habitat layer as the pinned CLI lists them: verdict ok,
@@ -480,7 +549,7 @@ TEST(Records, NorthSeaAndBalticOrthophotosOfThePinnedRelease) {
     }
 }
 
-// the shipped folder holds the 95 bundled definitions; the removed INEGI file is gone. Each definition has
+// the shipped folder holds the 102 bundled definitions; the removed INEGI file is gone. Each definition has
 // its own GUID and cache folder name: a repeated one would make two sources share a menu entry or a tile
 // cache.
 TEST(Records, ShippedSourceFiles) {
@@ -504,7 +573,7 @@ TEST(Records, ShippedSourceFiles) {
         }
         inegi = inegi || name == "Mexico-INEGI-Ortho.source.json";
     }
-    EXPECT_EQ(shipped, 95);
+    EXPECT_EQ(shipped, 102);
     EXPECT_FALSE(inegi);
     EXPECT_EQ(guids.size(), 95u);
     for (const auto& kv : guids)
@@ -1777,6 +1846,11 @@ TEST(Records, ShippedLicenceFieldsAfterTheLicenceCheck) {
               "EMODnet Bathymetry Consortium, CC BY 4.0; includes GEBCO 2019");
     EXPECT_EQ(licence("Depth/EMODnet-Bathymetry-Europe.source.json"),
               "EMODnet Bathymetry Consortium, CC BY 4.0");
+    const char* shomLitto3d = "© Shom / IGN — Litto3D®, Licence Ouverte 2.0. Non certifié pour la navigation";
+    EXPECT_EQ(licence("Depth/SHOM-Lidar-Morbihan.source.json"), shomLitto3d);
+    EXPECT_EQ(licence("Depth/SHOM-Litto3D-Mayotte.source.json"), shomLitto3d);
+    EXPECT_EQ(licence("Depth/SHOM-Litto3D-Reunion.source.json"), shomLitto3d);
+    EXPECT_EQ(licence("Depth/SHOM-Litto3D-Iles-Eparses.source.json"), shomLitto3d);
 }
 
 // field 4 of `snapshot` is the model run. The 2026.11.1 CLI prints 5 fields (captured
