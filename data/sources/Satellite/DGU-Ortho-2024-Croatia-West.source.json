@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{DC68C194-D140-4A88-8EC1-5EC3D459886D}",
+  "name": "DGU orthophoto 2024 (Croatia, Istria to Šibenik)",
+  "group": "Satellite",
+  "url": "https://geoportal.dgu.hr/services/inspire/orthophoto_2024/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=OI.OrthoimageCoverage&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg",
+  "contentType": "image/jpeg",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_DGU_DOF5_2024",
+  "license": "Izvor: Državna geodetska uprava, https://geoportal.dgu.hr — DOF5 2024, last changed 2024-06-06; Otvorena dozvola, https://data.gov.hr/otvorena-dozvola",
+  "maxConnections": 2,
+  "maxZoom": 18
+}

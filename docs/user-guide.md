@@ -121,7 +121,7 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 
 ## Bundled charts
 
-111 sources come with the plugin, in seven groups (the menus under **Chart**).
+113 sources come with the plugin, in seven groups (the menus under **Chart**).
 
 | Group | Source | What it is for | Area |
 |---|---|---|---|
@@ -197,6 +197,8 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 | Satellite | Regione Abruzzo orthophoto 2018-19 (Abruzzo) | 20 cm photo of Giulianova, Pescara, Ortona and Vasto harbours; flown 2018-19; non-commercial use only | Abruzzo |
 | Satellite | ASIG orthophoto 2015 (Albania) | Photo of Sarandë, Ksamil, Vlorë and Durrës; flown 2015, the coast has changed since; white offshore | Albania |
 | Satellite | Regione Siciliana orthophoto 2012-13 (Sicily and islands) | 25 cm photo of Sicily and the Aeolian, Egadi and Pelagie islands and Pantelleria; flown 2012-13, the coast has changed since | Sicily and islands |
+| Satellite | DGU orthophoto 2023 (Croatia, Primošten to Dubrovnik) | Aerial photo of the anchorages and harbours from Primošten to Dubrovnik, Hvar and Vis included; a GEOPORTAL logo in every tile; the sea is white beyond a few hundred metres | Croatia: Primošten to Dubrovnik |
+| Satellite | DGU orthophoto 2024 (Croatia, Istria to Šibenik) | Aerial photo of the anchorages and harbours from Istria to Šibenik, Kvarner and the Kornati included; a GEOPORTAL logo in every tile; the sea is white beyond a few hundred metres | Croatia: Istria to Šibenik |
 | Coast and land | OpenTopoMap | Land relief along the shore: what gives shelter, where squalls come down; light use at the server's request | Worldwide |
 | Coast and land | IDEIB Posidonia and protected seabed (Balearics) | Posidonia meadows and the Decree 25/2018 zones where anchoring is regulated; informative | Balearics |
 | Coast and land | EMODnet seagrass and Caribbean seabed | Seagrass meadows to avoid when anchoring; a hint, not a no-anchor line | European seas, Caribbean |
@@ -236,8 +238,6 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 | Ocean | Copernicus currents with tide (global) | Model currents including tides for passage planning; forecast, not measured | Worldwide |
 | Ocean | Copernicus currents (North-West European shelf) | Tidal currents of the Channel, North Sea and Irish Sea at 1.5 km; forecast | North-West European shelf |
 | Ocean | Copernicus significant wave height (global) | Significant wave height forecast for passage planning | Worldwide |
-
-Croatia DGU orthophoto is planned, added on request.
 
 CHS NONNA-10: downloading accepts the CHS NONNA Licence; a chart file you make from it and pass on must carry the notice of its clause 7 with your name.
 
@@ -294,7 +294,7 @@ NOAA NCCOS seabed habitat map (Saipan) colours: pale yellow bare sand, olive san
 
 ## Your own sources
 
-- The 111 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
+- The 113 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
 - Add your own `.zmp` source folders to `Charts/Chart sources` in your home folder (Settings, **Chart sources**, **Open folder** creates it), or pick another folder with **Change...**. They are read after the bundled ones.
 - Sources that need a key are not bundled: put the source folder there and enter your key where its file says `KEY`.
 
