@@ -575,7 +575,7 @@ TEST(Records, ShippedSourceFiles) {
     }
     EXPECT_EQ(shipped, 102);
     EXPECT_FALSE(inegi);
-    EXPECT_EQ(guids.size(), 95u);
+    EXPECT_EQ(guids.size(), 102u);
     for (const auto& kv : guids)
         EXPECT_EQ(kv.second, 1) << "GUID " << kv.first;
     for (const auto& kv : caches)
