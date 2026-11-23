@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{7FD25993-764A-4180-9A2B-B7DA68958C69}",
+  "name": "Digitaal Vlaanderen orthophoto 2025 (Belgian coast, Flanders)",
+  "group": "Satellite",
+  "url": "https://geo.api.vlaanderen.be/OMW/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=omwrgb25vl&STYLE=&FORMAT=image/png&TILEMATRIXSET=GoogleMapsVL&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+  "contentType": "image/png",
+  "ext": ".png",
+  "nameInCache": "Satellite_Digitaal_Vlaanderen_Ortho_2025",
+  "license": "Bron: Luchtopnamen Digitaal Vlaanderen — Orthofotomozaïek winteropnamen 2025, Modellicentie Gratis Hergebruik v1.0",
+  "maxConnections": 2,
+  "maxZoom": 19
+}
