@@ -45,8 +45,10 @@ There are two ways to install: from OpenCPN's Beta catalog, or by importing the 
 
 ### Install from the OpenCPN Beta catalog
 
-Chart Grabber is in OpenCPN's **Beta** plugin catalog for every system in the [table below](#install-by-import) except Arch and CachyOS.
+Chart Grabber is in OpenCPN's **Beta** plugin catalog for every system in the [table below](#install-by-import).
 Installing from the catalog means the Plugin Manager offers later versions as **Update**.
+
+**Note:** If you use OpenCPN from Debian trixie-backports, it reports itself as Debian 13. OpenCPN refuses Import of the Debian 13 file. Install Chart Grabber from the catalog instead.
 
 OpenCPN shows the master catalog by default; choosing another one is an expert setting you switch on in OpenCPN's config file:
 
@@ -70,7 +72,7 @@ If you installed Chart Grabber with **Import plugin...**, OpenCPN 5.10.2 shows n
 
 ### Install by Import
 
-Use this route on Arch and CachyOS, which are not in the catalog, or if you prefer a file you downloaded yourself.
+Use this route if you prefer a file you downloaded yourself.
 
 1. **Pick the tarball** for your system (full notes: the release's COMPAT.md):
 
@@ -81,7 +83,6 @@ Use this route on Arch and CachyOS, which are not in the catalog, or if you pref
    | Debian 12, Ubuntu 24.04, Mint 22 (x86-64) | `debian-x86_64-12-x86_64.tar.gz` |
    | Debian 12 arm64, Raspberry Pi OS bookworm 64-bit, Ubuntu 24.04 arm64 | `debian-arm64-12-arm64.tar.gz` |
    | Ubuntu 26.04 x86-64 / arm64 | `ubuntu-x86_64-26.04-x86_64.tar.gz` / `ubuntu-arm64-26.04-arm64.tar.gz` |
-   | Arch / CachyOS | `arch-x86_64-rolling-x86_64.tar.gz` / `cachyos-x86_64-rolling-x86_64.tar.gz` |
    | Windows 10 and newer | `windows-x86.tar.gz` |
    | macOS 12 or newer (Apple and Intel) | `macos-universal.tar.gz` |
    | Debian 12 / Debian 13, 32-bit ARM (armhf) | `debian-armhf-12-armhf.tar.gz` / `debian-armhf-13-armhf.tar.gz` |
@@ -348,7 +349,7 @@ OpenCPN, Options, Plugins, Chart Grabber, **Preferences**.
 | "Area too large for this detail" | Choose a smaller area or less detail. |
 | No Chart Grabber button on the toolbar | OpenCPN 5.10.2 adds it only at startup or on Options **OK**: press OK or restart OpenCPN. Meanwhile right-click the chart: **Chart Grabber: new chart of this view...**. |
 | "OpenCPN from Flathub can only keep charts inside your home folder" | Flatpak OpenCPN cannot write outside your home folder: choose a chart folder inside it under Settings, Advanced, **Save charts in**. |
-| Import plugin refuses the tarball | Check the [system table](#install) and that you have OpenCPN 5.10.2 or newer. |
+| Import plugin refuses the tarball | Check the [system table](#install) and that you have OpenCPN 5.10.2 or newer. With OpenCPN from Debian trixie-backports, OpenCPN always refuses Import of the Debian 13 file: install from the [Beta catalog](#install-from-the-opencpn-beta-catalog). A refused Import also removes an installed Chart Grabber (OpenCPN uninstalls it by name), so install it again from the catalog. |
 | macOS asks "OpenCPN was prevented from modifying apps" or for local network access | Deny or ignore it: in our macOS test (OpenCPN 5.12.4) nothing broke. The local network prompt appears when OpenCPN is started from a terminal app. |
 | "The list of favourite chart sources is missing or damaged" | The first entries of **Chart** and the order of **Weather on top** come from the file `favourite-sources.conf` in the plugin's data folder; the warning shows its full path and the reason. Until it is repaired, Chart Grabber uses the lines it can read, your last source and **More sources...**; downloading works. To repair it with internet (a phone will do): click **Download a fresh copy** under the warning (it opens the file of your plugin version), download the file, save it over the old one under the same name, then press **Reload** in **More sources...**. Without internet: import the plugin tarball of your version again from your saved copy (Options, Plugins, **Import plugin...**, see [Install by Import](#install-by-import)); this puts back every file of the plugin. |
 

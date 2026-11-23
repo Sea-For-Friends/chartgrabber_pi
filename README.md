@@ -49,6 +49,8 @@ The Linux file needs the graphics libraries `libopengl0`, `libglx0` and `libegl1
 
 Chart Grabber is in OpenCPN's **Beta** plugin catalog for every system above except Arch and CachyOS; the [user guide](docs/user-guide.md#install-from-the-opencpn-beta-catalog) shows how to switch to it. Installed from the catalog, the plugin is offered as **Update** in the Plugin Manager when a new version comes out. On Arch and CachyOS use **Import plugin...** as above.
 
+With OpenCPN from Debian trixie-backports, OpenCPN refuses Import of the Debian 13 file, and a refused Import also removes an installed Chart Grabber. Install from the catalog instead.
+
 ### Updating from 2026.10.4 or older
 
 Import the new plugin file over the old one. The plugin then uses its own CLI; the Chart Grabber CLI you installed separately is no longer needed (keep it if you use it in scripts).
