@@ -13,9 +13,15 @@
 #include "wx_util.h"
 
 #include <wx/dialog.h>
+#include <wx/evtloop.h>
 #include <wx/filename.h>
 #include <wx/intl.h>
 #include <wx/log.h>
+#include <wx/toplevel.h>
+// clang-format off
+#include <wx/progdlg.h> // first: generic/progdlgg.h needs its style flags
+#include <wx/generic/progdlgg.h>
+// clang-format on
 
 #include <algorithm>
 #include <chrono>
@@ -69,14 +75,43 @@ bool& staleDropAllowed() {
     return allowed;
 }
 
+namespace {
+enum class HostHold { None, Options, Busy };
+
+// Why OpenCPN cannot take a chart-list call now (GUI thread). Options: its Options dialog is shown.
+// Busy: the active event loop is inside a yield (OpenCPN 5.14+ closes MBTiles charts inside wxYield, and
+// wx runs timers there), or a progress dialog is shown (OpenCPN's chart update, texture or ENC build; it
+// yields on every Update), or the plugin's own call runs.
+HostHold hostHold(bool ownCallRunning) {
+    wxDialog* d = GetActiveOptionsDialog(); // OpenCPN keeps the dialog object while it is hidden
+    if (d && d->IsShown())
+        return HostHold::Options;
+    if (ownCallRunning)
+        return HostHold::Busy;
+    const wxEventLoopBase* loop = wxEventLoopBase::GetActive();
+    if (loop && loop->IsYielding())
+        return HostHold::Busy;
+    for (wxWindow* w : wxTopLevelWindows) { // wxGenericProgressDialog has no wx class info: C++ cast
+        if (dynamic_cast<wxGenericProgressDialog*>(w) && w->IsShown())
+            return HostHold::Busy;
+    }
+    return HostHold::None;
+}
+} // namespace
+
 // Plain removal; what OpenCPN still holds (Windows) is dropped from its chart list first when the
 // host is OpenCPN 5.x, x < 14 (5.14+ hangs that call). Returns the paths that remain.
 std::vector<std::string> JobController::dropStale(std::vector<std::string> stale) {
     stale = removeStaleFiles(stale);
     if (stale.empty() || !staleDropAllowed())
         return stale;
+    if (hostHold(calling_) != HostHold::None) { // retried by the stale tick once OpenCPN is idle
+        dropHeld_ = true;
+        return stale;
+    }
     const wxArrayString dirs = GetChartDBDirArrayString();
     std::vector<std::string> left;
+    calling_ = true;
     for (const std::string& p : stale) {
         std::vector<std::string> candidates; // the path as OpenCPN lists it, then the record's own
         for (const wxString& d : dirs) {
@@ -99,6 +134,7 @@ std::vector<std::string> JobController::dropStale(std::vector<std::string> stale
         if (!gone)
             left.push_back(p);
     }
+    calling_ = false;
     return left;
 }
 
@@ -123,13 +159,6 @@ void JobController::cleanupStaleAtStart() {
         staleTimer_.StartOnce(120000);
 }
 
-namespace {
-bool optionsShown() {
-    wxDialog* d = GetActiveOptionsDialog(); // OpenCPN keeps the dialog object while it is hidden
-    return d && d->IsShown();
-}
-} // namespace
-
 void JobController::requestRescan(const std::vector<std::string>& extraDirs) {
     for (const std::string& dir : extraDirs) {
         if (config_.addOpenCpnChartDir(dir))
@@ -141,7 +170,8 @@ void JobController::requestRescan(const std::vector<std::string>& extraDirs) {
     }
     rescanned_ = true;
     const bool wasPending = throttle_.pending();
-    const bool options = optionsShown();
+    const HostHold hold = hostHold(calling_);
+    const bool options = hold != HostHold::None;
     if (throttle_.request(rescanClockMs()(), !staleDropAllowed(), options) ==
         cg::RescanThrottle::Decision::CallNow) {
         doRescan();
@@ -149,7 +179,8 @@ void JobController::requestRescan(const std::vector<std::string>& extraDirs) {
     }
     if (options) {
         if (!holdLogged_)
-            cg::logLine("chart list update held (Options open)");
+            cg::logLine(hold == HostHold::Options ? "chart list update held (Options open)"
+                                                  : "chart list update held (OpenCPN busy)");
         holdLogged_ = true;
     } else if (wasPending) {
         cg::logLine("chart list update merged");
@@ -162,7 +193,7 @@ void JobController::onRescanTimer(wxTimerEvent&) {
     if (closing_)
         return;
     const std::int64_t now = rescanClockMs()();
-    const bool options = optionsShown();
+    const bool options = hostHold(calling_) != HostHold::None;
     if (throttle_.due(now, !staleDropAllowed(), options) == cg::RescanThrottle::Decision::CallNow) {
         doRescan();
         return;
@@ -186,18 +217,21 @@ void JobController::doRescan() {
             dirs.Add(cg::fromUtf8(dir));
     }
     rescanDirs_.clear();
+    throttle_.called(rescanClockMs()()); // before the call: a request made during it stays pending
+    calling_ = true;
     cg::guarded("chart list update", [&] {
         UpdateChartDBInplace(dirs, false, false);
         if (onChartListUpdated)
             onChartListUpdated();
         cg::logLine(wxString::Format("chart list updated (%d folders)", static_cast<int>(dirs.GetCount())));
     });
-    throttle_.called(rescanClockMs()());
+    calling_ = false;
 }
 
 void JobController::onStaleTimer(wxTimerEvent&) {
     if (closing_)
         return;
+    dropHeld_ = false;
     bool freed =
         rescanLeft_; // this tick removed a file: OpenCPN's list must be rescanned even after a job rescan
     for (cg::ChartRecord r : config_.loadCharts()) {
@@ -210,6 +244,8 @@ void JobController::onStaleTimer(wxTimerEvent&) {
         r.stale = std::move(left);
         config_.saveChart(r);
     }
+    if (dropHeld_)
+        staleTimer_.StartOnce(cg::RescanThrottle::kOptionsPollMs);
     if (!freed && (!staleRemoved_ || rescanned_))
         return;
     rescanLeft_ = false;

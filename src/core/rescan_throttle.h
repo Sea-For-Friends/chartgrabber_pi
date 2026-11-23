@@ -16,22 +16,22 @@ public:
     static constexpr std::int64_t kOptionsPollMs = 2000; // re-check while the Options dialog is shown
     enum class Decision { CallNow, Wait };
 
-    // A request at nowMs. asyncDb: OpenCPN 5.14+ or not known yet; optionsShown: the Options dialog is shown.
-    // Without asyncDb (5.10, 5.12: the call is synchronous) and with no dialog: always CallNow.
-    // Pending requests are one call.
-    Decision request(std::int64_t nowMs, bool asyncDb, bool optionsShown);
-    // The wait timer fired: CallNow when a request is pending and the gap and the dialog allow it, else Wait.
-    Decision due(std::int64_t nowMs, bool asyncDb, bool optionsShown);
+    // A request at nowMs. asyncDb: OpenCPN 5.14+ or not known yet; hold: the host cannot take a call now
+    // (Options shown or busy). Without asyncDb (5.10, 5.12: the call is synchronous) and with no dialog:
+    // always CallNow. Pending requests are one call.
+    Decision request(std::int64_t nowMs, bool asyncDb, bool hold);
+    // The wait timer fired: CallNow when a request is pending and the gap and the host allow it, else Wait.
+    Decision due(std::int64_t nowMs, bool asyncDb, bool hold);
     void called(std::int64_t nowMs); // the caller made the call: pending cleared, the gap starts
     bool pending() const { return pending_; }
     // Milliseconds to arm the one-shot timer while the answer is Wait; 0 when nothing is pending or a call is
     // allowed.
-    std::int64_t waitMs(std::int64_t nowMs, bool optionsShown) const;
+    std::int64_t waitMs(std::int64_t nowMs, bool hold) const;
 
 private:
     bool gapOver(std::int64_t nowMs) const; // a clock step backwards counts as over
     void seeDialog(std::int64_t nowMs,
-                   bool optionsShown); // after a hold the gap starts at the first hidden look
+                   bool hold); // after a hold the gap starts at the first hidden look
     std::optional<std::int64_t> last_;
     bool pending_ = false;
     bool held_ = false; // the dialog was seen shown while a request waited

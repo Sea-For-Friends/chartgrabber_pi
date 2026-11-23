@@ -126,6 +126,8 @@ private:
     cg::RescanThrottle throttle_;
     std::vector<std::string> rescanDirs_; // folders of written files for the next update
     bool holdLogged_ = false;             // "held" is logged once per hold
+    bool calling_ = false;                // the plugin's own chart-list call runs (timers may fire inside it)
+    bool dropHeld_ = false;               // a stale drop of this tick waited for OpenCPN to be idle
     bool rescanLeft_ = false;             // an update was left at the last shutdown: the stale tick makes it
     bool staleRemoved_ = false;           // a stale file was removed at start or by the timer
     bool rescanned_ = false;              // a job rescan ran (the start-up rescan is then skipped)
