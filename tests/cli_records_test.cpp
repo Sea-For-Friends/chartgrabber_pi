@@ -147,7 +147,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
         return out;
     };
     const auto all = flags("sources-bundled-all.stdout");
-    ASSERT_EQ(all.size(), 113u);
+    ASSERT_EQ(all.size(), 116u);
     const std::set<std::string> flagged = {
         "{25DBA489-D484-4A13-B65D-ABA8967FF3DA}", // Norway sea chart
         "{8A9C3A53-0512-4401-A6D3-050E08934949}", // Finland sea chart
@@ -207,7 +207,7 @@ TEST(Records, NavigationWarningOfThePinnedReleaseSources) {
 }
 
 // the regrouped bundled set as the pinned CLI lists it. Seven groups with these counts
-// (Nautical charts 5, Seamarks and traffic 6, Depth 28, Satellite 35,
+// (Nautical charts 5, Seamarks and traffic 6, Depth 28, Satellite 38,
 // Coast and land 7, Weather now 18, Ocean 14 with eight
 // snapshots (NASA sea surface temperature and sea ice, NOAA RTOFS east and west, NOAA OFS, three Copernicus)
 // and the six static SHOM layers, and every snapshot is in Weather now or Ocean (twenty-six); the six static
@@ -238,9 +238,9 @@ TEST(Records, BundledSetGroupsAndSnapshots) {
         }
     }
     const std::map<std::string, int> expected = {
-        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 28}, {"Satellite", 35},
+        {"Nautical charts", 5}, {"Seamarks and traffic", 6}, {"Depth", 28}, {"Satellite", 38},
         {"Coast and land", 7},  {"Weather now", 18},         {"Ocean", 14}};
-    EXPECT_EQ(rows, 113);
+    EXPECT_EQ(rows, 116);
     EXPECT_EQ(groups, expected);
     EXPECT_EQ(snapshots, 26);
 }
@@ -524,13 +524,14 @@ TEST(Records, MediterraneanAtlanticOrthophotosOfThePinnedRelease) {
         {"{C29D7414-801D-40C9-8909-77B3A2CCAA84}",
          "Regione Emilia-Romagna orthophoto 2022-23 (Ferrara coast)",
          "Regione Emilia-Romagna — Ortofoto RER 2022, CC BY 4.0"},
-        {"{1378C96F-6D91-45F6-9A5F-6267C32CBE8E}", "Regione Abruzzo orthophoto 2018-19 (Abruzzo)",
-         "Regione Abruzzo — Ortofoto 2018–2019, CC BY-NC 3.0"},
+        {"{43CF8BAE-98F3-48C6-BBF9-F3DD428559A0}", "AGEA orthophoto 2022 (Abruzzo)",
+         "AGEA – Ortofoto 2022 (via Regione Abruzzo), CC BY 4.0; "
+         "https://creativecommons.org/licenses/by/4.0/"},
         {"{B4088F26-9BD5-42DE-8F12-271097547A77}", "ASIG orthophoto 2015 (Albania)",
          "ASIG — Ortofoto 2015, CC BY 4.0"},
-        {"{837FADA3-FFA3-4C60-B272-97A8D4E55AC0}",
-         "Regione Siciliana orthophoto 2012-13 (Sicily and islands)",
-         "Regione Siciliana — S.I.T.R., Ortofoto ATA 2012–2013, CC BY 4.0"},
+        {"{B938AE47-231A-45FC-B077-7CA7B1B95B0E}", "AGEA orthophoto 2022 (Sicily and islands)",
+         "AGEA – Ortofoto 2022 (via Regione Siciliana S.I.T.R.), CC BY 4.0; "
+         "https://creativecommons.org/licenses/by/4.0/"},
     };
     std::map<std::string, SourceRecord> byGuid;
     for (const auto& line : fixtureLines("sources-bundled-all.stdout")) {
@@ -550,6 +551,59 @@ TEST(Records, MediterraneanAtlanticOrthophotosOfThePinnedRelease) {
         EXPECT_EQ(s.maxZoom, 19) << s.name;
         EXPECT_FALSE(s.navigationWarning) << s.name;
         EXPECT_EQ(s.license, r.license) << s.name;
+    }
+}
+
+// The five Italian AGEA orthophotos as the pinned CLI lists them: verdict ok, EPSG 3857, a static base map
+// of Satellite, the max zoom of each definition, no navigation flag, the licence line byte for byte with its
+// CC BY link. The Sicily 2012-13 and Abruzzo 2018-19 rows they replace are gone.
+TEST(Records, ItalianAgeaOrthophotosOfThePinnedRelease) {
+    struct Row {
+        const char* guid;
+        const char* name;
+        int maxZoom;
+        const char* license;
+    };
+    const Row rows[] = {
+        {"{4FADA575-C44D-4F86-B572-E83812CB4E17}", "AGEA orthophoto 2022 (Liguria)", 19,
+         "AGEA – Ortofoto 2022 (via Regione Liguria), CC BY 4.0; "
+         "https://creativecommons.org/licenses/by/4.0/"},
+        {"{B938AE47-231A-45FC-B077-7CA7B1B95B0E}", "AGEA orthophoto 2022 (Sicily and islands)", 19,
+         "AGEA – Ortofoto 2022 (via Regione Siciliana S.I.T.R.), CC BY 4.0; "
+         "https://creativecommons.org/licenses/by/4.0/"},
+        {"{2B1C68F5-26E5-498B-AD10-673CF7D86F80}",
+         "Regione Sardegna coastal orthophoto 2022 (Sardinia coast strip)", 20,
+         "Regione Autonoma della Sardegna – Ortofoto costa 2022, CC BY 4.0; "
+         "https://creativecommons.org/licenses/by/4.0/"},
+        {"{09268A85-9297-4249-B9B0-797DE47D6B01}", "AGEA orthophoto 2022 (Puglia and Tremiti)", 19,
+         "AGEA – Ortofoto 2022 (via Regione Puglia SIT), CC BY 4.0; "
+         "https://creativecommons.org/licenses/by/4.0/"},
+        {"{43CF8BAE-98F3-48C6-BBF9-F3DD428559A0}", "AGEA orthophoto 2022 (Abruzzo)", 19,
+         "AGEA – Ortofoto 2022 (via Regione Abruzzo), CC BY 4.0; "
+         "https://creativecommons.org/licenses/by/4.0/"},
+    };
+    std::map<std::string, SourceRecord> byGuid;
+    for (const auto& line : fixtureLines("sources-bundled-all.stdout")) {
+        const SourceRecord s = std::get<SourceRecord>(*parseStdoutLine(line));
+        byGuid.emplace(s.guid, s);
+    }
+    for (const Row& r : rows) {
+        const auto it = byGuid.find(r.guid);
+        ASSERT_NE(it, byGuid.end()) << r.guid;
+        const SourceRecord& s = it->second;
+        EXPECT_EQ(s.name, r.name);
+        EXPECT_EQ(s.verdict, "ok") << s.name;
+        EXPECT_EQ(s.epsg, 3857) << s.name;
+        EXPECT_EQ(s.kind, "map") << s.name;
+        EXPECT_EQ(s.group, "Satellite") << s.name;
+        EXPECT_EQ(s.refresh, "static") << s.name;
+        EXPECT_EQ(s.maxZoom, r.maxZoom) << s.name;
+        EXPECT_FALSE(s.navigationWarning) << s.name;
+        EXPECT_EQ(s.license, r.license) << s.name;
+    }
+    for (const auto& kv : byGuid) {
+        EXPECT_NE(kv.second.zmpFile, "Satellite/SITR-Sicily-Ortho-2012-13.source.json");
+        EXPECT_NE(kv.second.zmpFile, "Satellite/Abruzzo-Ortho-2018-19.source.json");
     }
 }
 
@@ -598,7 +652,7 @@ TEST(Records, NorthSeaAndBalticOrthophotosOfThePinnedRelease) {
     }
 }
 
-// the shipped folder holds the 113 bundled definitions; the removed INEGI file is gone. Each definition has
+// the shipped folder holds the 116 bundled definitions; the removed INEGI file is gone. Each definition has
 // its own GUID and cache folder name: a repeated one would make two sources share a menu entry or a tile
 // cache.
 TEST(Records, ShippedSourceFiles) {
@@ -622,9 +676,9 @@ TEST(Records, ShippedSourceFiles) {
         }
         inegi = inegi || name == "Mexico-INEGI-Ortho.source.json";
     }
-    EXPECT_EQ(shipped, 113);
+    EXPECT_EQ(shipped, 116);
     EXPECT_FALSE(inegi);
-    EXPECT_EQ(guids.size(), 113u);
+    EXPECT_EQ(guids.size(), 116u);
     for (const auto& kv : guids)
         EXPECT_EQ(kv.second, 1) << "GUID " << kv.first;
     for (const auto& kv : caches)

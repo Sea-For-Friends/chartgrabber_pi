@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "guid": "{B938AE47-231A-45FC-B077-7CA7B1B95B0E}",
+  "name": "AGEA orthophoto 2022 (Sicily and islands)",
+  "group": "Satellite",
+  "url": "https://map.sitr.regione.sicilia.it/gis/rest/services/ortofoto/ortofoto_2022_20cm_sicilia/ImageServer/tile/{z}/{y}/{x}",
+  "contentType": "image/jpeg,image/png",
+  "ext": ".jpg",
+  "nameInCache": "Satellite_AGEA_Ortofoto_2022_Sicily",
+  "license": "AGEA – Ortofoto 2022 (via Regione Siciliana S.I.T.R.), CC BY 4.0; https://creativecommons.org/licenses/by/4.0/",
+  "maxConnections": 2,
+  "maxZoom": 19
+}

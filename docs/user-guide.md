@@ -121,7 +121,7 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 
 ## Bundled charts
 
-113 sources come with the plugin, in seven groups (the menus under **Chart**).
+116 sources come with the plugin, in seven groups (the menus under **Chart**).
 
 | Group | Source | What it is for | Area |
 |---|---|---|---|
@@ -194,11 +194,14 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 | Satellite | DGT OrtoSat satellite photo 2023 (mainland Portugal) | 30 cm satellite photo of the whole mainland coast: Ria Formosa, the Algarve, Lisbon and the west-coast harbours; 2023 | Mainland Portugal |
 | Satellite | Regione Emilia-Romagna orthophoto 2023-24 (Rimini coast) | Sharp 20 cm photo of the Rimini coast and harbour; flown 2023-24; partial coverage, black where not flown | Emilia-Romagna (part) |
 | Satellite | Regione Emilia-Romagna orthophoto 2022-23 (Ferrara coast) | Sharp 20 cm photo of the Ferrara coast and Porto Garibaldi; flown January 2023; black where not flown | Ferrara coast |
-| Satellite | Regione Abruzzo orthophoto 2018-19 (Abruzzo) | 20 cm photo of Giulianova, Pescara, Ortona and Vasto harbours; flown 2018-19; non-commercial use only | Abruzzo |
+| Satellite | AGEA orthophoto 2022 (Abruzzo) | 20 cm photo of the Abruzzo coast, Giulianova, Pescara, Ortona and Vasto harbours included; flown 2022; the sea beyond the coast is white | Abruzzo |
 | Satellite | ASIG orthophoto 2015 (Albania) | Photo of Sarandë, Ksamil, Vlorë and Durrës; flown 2015, the coast has changed since; white offshore | Albania |
-| Satellite | Regione Siciliana orthophoto 2012-13 (Sicily and islands) | 25 cm photo of Sicily and the Aeolian, Egadi and Pelagie islands and Pantelleria; flown 2012-13, the coast has changed since | Sicily and islands |
+| Satellite | AGEA orthophoto 2022 (Sicily and islands) | 20 cm photo of Sicily and the Aeolian, Egadi, Pelagie and Ustica islands and Pantelleria; flown 2022 | Sicily and islands |
 | Satellite | DGU orthophoto 2023 (Croatia, Primošten to Dubrovnik) | Aerial photo of the anchorages and harbours from Primošten to Dubrovnik, Hvar and Vis included; a GEOPORTAL logo in every tile; the sea is white beyond a few hundred metres | Croatia: Primošten to Dubrovnik |
 | Satellite | DGU orthophoto 2024 (Croatia, Istria to Šibenik) | Aerial photo of the anchorages and harbours from Istria to Šibenik, Kvarner and the Kornati included; a GEOPORTAL logo in every tile; the sea is white beyond a few hundred metres | Croatia: Istria to Šibenik |
+| Satellite | AGEA orthophoto 2022 (Liguria) | 20 cm photo of the whole Liguria coast, Portofino, the Cinque Terre and Palmaria included; flown 2022; the sea beyond the mosaic is white | Liguria |
+| Satellite | Regione Sardegna coastal orthophoto 2022 (Sardinia coast strip) | Sharp 8 cm photo of the whole Sardinian shore: the beach and about 200 m of sea only, white beyond; flown 2022 | Sardinia coast |
+| Satellite | AGEA orthophoto 2022 (Puglia and Tremiti) | 20 cm photo of the Puglia coast from the Gargano to Leuca and the Tremiti islands; flown 2022; the sea beyond the mosaic is black | Puglia and Tremiti |
 | Coast and land | OpenTopoMap | Land relief along the shore: what gives shelter, where squalls come down; light use at the server's request | Worldwide |
 | Coast and land | IDEIB Posidonia and protected seabed (Balearics) | Posidonia meadows and the Decree 25/2018 zones where anchoring is regulated; informative | Balearics |
 | Coast and land | EMODnet seagrass and Caribbean seabed | Seagrass meadows to avoid when anchoring; a hint, not a no-anchor line | European seas, Caribbean |
@@ -294,7 +297,7 @@ NOAA NCCOS seabed habitat map (Saipan) colours: pale yellow bare sand, olive san
 
 ## Your own sources
 
-- The 113 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
+- The 116 sources that come with the plugin are listed under [Bundled charts](#bundled-charts).
 - Add your own `.zmp` source folders to `Charts/Chart sources` in your home folder (Settings, **Chart sources**, **Open folder** creates it), or pick another folder with **Change...**. They are read after the bundled ones.
 - Sources that need a key are not bundled: put the source folder there and enter your key where its file says `KEY`.
 
