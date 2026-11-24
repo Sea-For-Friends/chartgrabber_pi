@@ -149,7 +149,14 @@ bool CliRunner::start(const std::vector<std::string>& argv, Callbacks cb, std::s
         text.push_back(cg::fromUtf8(a));
     }
     text.push_back("--stop-on-stdin"); // last; the caller's argv stays without it
-    auto* process = new wxProcess(this);
+    // Built by the wx factory so the object's vtable lives in the wx library: wx calls OnTerminate on it
+    // after an abandoned run, possibly when this module is already unloaded (a local vtable copy would dangle
+    // on Windows).
+    auto* process = wxDynamicCast(wxCreateDynamicObject("wxProcess"), wxProcess);
+    if (!process) {
+        return fail(wxString::Format(_("Cannot start %s."), cg::fromUtf8(argv[0])));
+    }
+    process->SetNextHandler(this); // the end event goes to onEnd; Detach() cuts it
     process->Redirect();
     long pid;
     starting_ = true;
