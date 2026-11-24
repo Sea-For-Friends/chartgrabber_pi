@@ -2,7 +2,7 @@
 
 Versions are calendar-based: `YYYY.MM.N` (year and month of the release, N = release count within that month, from 0).
 
-## 2026.11.5
+## 2026.11.6
 
 - 116 chart sources are bundled, 30 more. New orthophotos cover the German coast (Hamburg, Bremen, Lower Saxony, Schleswig-Holstein), Belgium (Flanders) and Sweden (Gothenburg). They also cover Finland (Helsinki, Turku), Estonia, Albania, Croatia, Portugal and the Dutch Caribbean (Bonaire, Saba, Sint Eustatius). In Italy they cover Emilia-Romagna, and the AGEA 2022 orthophotos cover Abruzzo, Liguria, Puglia, Sicily and Sardinia. New SHOM lidar depths cover the Gulf of Morbihan, Mayotte, Réunion and the Îles Éparses. New seabed type charts cover European seas (EMODnet), Ireland (GSI) and Norway (NGU). The AGEA 2022 orthophotos replace the Sicily 2012-13 and Abruzzo 2018-19 orthophotos.
 - Better stability on OpenCPN 5.14 and 5.15. The plugin works around two OpenCPN problems. It does not cure them. After a chart list update, the ship position and timers of OpenCPN could freeze (OpenCPN issue https://github.com/OpenCPN/OpenCPN/issues/5518, proposed fix https://github.com/OpenCPN/OpenCPN/pull/5519, both still open). If no position fix arrives after such an update, the plugin now starts the timers again. Each chart list update makes OpenCPN read all charts again (https://github.com/OpenCPN/OpenCPN/issues/4261, still open). The plugin now sends at most one update in 30 s. It holds the update while Options is open.
@@ -15,6 +15,8 @@ Versions are calendar-based: `YYYY.MM.N` (year and month of the release, N = rel
 - The user guide has new screenshots and a route example over open water.
 - Chart Grabber CLI 2026.11.3 is bundled and recommended (unchanged).
 - Updating from 2026.11.3: Import the new file over the old one.
+
+2026.11.4 and 2026.11.5 were not released; their changes are in 2026.11.6.
 
 ## 2026.11.3
 
