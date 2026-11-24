@@ -18,6 +18,7 @@
 namespace cg {
 namespace {
 
+#ifndef __WXMSW__
 // The owner of every running xdg-open: wx sends the end of a process to its parent handler, which owns the
 // process then. Destroyed in shutdownOpenFolder, so no plugin code is called after the library is unloaded.
 class OpenHandler : public wxEvtHandler {
@@ -65,10 +66,16 @@ private:
 };
 
 std::unique_ptr<OpenHandler> g_handler;
+#endif // Flatpak exists on Linux only; Windows builds no wxProcess here
 
 } // namespace
 
 void openFolderInFileManager(const wxString& folder, std::function<void(const wxString&)> onFailed) {
+#ifdef __WXMSW__
+    (void)onFailed;
+    if (!wxLaunchDefaultApplication(folder))
+        logLine(wxString::Format("cannot open %s", folder));
+#else
     if (!sandboxProbe()().flatpak) {
         if (!wxLaunchDefaultApplication(folder))
             logLine(wxString::Format("cannot open %s", folder));
@@ -94,12 +101,15 @@ void openFolderInFileManager(const wxString& folder, std::function<void(const wx
         logWarning(wxString::Format("cannot start xdg-open for %s", folder));
         onFailed(folder);
     }
+#endif
 }
 
 void shutdownOpenFolder() {
+#ifndef __WXMSW__
     if (g_handler)
         g_handler->detachAll();
     g_handler.reset(); // its queued CallAfter events die with it
+#endif
 }
 
 wxString cannotOpenFolderText(const wxString& folder) {
