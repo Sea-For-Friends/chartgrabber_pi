@@ -76,7 +76,7 @@ Use this route if you prefer a file you downloaded yourself.
 
 1. **Pick the tarball** for your system (full notes: the release's COMPAT.md):
 
-   | System | `chartgrabber_pi-2026.11.5-` ... |
+   | System | `chartgrabber_pi-2026.11.6-` ... |
    |---|---|
    | Debian 13 x86-64 | `debian-x86_64-13-x86_64.tar.gz` |
    | Debian 13 arm64, Raspberry Pi OS trixie 64-bit | `debian-arm64-13-arm64.tar.gz` |
