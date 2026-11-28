@@ -41,32 +41,27 @@ You need OpenCPN 5.10.2 or newer. The Chart Grabber CLI 2026.11.3 is inside the 
 - Ubuntu 24.04: its own OpenCPN (5.8.4) is too old; install OpenCPN from the OpenCPN PPA (`ppa:opencpn/opencpn`).
 - Linux: the plugin needs the graphics libraries `libopengl0`, `libglx0` and `libegl1`. OpenCPN's own package on Debian 12, Debian 13 and Ubuntu 24.04 installs them; a hand-built OpenCPN may not (on CachyOS they come with `libglvnd`).
 
-There are two ways to install: from OpenCPN's Beta catalog, or by importing the plugin file. With either, OpenCPN 5.10.2 (the Debian 12 and 13 packages) may show no Chart Grabber toolbar button until you press **OK** to close Options or restart OpenCPN; until then, right-click the chart and choose **Chart Grabber: new chart of this view...**.
+There are two ways to install: from OpenCPN's plugin catalog, or by importing the plugin file. With either, OpenCPN 5.10.2 (the Debian 12 and 13 packages) may show no Chart Grabber toolbar button until you press **OK** to close Options or restart OpenCPN; until then, right-click the chart and choose **Chart Grabber: new chart of this view...**.
 
-### Install from the OpenCPN Beta catalog
+### Install from the OpenCPN catalog
 
-Chart Grabber is in OpenCPN's **Beta** plugin catalog for every system in the [table below](#install-by-import).
+Chart Grabber is in OpenCPN's default (master) plugin catalog for every system in the [table below](#install-by-import).
 Installing from the catalog means the Plugin Manager offers later versions as **Update**.
 
 **Note:** If you use OpenCPN from Debian trixie-backports, it reports itself as Debian 13. OpenCPN refuses Import of the Debian 13 file. Install Chart Grabber from the catalog instead.
 
-OpenCPN shows the master catalog by default; choosing another one is an expert setting you switch on in OpenCPN's config file:
+1. Start OpenCPN and open Options, Plugins.
+2. Click **Update Plugin Catalog: master**.
+3. Find **ChartGrabber** in the list, click **Install**, then enable it.
 
-1. Close OpenCPN. It rewrites the config file when it exits, so an edit made while it runs is lost.
-2. Open the config file and add the line `CatalogExpert=1` to the `[PlugIns]` section (create the section if it is missing):
+Chart Grabber is also in the Beta catalog. To use it, close OpenCPN and add the line `CatalogExpert=1` to the `[PlugIns]` section of OpenCPN's config file. Then start OpenCPN and choose **Beta** under Options, Plugins, **Settings...**. The config file is:
 
-   | System | OpenCPN's config file |
-   |---|---|
-   | Linux (Debian, Ubuntu, CachyOS) | `~/.opencpn/opencpn.conf` |
-   | Flatpak OpenCPN | `~/.var/app/org.opencpn.OpenCPN/config/opencpn/opencpn.conf` |
-   | macOS | `~/Library/Preferences/opencpn/opencpn.ini` |
-   | Windows | `C:\ProgramData\opencpn\opencpn.ini` |
-
-3. Start OpenCPN and open Options, Plugins, **Settings...** (without step 2 it shows only a "Disabled" message). Choose **Beta**.
-4. Click **Update Plugin Catalog: Beta**.
-5. Find **ChartGrabber** in the list, click **Install**, then enable it.
-
-![Options, Plugins: the Beta catalog is active and ChartGrabber is in the list with its install button](images/install-catalog.png)
+| System | OpenCPN's config file |
+|---|---|
+| Linux (Debian, Ubuntu, CachyOS) | `~/.opencpn/opencpn.conf` |
+| Flatpak OpenCPN | `~/.var/app/org.opencpn.OpenCPN/config/opencpn/opencpn.conf` |
+| macOS | `~/Library/Preferences/opencpn/opencpn.ini` |
+| Windows | `C:\ProgramData\opencpn\opencpn.ini` |
 
 If you installed Chart Grabber with **Import plugin...**, OpenCPN 5.10.2 shows no Install or Update for it in the catalog list. Uninstall it first (your charts and settings stay, see [Uninstall](#uninstall)), then install it from the catalog; from then on, new versions show **Update**. Newer OpenCPN versions show **Update** for an imported Chart Grabber as soon as the catalog has the same or a newer version.
 
@@ -349,7 +344,7 @@ OpenCPN, Options, Plugins, Chart Grabber, **Preferences**.
 | "Area too large for this detail" | Choose a smaller area or less detail. |
 | No Chart Grabber button on the toolbar | OpenCPN 5.10.2 adds it only at startup or on Options **OK**: press OK or restart OpenCPN. Meanwhile right-click the chart: **Chart Grabber: new chart of this view...**. |
 | "OpenCPN from Flathub can only keep charts inside your home folder" | Flatpak OpenCPN cannot write outside your home folder: choose a chart folder inside it under Settings, Advanced, **Save charts in**. |
-| Import plugin refuses the tarball | Check the [system table](#install) and that you have OpenCPN 5.10.2 or newer. With OpenCPN from Debian trixie-backports, OpenCPN always refuses Import of the Debian 13 file: install from the [Beta catalog](#install-from-the-opencpn-beta-catalog). A refused Import also removes an installed Chart Grabber (OpenCPN uninstalls it by name), so install it again from the catalog. |
+| Import plugin refuses the tarball | Check the [system table](#install) and that you have OpenCPN 5.10.2 or newer. With OpenCPN from Debian trixie-backports, OpenCPN always refuses Import of the Debian 13 file: install from the [catalog](#install-from-the-opencpn-catalog). A refused Import also removes an installed Chart Grabber (OpenCPN uninstalls it by name), so install it again from the catalog. |
 | macOS asks "OpenCPN was prevented from modifying apps" or for local network access | Deny or ignore it: in our macOS test (OpenCPN 5.12.4) nothing broke. The local network prompt appears when OpenCPN is started from a terminal app. |
 | "The list of favourite chart sources is missing or damaged" | The first entries of **Chart** and the order of **Weather on top** come from the file `favourite-sources.conf` in the plugin's data folder; the warning shows its full path and the reason. Until it is repaired, Chart Grabber uses the lines it can read, your last source and **More sources...**; downloading works. To repair it with internet (a phone will do): click **Download a fresh copy** under the warning (it opens the file of your plugin version), download the file, save it over the old one under the same name, then press **Reload** in **More sources...**. Without internet: import the plugin tarball of your version again from your saved copy (Options, Plugins, **Import plugin...**, see [Install by Import](#install-by-import)); this puts back every file of the plugin. |
 
