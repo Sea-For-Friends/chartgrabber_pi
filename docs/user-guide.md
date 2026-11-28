@@ -113,6 +113,9 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 
 116 sources come with the plugin, in seven groups (the menus under **Chart**).
 
+<details>
+<summary>Show the list of 116 sources</summary>
+
 | Group | Source | What it is for | Area |
 |---|---|---|---|
 | Nautical charts | Norway sea chart (Kartverket, not for navigation) | Planning passages along the coast and skerries | Norway |
@@ -231,6 +234,8 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 | Ocean | Copernicus currents with tide (global) | Model currents including tides for passage planning; forecast, not measured | Worldwide |
 | Ocean | Copernicus currents (North-West European shelf) | Tidal currents of the Channel, North Sea and Irish Sea at 1.5 km; forecast | North-West European shelf |
 | Ocean | Copernicus significant wave height (global) | Significant wave height forecast for passage planning | Worldwide |
+
+</details>
 
 CHS NONNA-10: downloading accepts the CHS NONNA Licence; a chart file you make from it and pass on must carry the notice of its clause 7 with your name.
 
