@@ -54,14 +54,7 @@ Installing from the catalog means the Plugin Manager offers later versions as **
 2. Click **Update Plugin Catalog: master**.
 3. Find **ChartGrabber** in the list, click **Install**, then enable it.
 
-Chart Grabber is also in the Beta catalog. To use it, close OpenCPN and add the line `CatalogExpert=1` to the `[PlugIns]` section of OpenCPN's config file. Then start OpenCPN and choose **Beta** under Options, Plugins, **Settings...**. The config file is:
-
-| System | OpenCPN's config file |
-|---|---|
-| Linux (Debian, Ubuntu, CachyOS) | `~/.opencpn/opencpn.conf` |
-| Flatpak OpenCPN | `~/.var/app/org.opencpn.OpenCPN/config/opencpn/opencpn.conf` |
-| macOS | `~/Library/Preferences/opencpn/opencpn.ini` |
-| Windows | `C:\ProgramData\opencpn\opencpn.ini` |
+![Options, Plugins: the master catalog is updated and ChartGrabber 2026.11.6 is offered with its Install button](images/install-catalog-master.png)
 
 If you installed Chart Grabber with **Import plugin...**, OpenCPN 5.10.2 shows no Install or Update for it in the catalog list. Uninstall it first (your charts and settings stay, see [Uninstall](#uninstall)), then install it from the catalog; from then on, new versions show **Update**. Newer OpenCPN versions show **Update** for an imported Chart Grabber as soon as the catalog has the same or a newer version.
 
