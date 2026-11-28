@@ -12,7 +12,7 @@
 7. [Weather](#weather)
 8. [At sea and on slow links](#at-sea-and-on-slow-links)
 9. [Your own sources](#your-own-sources)
-10. [Tips](#tips)
+10. [Manage chart sets with chart groups](#manage-chart-sets-with-chart-groups)
 11. [Settings reference](#settings-reference)
 12. [Troubleshooting](#troubleshooting)
 13. [Help and licence](#help-and-licence)
@@ -306,9 +306,9 @@ The `.zmp` source folders Chart Grabber reads use the format of SAS.Planet, a fr
 
 **Check a source before you copy it.** A `.zmp` folder is plain text: open `params.txt` (the server address, `DefURLBase`, and the headers) and, if present, `GetUrlScript.txt`. Chart Grabber never runs programs from a source. A script only builds the tile address; it cannot read or write your files, and it is stopped after 5 seconds. But that address can point to any server, and with `IsUseDownloaderInScript=1` in `params.txt` the script can also send web requests of its own. If you cannot see where the requests go, do not use the source. More: [what a script may not do](https://github.com/Sea-For-Friends/chart-grabber-cli/blob/main/docs/user/sources-guide.md#what-a-script-may-not-do) in the Chart Grabber CLI guide.
 
-## Tips
+## Manage chart sets with chart groups
 
-- Many charts on the chart bar of OpenCPN? Keep the charts of one trip in one folder and make the folder a chart group: [Keep many charts in order with chart groups](chart-groups.md).
+Many charts on the chart bar of OpenCPN? Keep the charts of one trip in one folder and make the folder a chart group. Then you can show only the charts of that trip. Steps with screenshots: [Keep many charts in order with chart groups](chart-groups.md).
 
 ## Settings reference
 
