@@ -114,7 +114,7 @@ While the download runs, a strip at the bottom of the chart shows the part, the 
 116 sources come with the plugin, in seven groups (the menus under **Chart**).
 
 <details>
-<summary>Show the list of 116 sources</summary>
+<summary><h3>Click to show the list of 116 sources</h3></summary>
 
 | Group | Source | What it is for | Area |
 |---|---|---|---|
